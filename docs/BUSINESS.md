@@ -113,3 +113,10 @@ Run the numbers on your own plan: *(average paid AI calls per Pro user per month
 - **Referral credit** is not built; add after you have retention data.
 - The PWA is installable to the home screen (the daily-use surface). Prompt installs after a person's third visit.
 - Email digests ("what to wear this week") are a retention lever: the engine already produces the week plan.
+
+## Admin access and giving away Pro
+
+- **Admin:** set `ADMIN_EMAILS=you@example.com` (comma-separated for several people). Register or sign in with that email, then open `/admin`. There is no separate admin password: the account is an ordinary one that the server recognises by its email.
+- **Give Pro to an existing user:** `/admin` → *Pro access* → enter their email and a number of days. Pro ends automatically; a paying Stripe subscriber is never overridden.
+- **Pro codes:** `/admin` → *Pro access* → *Create code* (leave the code blank for a random one such as `K7QM-2XPD-9TRB`). Choose the days of Pro and how many people can use it. Users enter it on the Pro page ("Have a Pro code?"). Every code is one use per person.
+- **Stripe discounts:** the checkout page already accepts Stripe promotion codes. Create a coupon and promotion code in the Stripe dashboard (Product catalogue → Coupons) for discounts on paid subscriptions.

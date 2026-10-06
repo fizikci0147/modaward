@@ -7,6 +7,7 @@ import { createMailer } from './services/mailer.js';
 import { createWeatherService, openMeteoProvider, mockProvider } from './services/weather.js';
 import { createOutfitService } from './services/outfits.js';
 import { createShopService } from './services/shop.js';
+import { createCodes } from './services/codes.js';
 import { createUsage } from './services/usage.js';
 import { createCutoutService } from './services/cutout.js';
 import { createBilling } from './services/billing.js';
@@ -53,7 +54,8 @@ export async function createDeps(config, overrides = {}) {
     billing: Boolean(billing && (config.stripe.priceMonthly || config.stripe.priceYearly))
   };
 
-  const deps = { config, db, repos, log, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
+  const codes = createCodes({ db, repos });
+  const deps = { config, db, repos, codes, log, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
   deps.outfits = createOutfitService({ repos, weather, config, stylist });
   deps.shop = createShopService({ repos, weather, catalog, linker, config, stylist });
   for (const routes of [shopRoutes, photoRoutes, billingRoutes, aiRoutes, insightsRoutes, adminRoutes]) deps.extraApiRoutes.push((api) => api.use(routes(deps)));

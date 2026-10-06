@@ -1,10 +1,32 @@
 import { html, useState } from '/js/ui.js';
-import { useStore } from '/js/store.js';
+import { useStore, refreshMe, toast, fail } from '/js/store.js';
+import { api } from '/js/api.js';
 import { Icon } from '/js/icons.js';
 import { Spinner, startCheckout, PRO_FEATURES } from '/js/components/common.js';
 import { Link, navigate } from '/js/router.js';
 
 const FREE = ['Up to 30 pieces in your closet', 'Outfits for today, matched to the hour-by-hour forecast', '3-day planning', 'The style quiz and a taste profile that learns', '6 shopping looks at a time'];
+
+function RedeemCode() {
+  const [code, setCode] = useState('');
+  const [busy, setBusy] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!code.trim()) return;
+    setBusy(true);
+    try {
+      const r = await api.post('/billing/redeem', { code });
+      await refreshMe();
+      toast(`Pro is on until ${new Date(r.until * 1000).toLocaleDateString()}. Enjoy!`);
+      setCode('');
+    } catch (err) { fail(err); }
+    setBusy(false);
+  };
+  return html`<form class="row center" style=${{ gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }} onSubmit=${submit}>
+    <input class="input" style=${{ maxWidth: '240px' }} aria-label="Pro code" placeholder="Have a Pro code?" value=${code} maxlength="40" autocomplete="off" autocapitalize="characters" onInput=${(e) => setCode(e.target.value)} />
+    <button class="btn btn-outline" disabled=${busy || !code.trim()}>${busy ? html`<${Spinner} />` : null}Redeem</button>
+  </form>`;
+}
 
 export function ProView() {
   const { user, entitlements, capabilities } = useStore();
@@ -35,6 +57,7 @@ export function ProView() {
         ${pro ? html`<button class="btn" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} disabled>You’re on Pro</button>` : capabilities.billing ? html`<button class="btn btn-l" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} onClick=${buy} disabled=${busy}>${busy ? html`<${Spinner} />` : null}Go Pro</button>` : html`<button class="btn" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} disabled>Coming soon</button>`}
       </section>
     </div>
+    ${user && !pro ? html`<${RedeemCode} />` : null}
     <p class="footnote center">Payments are handled securely by Stripe. Cancel any time from your profile; you keep Pro until the end of the period you paid for.</p>
   </div>`;
 }

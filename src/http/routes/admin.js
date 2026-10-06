@@ -1,9 +1,19 @@
 import { Router } from 'express';
 import { requireUser } from '../middleware.js';
 import { forbidden } from '../../util/errors.js';
+import { object, string, integer, optional, email } from '../../util/validate.js';
+
+const codeSchema = object({
+  code: optional(string({ min: 4, max: 32 })),
+  days: integer({ min: 1, max: 3660 }),
+  maxUses: optional(integer({ min: 1, max: 100000 }), 1),
+  expiresInDays: optional(integer({ min: 1, max: 3660 })),
+  note: optional(string({ max: 200 }), '')
+});
+const grantSchema = object({ email: email(), days: integer({ min: 1, max: 3660 }) });
 
 /** Operator dashboard data. Access is limited to the emails in ADMIN_EMAILS. */
-export function adminRoutes({ db, config, usage, catalog }) {
+export function adminRoutes({ db, config, usage, catalog, codes }) {
   const r = Router();
   r.use('/admin', requireUser, (req, _res, next) => (config.adminEmails.includes(req.user.email.toLowerCase()) ? next() : next(forbidden('Not found.'))));
 
@@ -45,6 +55,17 @@ export function adminRoutes({ db, config, usage, catalog }) {
       catalogue: { products: catalog.count(), byRetailer: catalog.byRetailer() },
       ai: { today: usage.totals() }
     });
+  });
+
+  r.get('/admin/codes', (_req, res) => res.json({ codes: codes.list() }));
+  r.post('/admin/codes', (req, res) => res.status(201).json(codes.create(codeSchema(req.body ?? {}))));
+  r.delete('/admin/codes/:code', (req, res) => {
+    codes.remove(req.params.code);
+    res.json({ ok: true });
+  });
+  r.post('/admin/grants', (req, res) => {
+    const { email: to, days } = grantSchema(req.body ?? {});
+    res.json(codes.grant(to, days));
   });
   return r;
 }

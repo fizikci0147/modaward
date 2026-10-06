@@ -115,6 +115,11 @@ export function createRepos(db) {
         sha256(token),
         now()
       );
+      if (row && row.plan === 'pro' && row.plan_status === 'granted' && row.plan_renews_at <= now()) {
+        // comped Pro time has run out: back to Free, effective on this very request
+        users.setPlan(row.id, { plan: 'free', status: null, renewsAt: null });
+        Object.assign(row, { plan: 'free', plan_status: null, plan_renews_at: null });
+      }
       return row || null;
     },
     revoke: (token) => db.run('DELETE FROM sessions WHERE token_hash = ?', sha256(token || '')),

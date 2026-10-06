@@ -1,8 +1,52 @@
 import { html, useState, useEffect } from '/js/ui.js';
 import { api } from '/js/api.js';
-import { fail } from '/js/store.js';
+import { fail, toast } from '/js/store.js';
 
 const Stat = ({ label, value, sub }) => html`<div class="card stat"><span class="eyebrow">${label}</span><b class="num">${value}</b>${sub ? html`<span class="small muted">${sub}</span>` : null}</div>`;
+
+function Access() {
+  const [codes, setCodes] = useState([]);
+  const [form, setForm] = useState({ code: '', days: 30, maxUses: 1, note: '' });
+  const [grant, setGrant] = useState({ email: '', days: 30 });
+  const load = () => api.get('/admin/codes').then((r) => setCodes(r.codes)).catch(fail);
+  useEffect(() => { load(); }, []);
+  const set = (k) => (e) => setForm({ ...form, [k]: e.target.value });
+  const create = async (e) => {
+    e.preventDefault();
+    try {
+      const body = { days: Number(form.days), maxUses: Number(form.maxUses), note: form.note };
+      if (form.code.trim()) body.code = form.code;
+      const r = await api.post('/admin/codes', body);
+      toast(`Code ${r.display} created`);
+      setForm({ ...form, code: '', note: '' });
+      load();
+    } catch (err) { fail(err); }
+  };
+  const give = async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api.post('/admin/grants', { email: grant.email, days: Number(grant.days) });
+      toast(`${r.email} has Pro until ${new Date(r.until * 1000).toLocaleDateString()}`);
+      setGrant({ ...grant, email: '' });
+    } catch (err) { fail(err); }
+  };
+  const remove = async (code) => { try { await api.del(`/admin/codes/${code}`); load(); } catch (err) { fail(err); } };
+  return html`<section class="card card-pad stack"><h2 class="display h-s">Pro access</h2>
+    <form class="row" style=${{ flexWrap: 'wrap', gap: '8px' }} onSubmit=${give}>
+      <input class="input grow" type="email" required aria-label="Email to give Pro" placeholder="Give Pro to an existing account: email" value=${grant.email} onInput=${(e) => setGrant({ ...grant, email: e.target.value })} />
+      <input class="input" style=${{ width: '90px' }} type="number" min="1" max="3660" aria-label="Days" value=${grant.days} onInput=${(e) => setGrant({ ...grant, days: e.target.value })} />
+      <button class="btn">Give Pro (days)</button>
+    </form>
+    <form class="row" style=${{ flexWrap: 'wrap', gap: '8px' }} onSubmit=${create}>
+      <input class="input" style=${{ width: '170px' }} aria-label="Custom code" placeholder="Code (blank = random)" value=${form.code} onInput=${set('code')} />
+      <input class="input" style=${{ width: '90px' }} type="number" min="1" max="3660" aria-label="Days of Pro" title="Days of Pro" value=${form.days} onInput=${set('days')} />
+      <input class="input" style=${{ width: '90px' }} type="number" min="1" aria-label="Max uses" title="How many people can use it" value=${form.maxUses} onInput=${set('maxUses')} />
+      <input class="input grow" aria-label="Note" placeholder="Note (who is it for?)" value=${form.note} onInput=${set('note')} />
+      <button class="btn btn-outline">Create code</button>
+    </form>
+    ${codes.length ? html`<table class="table"><thead><tr><th>Code</th><th class="num">Days</th><th class="num">Used</th><th>Note</th><th></th></tr></thead><tbody>${codes.map((c) => html`<tr key=${c.code}><td><b>${c.code}</b></td><td class="num">${c.days}</td><td class="num">${c.uses}/${c.maxUses}</td><td>${c.note}</td><td><button class="btn btn-ghost" onClick=${() => remove(c.code)}>Delete</button></td></tr>`)}</tbody></table>` : html`<p class="muted">No codes yet.</p>`}
+  </section>`;
+}
 
 export function AdminView() {
   const [m, setM] = useState(null);
@@ -11,6 +55,7 @@ export function AdminView() {
   const max = Math.max(1, ...m.clicks.byDay.map((d) => d.clicks));
   return html`<div class="stack-l">
     <header class="stack"><h1 class="display h-xl">Business</h1><p class="muted">Updated ${new Date(m.generatedAt).toLocaleString()}</p></header>
+    <${Access} />
     <div class="grid wide">
       <${Stat} label="Users" value=${m.users.total} sub=${`${m.users.new7} new this week`} />
       <${Stat} label="Pro" value=${m.users.pro} sub=${`${m.conversion}% conversion`} />
