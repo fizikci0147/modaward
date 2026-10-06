@@ -33,16 +33,16 @@ function Access() {
   const remove = async (code) => { try { await api.del(`/admin/codes/${code}`); load(); } catch (err) { fail(err); } };
   return html`<section class="card card-pad stack"><h2 class="display h-s">Pro access</h2>
     <form class="row" style=${{ flexWrap: 'wrap', gap: '8px' }} onSubmit=${give}>
-      <input class="input grow" type="email" required aria-label="Email to give Pro" placeholder="Give Pro to an existing account: email" value=${grant.email} onInput=${(e) => setGrant({ ...grant, email: e.target.value })} />
-      <input class="input" style=${{ width: '90px' }} type="number" min="1" max="3660" aria-label="Days" value=${grant.days} onInput=${(e) => setGrant({ ...grant, days: e.target.value })} />
-      <button class="btn">Give Pro (days)</button>
+      <input class="input grow" type="email" required aria-label="Email to give Pro" placeholder="Email of an existing account" value=${grant.email} onInput=${(e) => setGrant({ ...grant, email: e.target.value })} />
+      <input class="input" style=${{ width: '90px' }} type="number" min="1" max="3660" aria-label="Days of Pro" title="Days of Pro" value=${grant.days} onInput=${(e) => setGrant({ ...grant, days: e.target.value })} />
+      <button class="btn btn-primary">Give Pro</button>
     </form>
     <form class="row" style=${{ flexWrap: 'wrap', gap: '8px' }} onSubmit=${create}>
       <input class="input" style=${{ width: '170px' }} aria-label="Custom code" placeholder="Code (blank = random)" value=${form.code} onInput=${set('code')} />
       <input class="input" style=${{ width: '90px' }} type="number" min="1" max="3660" aria-label="Days of Pro" title="Days of Pro" value=${form.days} onInput=${set('days')} />
       <input class="input" style=${{ width: '90px' }} type="number" min="1" aria-label="Max uses" title="How many people can use it" value=${form.maxUses} onInput=${set('maxUses')} />
       <input class="input grow" aria-label="Note" placeholder="Note (who is it for?)" value=${form.note} onInput=${set('note')} />
-      <button class="btn btn-outline">Create code</button>
+      <button class="btn btn-primary">Create code</button>
     </form>
     ${codes.length ? html`<table class="table"><thead><tr><th>Code</th><th class="num">Days</th><th class="num">Used</th><th>Note</th><th></th></tr></thead><tbody>${codes.map((c) => html`<tr key=${c.code}><td><b>${c.code}</b></td><td class="num">${c.days}</td><td class="num">${c.uses}/${c.maxUses}</td><td>${c.note}</td><td><button class="btn btn-ghost" onClick=${() => remove(c.code)}>Delete</button></td></tr>`)}</tbody></table>` : html`<p class="muted">No codes yet.</p>`}
   </section>`;
@@ -67,6 +67,7 @@ export function AdminView() {
       ${m.clicks.last30.length ? html`<table class="table"><thead><tr><th>Retailer</th><th class="num">Clicks</th><th class="num">Product links</th></tr></thead><tbody>${m.clicks.last30.map((r) => html`<tr key=${r.retailer}><td>${r.retailer}</td><td class="num">${r.clicks}</td><td class="num">${r.product_clicks}</td></tr>`)}</tbody></table>` : html`<p class="muted">No clicks yet.</p>`}
     </section>
     <section class="card card-pad stack"><h2 class="display h-s">Clicks, last 14 days</h2>
+      ${m.clicks.byDay.length ? null : html`<p class="muted">No clicks yet. They appear here once people tap through to a retailer.</p>`}
       <div class="stack" style=${{ gap: '6px' }}>${m.clicks.byDay.map((d) => html`<div key=${d.day} class="row small"><span class="faint num" style=${{ width: '84px' }}>${d.day.slice(5)}</span><div class="meter grow"><i style=${{ width: `${(d.clicks / max) * 100}%` }}></i></div><span class="num" style=${{ width: '36px', textAlign: 'right' }}>${d.clicks}</span></div>`)}</div>
     </section>
     <section class="card card-pad stack"><h2 class="display h-s">Engagement</h2>
