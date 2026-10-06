@@ -1,7 +1,7 @@
 {
   "name": "modaward",
   "version": "5.0.0",
-  "description": "ModaWard \u2014 weather-aware outfit planner with a digital closet and multi-retailer style recommendations.",
+  "description": "ModaWard — weather-aware outfit planner with a digital closet and multi-retailer style recommendations.",
   "private": true,
   "main": "server.js",
   "scripts": {
@@ -25,7 +25,7 @@
     "@anthropic-ai/sdk": "^0.131.0",
     "compression": "^1.8.0",
     "express": "^5.1.0",
-    "nodemailer": "^7.0.0"
+    "nodemailer": "^10.0.15"
   },
   "optionalDependencies": {
     "better-sqlite3": "^12.0.0"
