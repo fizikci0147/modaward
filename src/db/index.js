@@ -28,7 +28,7 @@ async function openDriver(file, prefer) {
     return { driver: 'better-sqlite3', raw: new (mod.default || mod)(file) };
   } catch (cause) {
     throw new Error(
-      'No SQLite driver available. Use Node.js 22.5 or newer (built-in node:sqlite), or run `npm install` so the optional better-sqlite3 package can be installed.',
+      `No SQLite driver available on Node.js ${process.version}. Switch the app to Node.js 22.13 or newer (built-in node:sqlite), or run \`npm install\` so the optional better-sqlite3 package can be installed (${String(cause?.code || cause?.message || cause).slice(0, 120)}).`,
       { cause }
     );
   }

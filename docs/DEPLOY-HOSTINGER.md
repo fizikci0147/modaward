@@ -102,7 +102,7 @@ A 503 from Hostinger means the platform could not reach a running Node process. 
 
 | Symptom | Likely cause |
 |---|---|
-| App won't start, "No SQLite driver available" | Node.js version is below 22.5 and `better-sqlite3` was not installed. Pick Node 22+, or run `npm install` again. |
+| App won't start, "No SQLite driver available" | Node.js version is below 22.5 and `better-sqlite3` was not installed. Pick Node 22.13+, or run `npm install` again. |
 | "No writable data directory" | `DATA_DIR` points somewhere the app user can't write. Use a folder under your home directory. |
 | Sign-in works but you are logged out on refresh | The panel is terminating HTTPS in front of Node: set `TRUST_PROXY=1`. |
 | Password-reset emails never arrive | Check `SMTP_*` and `APP_URL`; run `npm run live:check`. Without SMTP the link is only written to the server log. |
