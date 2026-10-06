@@ -371,7 +371,11 @@ export function outfitMarkup(items) {
   const [outer] = by('outerwear');
   const [shoes] = by('shoes');
   const accessories = by('accessory').slice(0, 4);
-  const cell = (item, x, y, w, h) => `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${viewBoxFor(item.art)}" overflow="visible">${garmentMarkup(item.art, item.color, item.pattern)}</svg>`;
+  // A real cut-out photo of the person's own garment replaces the illustration.
+  const cell = (item, x, y, w, h) =>
+    item.image
+      ? `<image href="${String(item.image).replace(/[&"<>]/g, '')}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`
+      : `<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${viewBoxFor(item.art)}" overflow="visible">${garmentMarkup(item.art, item.color, item.pattern)}</svg>`;
   const shadow = (cx, cy, rx) => `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="4.5" fill="#000" opacity=".07"/>`;
   let out = '';
   const hasRight = outer || shoes || accessories.length;

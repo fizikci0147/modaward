@@ -79,6 +79,12 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
       dailyLimitGlobal: int(env.AI_GLOBAL_DAILY_LIMIT, 2000)
     },
 
+    cutout: {
+      apiKey: str(env.REMOVEBG_API_KEY),
+      size: str(env.REMOVEBG_SIZE, 'regular'),
+      dailyLimitPerUser: int(env.CUTOUT_DAILY_LIMIT, 30)
+    },
+
     plans: {
       freeClosetLimit: int(env.FREE_CLOSET_LIMIT, 30),
       freeLooksPerWeek: int(env.FREE_SHOP_LOOKS, 6)

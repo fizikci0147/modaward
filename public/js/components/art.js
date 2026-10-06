@@ -21,10 +21,11 @@ export function GarmentArt({ type, color = '#cccccc', pattern = 'solid', class: 
   return html`<svg class=${cls} viewBox=${fit ? viewBoxFor(art) : '0 0 100 100'} aria-hidden="true" dangerouslySetInnerHTML=${{ __html: inner }} />`;
 }
 
-const toArtItem = (g) => ({ art: TYPES[g.type]?.art || 'tee', category: g.category || TYPES[g.type]?.category, color: g.color, pattern: g.pattern || 'solid' });
+const isCutout = (u) => typeof u === 'string' && /\/uploads\/g_[a-f0-9]+\.png/.test(u);
+const toArtItem = (g) => ({ art: TYPES[g.type]?.art || 'tee', category: g.category || TYPES[g.type]?.category, color: g.color, pattern: g.pattern || 'solid', image: isCutout(g.imageUrl) ? g.imageUrl : null });
 
 /** A flat-lay board for a set of garments or look pieces. */
 export function OutfitArt({ items, class: cls = '', label }) {
-  const inner = useMemo(() => outfitMarkup(items.map(toArtItem)), [items.map((g) => `${g.type}${g.color}${g.pattern}`).join('|')]);
+  const inner = useMemo(() => outfitMarkup(items.map(toArtItem)), [items.map((g) => `${g.type}${g.color}${g.pattern}${g.imageUrl || ''}`).join('|')]);
   return html`<svg class=${`art ${cls}`} viewBox="0 0 300 360" role=${label ? 'img' : undefined} aria-label=${label} aria-hidden=${label ? undefined : 'true'} dangerouslySetInnerHTML=${{ __html: inner }} />`;
 }

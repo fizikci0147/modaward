@@ -11,6 +11,9 @@ import { createLinker } from './shop/links.js';
 import { createCatalog } from './shop/catalog.js';
 import { createShopService } from './services/shop.js';
 import { shopRoutes } from './http/routes/shop.js';
+import { createUsage } from './services/usage.js';
+import { createCutoutService } from './services/cutout.js';
+import { photoRoutes } from './http/routes/photos.js';
 import { createApp } from './app.js';
 
 /**
@@ -34,6 +37,11 @@ export async function createDeps(config, overrides = {}) {
   deps.outfits = createOutfitService({ repos, weather, config, stylist: deps.stylist ?? null });
   deps.shop = createShopService({ repos, weather, catalog: deps.catalog, linker, config, stylist: deps.stylist ?? null });
   deps.extraApiRoutes.push((api) => api.use(shopRoutes(deps)));
+
+  deps.usage = createUsage(db);
+  deps.cutoutService = overrides.cutoutService === undefined ? createCutoutService(config, deps.usage, log, overrides.fetch) : overrides.cutoutService;
+  deps.capabilities.cutoutService = Boolean(deps.cutoutService);
+  deps.extraApiRoutes.push((api) => api.use(photoRoutes(deps)));
   return deps;
 }
 

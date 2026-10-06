@@ -12,7 +12,7 @@ const KIND_LABEL = { new: 'New outfit', owned: 'Built around your closet' };
 function PieceImage({ p }) {
   const src = p.product?.image || p.imageUrl;
   return src
-    ? html`<img src=${src} alt=${p.name} loading="lazy" decoding="async" referrerpolicy="no-referrer" />`
+    ? html`<img class=${/\/uploads\/.*\.png/.test(src) ? 'cutout' : ''} src=${src} alt=${p.name} loading="lazy" decoding="async" referrerpolicy="no-referrer" />`
     : html`<${GarmentArt} type=${p.type} color=${p.color} pattern=${p.pattern || 'solid'} />`;
 }
 

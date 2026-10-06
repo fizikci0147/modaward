@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { startTestServer } from '../helpers.js';
+import { syntheticGarmentPng } from './photo.mjs';
 
 const shots = process.env.SHOTS;
 if (shots) fs.mkdirSync(shots, { recursive: true });
@@ -101,6 +102,36 @@ async function run(label, contextOptions) {
   await page.getByRole('button', { name: 'Add to closet' }).click();
   await page.getByText(/added$/).waitFor();
   ok(`${label}: closet lists pieces and adding one works`);
+
+  // ── photo with automatic background removal ──
+  await page.getByRole('button', { name: 'Add a piece' }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.waitFor();
+  await dialog.locator('input[type=file]').setInputFiles({ name: 'tee-on-floor.png', mimeType: 'image/png', buffer: syntheticGarmentPng() });
+  await dialog.locator('img.cutout').waitFor({ timeout: 20000 });
+  await dialog.getByRole('switch', { name: 'Remove background' }).waitFor();
+  await shot('10b-closet-cutout');
+  const alpha = await dialog.locator('img.cutout').evaluate(async (img) => {
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    const px = (x, y) => ctx.getImageData(x, y, 1, 1).data;
+    return { corner: px(2, 2)[3], centre: px(c.width >> 1, c.height >> 1)[3], w: c.width, h: c.height };
+  });
+  if (alpha.corner !== 0 || alpha.centre !== 255) fail(`${label}: cut-out alpha wrong (corner ${alpha.corner}, centre ${alpha.centre})`);
+  // the detected colour should be navy, not floor brown
+  await dialog.getByRole('button', { name: 'T-shirt', exact: true }).click();
+  await dialog.getByRole('button', { name: 'Add to closet' }).click();
+  await page.locator('.toast').filter({ hasText: /T-shirt added/i }).first().waitFor();
+  await page.locator('.tile-art img.cutout').first().waitFor();
+  const saved = await page.locator('.tile-art img.cutout').first().getAttribute('src');
+  const res = await page.request.get(saved);
+  if (res.headers()['content-type'] !== 'image/png') fail(`${label}: stored photo is not a PNG cut-out (${res.status()} ${res.headers()['content-type']} ${saved})`);
+  await shot('10c-closet-with-cutout');
+  ok(`${label}: photo upload removes the background, detects the colour and stores a transparent PNG`);
 
   // ── shop ──
   await page.goto('/shop');

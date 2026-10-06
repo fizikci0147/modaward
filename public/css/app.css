@@ -536,3 +536,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 .look-top .badge { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-s); }
 .look-top .badge-ok { background: color-mix(in srgb, var(--ok) 16%, var(--surface)); color: var(--ok); }
+
+.tile-art img.cutout, .drop img.cutout { object-fit: contain; padding: 9%; }
+.drop-busy { position: absolute; inset: auto 12px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-m); font-size: 12.5px; font-weight: 550; }
+.drop { background: var(--board); }
+.collage-cell img.cutout, .mini .ph img.cutout { object-fit: contain; padding: 8%; }

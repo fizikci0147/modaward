@@ -8,38 +8,15 @@ import { CATEGORIES, TYPES, typesFor, PATTERNS, WARMTH_LABELS, FORMALITY_LABELS 
 import { PALETTE, colorName, dominantColor } from '/shared/color.js';
 import { plural, cap } from '/js/format.js';
 import { useQuery, navigate } from '/js/router.js';
-
-/** Resize to ≤ 900px JPEG and detect the dominant colour. Everything stays in the browser until save. */
-export async function processPhoto(file) {
-  if (!/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new Error('Choose a photo (JPEG, PNG or WebP).');
-  const bmp = await createImageBitmap(file).catch(() => null);
-  if (!bmp) throw new Error('That photo could not be read. Try a JPEG or PNG.');
-  const scale = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
-  const w = Math.max(1, Math.round(bmp.width * scale));
-  const h = Math.max(1, Math.round(bmp.height * scale));
-  const canvas = document.createElement('canvas');
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(0, 0, w, h);
-  ctx.drawImage(bmp, 0, 0, w, h);
-  // sample a small copy for the colour
-  const small = document.createElement('canvas');
-  small.width = 48;
-  small.height = 48;
-  const sctx = small.getContext('2d', { willReadFrequently: true });
-  sctx.drawImage(canvas, 0, 0, 48, 48);
-  const { data } = sctx.getImageData(0, 0, 48, 48);
-  return { dataUrl: canvas.toDataURL('image/jpeg', 0.84), color: dominantColor(data, 48, 48) };
-}
+import { readPhoto } from '/js/photo.js';
+import { CUTOUT_MESSAGES } from '/shared/cutout.js';
 
 const CAT_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory'];
 
 function Tile({ g, onOpen, onFav }) {
   return html`<div class="tile enter">
     <button class="tile-btn" onClick=${() => onOpen(g)} aria-label=${`Edit ${g.name}`}>
-      <div class="tile-art">${g.imageUrl ? html`<img src=${g.imageUrl} alt="" loading="lazy" decoding="async" />` : html`<${GarmentArt} type=${g.type} color=${g.color} pattern=${g.pattern} />`}</div>
+      <div class="tile-art">${g.imageUrl ? html`<img class=${/\.png/.test(g.imageUrl) ? 'cutout' : ''} src=${g.imageUrl} alt="" loading="lazy" decoding="async" />` : html`<${GarmentArt} type=${g.type} color=${g.color} pattern=${g.pattern} />`}</div>
       <div class="tile-meta">
         <span class="tile-name">${g.name}</span>
         <span class="tile-sub">${TYPES[g.type]?.label}${g.wearCount ? ` · worn ${g.wearCount}×` : ' · not worn yet'}</span>
@@ -70,7 +47,10 @@ export function GarmentSheet({ garment, onClose, caps }) {
     notes: garment?.notes || '',
     favorite: garment?.favorite || false
   }));
-  const [photo, setPhoto] = useState(null); // new dataUrl
+  const [photos, setPhotos] = useState(null); // { original, cutout, reason } for a newly chosen photo
+  const [removeBg, setRemoveBg] = useState(true);
+  const [working, setWorking] = useState(false);
+  const photo = photos ? (removeBg && photos.cutout ? photos.cutout : photos.original) : null;
   const [preview, setPreview] = useState(garment?.imageUrl || null);
   const [removePhoto, setRemovePhoto] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -87,14 +67,33 @@ export function GarmentSheet({ garment, onClose, caps }) {
 
   const onFile = async (file) => {
     if (!file) return;
+    setWorking(true);
     try {
-      const p = await processPhoto(file);
-      setPhoto(p.dataUrl);
-      setPreview(p.dataUrl);
+      const p = await readPhoto(file, { removeBackground: true });
+      setPhotos({ original: p.original, cutout: p.cutout, reason: p.cutoutReason });
+      setRemoveBg(true);
       setRemovePhoto(false);
       if (p.color && !editing) set({ color: p.color });
+      if (p.cutoutReason && CUTOUT_MESSAGES[p.cutoutReason]) toast(CUTOUT_MESSAGES[p.cutoutReason], { ms: 6500 });
     } catch (e) {
       toast(e.message, { kind: 'err' });
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const cloudCutout = async () => {
+    if (!photos) return;
+    setWorking(true);
+    try {
+      const { image } = await api.post('/photos/cutout', { image: photos.original });
+      setPhotos({ ...photos, cutout: image, reason: null });
+      setRemoveBg(true);
+      toast('Background removed');
+    } catch (e) {
+      fail(e);
+    } finally {
+      setWorking(false);
     }
   };
 
@@ -160,14 +159,17 @@ export function GarmentSheet({ garment, onClose, caps }) {
           onDragOver=${(e) => (e.preventDefault(), setOver(true))} onDragLeave=${() => setOver(false)}
           onDrop=${(e) => { e.preventDefault(); setOver(false); onFile(e.dataTransfer.files?.[0]); }}
           style=${{ aspectRatio: '1', minHeight: 0 }}>
-          ${preview && !removePhoto ? html`<img src=${preview} alt="Your photo" />` : html`<${GarmentArt} type=${form.type} color=${form.color} pattern=${form.pattern} class="" />`}
-          ${!preview || removePhoto ? html`<span class="small" style=${{ position: 'absolute', bottom: '12px' }}><${Icon} name="camera" size="14" /> Add a photo</span>` : null}
+          ${(photo || preview) && !removePhoto ? html`<img class=${photo && removeBg && photos.cutout ? 'cutout' : ''} src=${photo || preview} alt="Your photo" />` : html`<${GarmentArt} type=${form.type} color=${form.color} pattern=${form.pattern} class="" />`}
+          ${working ? html`<span class="drop-busy"><${Spinner} /> Removing background…</span>` : (!(photo || preview) || removePhoto) ? html`<span class="small" style=${{ position: 'absolute', bottom: '12px' }}><${Icon} name="camera" size="14" /> Add a photo</span>` : null}
         </div>
         <input ref=${fileRef} type="file" accept="image/*" capture=${undefined} hidden onChange=${(e) => { onFile(e.target.files?.[0]); e.target.value = ''; }} />
         <div class="row-wrap">
-          <button class="btn btn-outline btn-s" onClick=${() => fileRef.current?.click()}><${Icon} name="upload" />${preview && !removePhoto ? 'Replace' : 'Upload'}</button>
-          ${preview && !removePhoto ? html`<button class="btn btn-ghost btn-s" onClick=${() => { setPhoto(null); setPreview(null); setRemovePhoto(true); }}>Remove</button>` : null}
+          <button class="btn btn-outline btn-s" onClick=${() => fileRef.current?.click()} disabled=${working}><${Icon} name="upload" />${(photo || preview) && !removePhoto ? 'Replace' : 'Upload'}</button>
+          ${(photo || preview) && !removePhoto ? html`<button class="btn btn-ghost btn-s" onClick=${() => { setPhotos(null); setPreview(null); setRemovePhoto(true); }}>Remove</button>` : null}
         </div>
+        ${photos && photos.cutout ? html`<div class="spread"><div><div class="label">Remove background</div><div class="hint">Shows just the garment</div></div><${Switch} label="Remove background" checked=${removeBg} onChange=${setRemoveBg} /></div>` : null}
+        ${photos && !photos.cutout && photos.reason && caps.cutoutService ? html`<button class="btn btn-outline btn-s" onClick=${cloudCutout} disabled=${working}><${Icon} name="sparkle" />Try high-accuracy removal</button>` : null}
+        ${photos && !photos.cutout && photos.reason && !caps.cutoutService ? html`<p class="hint">Tip: lay the piece on a plain, contrasting surface for a clean cut-out.</p>` : null}
         ${photo && caps.vision ? html`<button class="btn btn-accent btn-s" onClick=${analyse} disabled=${analysing}>${analysing ? html`<${Spinner} />` : html`<${Icon} name="sparkle" />`}Auto-fill from photo</button>` : null}
         ${photo && !caps.vision ? html`<p class="hint">Tip: we picked the colour from your photo. Choose the type below.</p>` : null}
       </div>
@@ -298,6 +300,6 @@ export function ClosetView() {
           ? html`<div class="grid wide">${shown.map((g) => html`<${Tile} key=${g.id} g=${g} onOpen=${(x) => setSheet(x)} onFav=${fav} />`)}<button class="tile tile-add" onClick=${openAdd}><${Icon} name="plus" /><span>Add a piece</span></button></div>`
           : html`<${Empty} title="No matches" text="Try a different search or category." />`}`}
 
-    ${sheet ? html`<${GarmentSheet} garment=${sheet === 'add' ? null : sheet} caps=${{ vision: capabilities.vision && entitlements?.photoTagging }} onClose=${() => setSheet(null)} />` : null}
+    ${sheet ? html`<${GarmentSheet} garment=${sheet === 'add' ? null : sheet} caps=${{ vision: capabilities.vision && entitlements?.photoTagging, cutoutService: capabilities.cutoutService && entitlements?.photoTagging }} onClose=${() => setSheet(null)} />` : null}
   </div>`;
 }
