@@ -34,6 +34,24 @@ for (const driver of ['node:sqlite', 'better-sqlite3']) {
       fs.rmSync(dir, { recursive: true });
     });
 
+    test('a database left by an older app is set aside, not migrated over or deleted', async () => {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mw-db-'));
+      const file = path.join(dir, 'modaward.db');
+      const old = await openDb(':memory:', { driver }); // any handle will do to create a foreign file
+      old.close();
+      const { DatabaseSync } = hasNodeSqlite ? await import('node:sqlite') : {};
+      const raw = DatabaseSync ? new DatabaseSync(file) : new (await import('better-sqlite3')).default(file);
+      raw.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, legacy TEXT); INSERT INTO users (legacy) VALUES ('keep me')");
+      raw.close();
+      const db = await openDb(file, { driver });
+      assert.ok(db.get('SELECT COUNT(*) AS n FROM schema_migrations').n >= 2);
+      assert.equal(db.get('SELECT COUNT(*) AS n FROM users').n, 0);
+      db.close();
+      const kept = fs.readdirSync(dir).filter((f) => f.includes('.previous-'));
+      assert.equal(kept.length, 1);
+      fs.rmSync(dir, { recursive: true });
+    });
+
     test('foreign keys cascade and booleans/undefined bind safely', async () => {
       const db = await openDb(':memory:', { driver });
       db.run('INSERT INTO users (id,email,password_hash,created_at) VALUES (?,?,?,?)', 'u1', 'a@b.co', 'x', now());

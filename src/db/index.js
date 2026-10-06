@@ -110,6 +110,14 @@ export class Db {
   }
 }
 
+/** Tables exist, but this app's migration bookkeeping does not: not a database we created. */
+function isForeignDatabase(db) {
+  const has = (name) => Boolean(db.get("SELECT 1 AS x FROM sqlite_master WHERE type = 'table' AND name = ?", name));
+  if (!has('users')) return false;
+  if (!has('schema_migrations')) return true;
+  return db.get('SELECT COUNT(*) AS n FROM schema_migrations').n === 0;
+}
+
 function migrate(db) {
   db.exec('CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at INTEGER NOT NULL)');
   const applied = new Set(db.all('SELECT version FROM schema_migrations').map((r) => r.version));
@@ -132,6 +140,21 @@ function migrate(db) {
  */
 export async function openDb(file, { driver } = {}) {
   const db = new Db(await openDriver(file, driver));
+  if (file !== ':memory:' && isForeignDatabase(db)) {
+    // A database from an older ModaWard (or another app) sits at this path with tables we did not
+    // create. Never delete it and never migrate on top of it: set it aside and start clean.
+    db.close();
+    const aside = file.replace(/(\.db)?$/, `.previous-${new Date().toISOString().replace(/[:.]/g, '-')}.db`);
+    for (const suffix of ['', '-wal', '-shm', '-journal']) {
+      try {
+        fs.renameSync(file + suffix, aside + suffix);
+      } catch {
+        /* that sidecar file does not exist */
+      }
+    }
+    console.warn(`ModaWard: found an older database at ${file}; kept as ${aside} and started a new one.`);
+    return openDb(file, { driver });
+  }
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 5000');
   if (file !== ':memory:') {
