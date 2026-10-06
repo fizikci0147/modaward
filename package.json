@@ -7,7 +7,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "node --test --test-reporter=spec test/",
+    "test": "node scripts/test.mjs",
     "test:e2e": "node test/e2e/run.mjs",
     "check": "node scripts/check.mjs",
     "vendor": "node scripts/vendor.mjs",

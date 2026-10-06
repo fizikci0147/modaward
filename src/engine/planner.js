@@ -28,6 +28,8 @@ function difficulty(day) {
  * @param {object[]} args.garments
  * @param {object[]} args.days            normalised forecast days, chronological
  * @param {object|null} args.profile
+ * @param {object} [args.prefs]            prefs with learned taste (overrides profile)
+ * @param {Set<string>} [args.blockedKeys] outfits never to show
  * @param {{lastWorn?:Record<string,number>, recentKeys?:string[]}} [args.history]
  * @param {number[]} [args.workDays]      weekday numbers that count as work (default Mon–Fri)
  * @param {Record<string,string>} [args.occasions]  explicit occasion per date
@@ -52,6 +54,8 @@ export function planWeek(args) {
       day,
       occasion,
       profile: args.profile,
+      prefs: args.prefs,
+      blockedKeys: args.blockedKeys,
       history: args.history,
       avoid,
       seed: args.seed,

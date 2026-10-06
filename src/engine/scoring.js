@@ -75,7 +75,13 @@ export function styleScore(parts, prefs) {
     sum += garmentAffinity(parts.outer, prefs) * 0.8;
     weight += 0.8;
   }
-  return weight ? sum / weight : 0.5;
+  const declared = weight ? sum / weight : 0.5;
+  if (!prefs.taste) return declared;
+  // learned taste: what the person actually reacts to, blended with what they said in the quiz
+  const items = parts.outer ? [...mainPieces(parts), parts.outer] : mainPieces(parts);
+  const learned = prefs.taste.score(items);
+  const w = prefs.tasteWeight ?? 0.5;
+  return (1 - w) * declared + w * learned;
 }
 
 export function harmonyScore(parts) {

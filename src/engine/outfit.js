@@ -346,6 +346,8 @@ export function missingEssentials(garments) {
  * @param {object} args.day           normalised forecast day
  * @param {string} [args.occasion]
  * @param {object|null} [args.profile]
+ * @param {Set<string>} [args.blockedKeys]  outfits the person rejected; never returned
+ * @param {object} [args.prefs]       pre-built prefs (profile + learned taste); overrides profile
  * @param {{lastWorn?:Record<string,number>, recentKeys?:string[]}} [args.history]
  * @param {Map<string,number>} [args.avoid]
  * @param {number|string} [args.seed]
@@ -370,7 +372,7 @@ export function recommend(args) {
   };
   if (missing.length) return { outfits: [], tips, context: summary, missing };
 
-  const prefs = normalizePrefs(args.profile);
+  const prefs = args.prefs || normalizePrefs(args.profile);
   const lastWorn = new Map(Object.entries(args.history?.lastWorn || {}));
   const recentKeys = new Set(args.history?.recentKeys || []);
   const seed = hashString(`${args.seed ?? 'default'}|${ctx.date}|${occasion}`);
@@ -390,7 +392,9 @@ export function recommend(args) {
     rand
   });
 
-  const chosen = pickDiverse(results, args.count ?? 3);
+  const blocked = args.blockedKeys;
+  const allowed = blocked?.size ? results.filter((r) => !blocked.has(r.key)) : results;
+  const chosen = pickDiverse(allowed, args.count ?? 3);
   const outfits = chosen.map((r) => {
     const parts = { ...r.parts, accessories: pickAccessories(r.parts, ctx, occasion, prefs, accessories, rand) };
     const env = { ctx, occasion, prefs, lastWorn, avoid: args.avoid || new Map(), recentKeys, key: r.key };
