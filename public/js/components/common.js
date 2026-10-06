@@ -1,0 +1,186 @@
+import { html, useEffect, useRef, useState } from '/js/ui.js';
+import { Icon, Logo } from '/js/icons.js';
+import { useStore, dismissToast, closeUpgrade, toast, fail, state } from '/js/store.js';
+import { api } from '/js/api.js';
+import { navigate } from '/js/router.js';
+
+/** Bottom sheet on phones, centred dialog on desktop. Closes on Esc, scrim click and swipe-free. */
+export function Sheet({ title, onClose, children, footer, wide = false, label }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const prev = document.activeElement;
+    const onKey = (e) => {
+      if (e.key === 'Escape') onClose();
+      if (e.key === 'Tab' && ref.current) {
+        const f = [...ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((el) => !el.disabled && el.offsetParent !== null);
+        if (!f.length) return;
+        const first = f[0];
+        const last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) (e.preventDefault(), last.focus());
+        else if (!e.shiftKey && document.activeElement === last) (e.preventDefault(), first.focus());
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    ref.current?.querySelector('[data-autofocus]')?.focus();
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+      prev?.focus?.();
+    };
+  }, []);
+  return html`<div class="scrim" onMouseDown=${(e) => e.target === e.currentTarget && onClose()}>
+    <div class=${`sheet ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label=${label || title} ref=${ref}>
+      <div class="grab"></div>
+      <div class="sheet-head">
+        <h2 class="display h-s">${title}</h2>
+        <button class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} name="x" /></button>
+      </div>
+      <div class="sheet-body">${children}</div>
+      ${footer ? html`<div class="sheet-foot">${footer}</div>` : null}
+    </div>
+  </div>`;
+}
+
+export function Toasts() {
+  const { toasts } = useStore();
+  return html`<div class="toasts" role="status" aria-live="polite">
+    ${toasts.map((t) => html`<div class=${`toast ${t.kind === 'err' ? 'err' : ''}`} key=${t.id}>
+      <${Icon} name=${t.kind === 'err' ? 'info' : 'check'} />
+      <span>${t.message}</span>
+      ${t.action ? html`<button onClick=${() => { t.action.run(); dismissToast(t.id); }}>${t.action.label}</button>` : null}
+    </div>`)}
+  </div>`;
+}
+
+export const Spinner = ({ class: cls = '' }) => html`<span class=${`spinner ${cls}`} role="progressbar" aria-label="Loading"></span>`;
+
+export function Switch({ checked, onChange, label }) {
+  return html`<button type="button" class="switch" role="switch" aria-checked=${checked ? 'true' : 'false'} aria-label=${label} onClick=${() => onChange(!checked)}></button>`;
+}
+
+export function Empty({ title, text, children, art }) {
+  return html`<div class="empty">
+    ${art ? html`<div class="art-pair">${art}</div>` : null}
+    <div class="stack" style=${{ gap: '8px', justifyItems: 'center' }}>
+      <h2 class="display h-m">${title}</h2>
+      ${text ? html`<p class="muted" style=${{ maxWidth: '44ch' }}>${text}</p>` : null}
+    </div>
+    ${children}
+  </div>`;
+}
+
+const PRO_COPY = {
+  closet: ['An unlimited closet', 'Add every piece you own and get outfits built from all of it.'],
+  plan: ['Plan the whole week', 'See outfits for all seven days ahead, matched to each day’s forecast.'],
+  saved: ['Save every look', 'Keep as many looks as you like and come back to them any time.'],
+  pro: ['ModaWard Pro', 'The full stylist experience.']
+};
+
+export const PRO_FEATURES = [
+  'Unlimited closet and saved looks',
+  'Outfits planned for every day of the week',
+  'The full shopping feed: dozens of looks, mixed across brands',
+  'AI stylist notes and photo auto-tagging',
+  'Early access to new features'
+];
+
+export async function startCheckout(interval) {
+  try {
+    const { url } = await api.post('/billing/checkout', { interval });
+    location.href = url;
+  } catch (e) {
+    fail(e);
+    throw e;
+  }
+}
+
+export function UpgradeSheet() {
+  const { upgrade, capabilities } = useStore();
+  const [busy, setBusy] = useState('');
+  if (!upgrade) return null;
+  const [title, text] = PRO_COPY[upgrade.reason] || PRO_COPY.pro;
+  const go = async (interval) => {
+    setBusy(interval);
+    try {
+      await startCheckout(interval);
+    } catch {
+      setBusy('');
+    }
+  };
+  return html`<${Sheet} title=${title} onClose=${closeUpgrade} label="Upgrade to Pro">
+    <p class="muted" style=${{ marginTop: '-8px' }}>${upgrade.message || text}</p>
+    <ul class="stack" style=${{ gap: '10px' }}>
+      ${PRO_FEATURES.map((f) => html`<li class="row" style=${{ alignItems: 'flex-start' }}><${Icon} name="check" class="" size="18" /><span>${f}</span></li>`)}
+    </ul>
+    ${capabilities.billing
+      ? html`<div class="stack">
+          <button class="btn btn-primary btn-l btn-block" disabled=${!!busy} onClick=${() => go('year')}>${busy === 'year' ? html`<${Spinner} />` : 'Yearly · $59 (save 38%)'}</button>
+          <button class="btn btn-outline btn-block" disabled=${!!busy} onClick=${() => go('month')}>${busy === 'month' ? html`<${Spinner} />` : 'Monthly · $7.99'}</button>
+          <p class="footnote center">Cancel any time from your profile. Billed securely by Stripe.</p>
+        </div>`
+      : html`<div class="banner"><${Icon} name="info" />Online payments are not switched on for this site yet.</div>`}
+  </${Sheet}>`;
+}
+
+/** City search + "use my location". Used by onboarding, Today and Profile. */
+export function LocationPicker({ onPick, compact = false }) {
+  const [q, setQ] = useState('');
+  const [results, setResults] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const timer = useRef();
+
+  useEffect(() => {
+    clearTimeout(timer.current);
+    if (q.trim().length < 2) return setResults([]);
+    timer.current = setTimeout(async () => {
+      try {
+        setResults((await api.get(`/geo/search?q=${encodeURIComponent(q.trim())}`)).results);
+      } catch {
+        setResults([]);
+      }
+    }, 250);
+    return () => clearTimeout(timer.current);
+  }, [q]);
+
+  const locate = () => {
+    if (!navigator.geolocation) return toast('Your browser cannot share its location. Search for your city instead.', { kind: 'err' });
+    setBusy(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setBusy(false);
+        onPick({ name: 'Current location', lat: Number(pos.coords.latitude.toFixed(4)), lon: Number(pos.coords.longitude.toFixed(4)), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' });
+      },
+      () => {
+        setBusy(false);
+        toast('We could not get your location. Search for your city instead.', { kind: 'err' });
+      },
+      { timeout: 10000, maximumAge: 600000 }
+    );
+  };
+
+  return html`<div class="stack">
+    <div class="field">
+      ${compact ? null : html`<label for="city">City</label>`}
+      <div style=${{ position: 'relative' }}>
+        <input id="city" class="input" placeholder="Search for your city" autocomplete="off" value=${q} onInput=${(e) => setQ(e.target.value)} data-autofocus style=${{ paddingLeft: '42px' }} />
+        <${Icon} name="search" size="18" class="faint" style=${{ position: 'absolute', left: '14px', top: '14px' }} />
+      </div>
+    </div>
+    ${results.length ? html`<ul class="card" style=${{ overflow: 'hidden' }}>${results.map((r) => html`<li key=${r.name}><button class="row" style=${{ width: '100%', padding: '13px 16px', textAlign: 'left', borderBottom: '1px solid var(--line)' }} onClick=${() => onPick(r)}><${Icon} name="pin" size="18" class="faint" /><span>${r.name}</span></button></li>`)}</ul>` : null}
+    <button class="btn btn-outline" onClick=${locate} disabled=${busy}>${busy ? html`<${Spinner} />` : html`<${Icon} name="pin" />`} Use my current location</button>
+  </div>`;
+}
+
+export function Wordmark() {
+  return html`<span class="brand"><${Logo} size=${26} />ModaWard</span>`;
+}
+
+export function ProBadge() {
+  return html`<span class="badge badge-pro"><${Icon} name="crown" size="12" />Pro</span>`;
+}
+
+export function go(path) {
+  navigate(path);
+}
+export { state };

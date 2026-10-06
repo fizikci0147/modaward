@@ -1,0 +1,303 @@
+import { html, useState, useEffect, useRef, useMemo } from '/js/ui.js';
+import { api } from '/js/api.js';
+import { useStore, loadCloset, upsertGarment, removeGarment, toast, fail, openUpgrade, state } from '/js/store.js';
+import { Icon } from '/js/icons.js';
+import { GarmentArt } from '/js/components/art.js';
+import { Sheet, Spinner, Empty, Switch } from '/js/components/common.js';
+import { CATEGORIES, TYPES, typesFor, PATTERNS, WARMTH_LABELS, FORMALITY_LABELS } from '/shared/taxonomy.js';
+import { PALETTE, colorName, dominantColor } from '/shared/color.js';
+import { plural, cap } from '/js/format.js';
+import { useQuery, navigate } from '/js/router.js';
+
+/** Resize to ≤ 900px JPEG and detect the dominant colour. Everything stays in the browser until save. */
+export async function processPhoto(file) {
+  if (!/^image\/(jpeg|png|webp|heic|heif)$/i.test(file.type) && !/\.(jpe?g|png|webp|heic)$/i.test(file.name)) throw new Error('Choose a photo (JPEG, PNG or WebP).');
+  const bmp = await createImageBitmap(file).catch(() => null);
+  if (!bmp) throw new Error('That photo could not be read. Try a JPEG or PNG.');
+  const scale = Math.min(1, 900 / Math.max(bmp.width, bmp.height));
+  const w = Math.max(1, Math.round(bmp.width * scale));
+  const h = Math.max(1, Math.round(bmp.height * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+  ctx.drawImage(bmp, 0, 0, w, h);
+  // sample a small copy for the colour
+  const small = document.createElement('canvas');
+  small.width = 48;
+  small.height = 48;
+  const sctx = small.getContext('2d', { willReadFrequently: true });
+  sctx.drawImage(canvas, 0, 0, 48, 48);
+  const { data } = sctx.getImageData(0, 0, 48, 48);
+  return { dataUrl: canvas.toDataURL('image/jpeg', 0.84), color: dominantColor(data, 48, 48) };
+}
+
+const CAT_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory'];
+
+function Tile({ g, onOpen, onFav }) {
+  return html`<div class="tile enter">
+    <button class="tile-btn" onClick=${() => onOpen(g)} aria-label=${`Edit ${g.name}`}>
+      <div class="tile-art">${g.imageUrl ? html`<img src=${g.imageUrl} alt="" loading="lazy" decoding="async" />` : html`<${GarmentArt} type=${g.type} color=${g.color} pattern=${g.pattern} />`}</div>
+      <div class="tile-meta">
+        <span class="tile-name">${g.name}</span>
+        <span class="tile-sub">${TYPES[g.type]?.label}${g.wearCount ? ` · worn ${g.wearCount}×` : ' · not worn yet'}</span>
+      </div>
+    </button>
+    <button class=${`fav ${g.favorite ? 'on' : ''}`} onClick=${() => onFav(g)} aria-label=${g.favorite ? 'Remove from favourites' : 'Add to favourites'} aria-pressed=${g.favorite ? 'true' : 'false'}><${Icon} name="heart" /></button>
+  </div>`;
+}
+
+function Slider({ label, value, min, max, step = 0.5, labels, onChange, id }) {
+  return html`<div class="field">
+    <div class="spread"><label for=${id}>${label}</label><span class="small muted">${labels[Math.round(value)] || ''}</span></div>
+    <input id=${id} class="range" type="range" min=${min} max=${max} step=${step} value=${value} onInput=${(e) => onChange(Number(e.target.value))} />
+  </div>`;
+}
+
+export function GarmentSheet({ garment, onClose, caps }) {
+  const editing = Boolean(garment);
+  const [form, setForm] = useState(() => ({
+    type: garment?.type || 'tee',
+    color: garment?.color || '#1f2f54',
+    name: garment?.name || '',
+    pattern: garment?.pattern || 'solid',
+    warmth: garment?.warmth ?? TYPES.tee.warmth,
+    formality: garment?.formality ?? TYPES.tee.formality,
+    waterproof: garment?.waterproof ?? false,
+    brand: garment?.brand || '',
+    notes: garment?.notes || '',
+    favorite: garment?.favorite || false
+  }));
+  const [photo, setPhoto] = useState(null); // new dataUrl
+  const [preview, setPreview] = useState(garment?.imageUrl || null);
+  const [removePhoto, setRemovePhoto] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [analysing, setAnalysing] = useState(false);
+  const [touched, setTouched] = useState({});
+  const [over, setOver] = useState(false);
+  const fileRef = useRef(null);
+  const set = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  const pickType = (type) => {
+    const t = TYPES[type];
+    set({ type, ...(touched.warmth ? {} : { warmth: t.warmth }), ...(touched.formality ? {} : { formality: t.formality }), ...(touched.waterproof ? {} : { waterproof: Boolean(t.water) }) });
+  };
+
+  const onFile = async (file) => {
+    if (!file) return;
+    try {
+      const p = await processPhoto(file);
+      setPhoto(p.dataUrl);
+      setPreview(p.dataUrl);
+      setRemovePhoto(false);
+      if (p.color && !editing) set({ color: p.color });
+    } catch (e) {
+      toast(e.message, { kind: 'err' });
+    }
+  };
+
+  const analyse = async () => {
+    if (!photo) return;
+    setAnalysing(true);
+    try {
+      const { suggestion } = await api.post('/ai/analyze-garment', { image: photo });
+      setTouched({});
+      set({ type: suggestion.type, color: suggestion.color, name: suggestion.name || form.name, pattern: suggestion.pattern || 'solid', warmth: suggestion.warmth ?? TYPES[suggestion.type].warmth, formality: suggestion.formality ?? TYPES[suggestion.type].formality, waterproof: Boolean(suggestion.waterproof) });
+      toast('Filled in from your photo. Check it looks right.');
+    } catch (e) {
+      fail(e);
+    } finally {
+      setAnalysing(false);
+    }
+  };
+
+  const save = async () => {
+    setBusy(true);
+    try {
+      const body = { ...form, brand: form.brand, notes: form.notes };
+      if (!body.name) delete body.name;
+      let saved;
+      if (editing) {
+        saved = (await api.patch(`/garments/${garment.id}`, body)).garment;
+        if (photo) saved = (await api.put(`/garments/${garment.id}/photo`, { image: photo })).garment;
+        else if (removePhoto && garment.imageUrl) saved = (await api.del(`/garments/${garment.id}/photo`)).garment;
+      } else {
+        saved = (await api.post('/garments', { ...body, ...(photo ? { image: photo } : {}) })).garment;
+      }
+      upsertGarment(saved);
+      toast(editing ? 'Saved' : `${saved.name} added`);
+      onClose();
+    } catch (e) {
+      fail(e);
+      setBusy(false);
+    }
+  };
+
+  const del = async () => {
+    if (!confirm(`Remove “${garment.name}” from your closet?`)) return;
+    setBusy(true);
+    try {
+      await api.del(`/garments/${garment.id}`);
+      removeGarment(garment.id);
+      toast('Removed');
+      onClose();
+    } catch (e) {
+      fail(e);
+      setBusy(false);
+    }
+  };
+
+  const cname = colorName(form.color);
+  return html`<${Sheet} title=${editing ? 'Edit piece' : 'Add a piece'} onClose=${onClose} wide
+    footer=${html`${editing ? html`<button class="btn btn-danger" onClick=${del} disabled=${busy} aria-label="Delete"><${Icon} name="trash" /></button>` : null}<button class="btn btn-primary grow" onClick=${save} disabled=${busy}>${busy ? html`<${Spinner} />` : null}${editing ? 'Save changes' : 'Add to closet'}</button>`}>
+    <div class="size-row" style=${{ gridTemplateColumns: 'minmax(0, 220px) 1fr', alignItems: 'start' }}>
+      <div class="stack">
+        <div class=${`drop ${over ? 'over' : ''}`} role="button" tabindex="0" aria-label="Add a photo"
+          onClick=${() => fileRef.current?.click()}
+          onKeyDown=${(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), fileRef.current?.click())}
+          onDragOver=${(e) => (e.preventDefault(), setOver(true))} onDragLeave=${() => setOver(false)}
+          onDrop=${(e) => { e.preventDefault(); setOver(false); onFile(e.dataTransfer.files?.[0]); }}
+          style=${{ aspectRatio: '1', minHeight: 0 }}>
+          ${preview && !removePhoto ? html`<img src=${preview} alt="Your photo" />` : html`<${GarmentArt} type=${form.type} color=${form.color} pattern=${form.pattern} class="" />`}
+          ${!preview || removePhoto ? html`<span class="small" style=${{ position: 'absolute', bottom: '12px' }}><${Icon} name="camera" size="14" /> Add a photo</span>` : null}
+        </div>
+        <input ref=${fileRef} type="file" accept="image/*" capture=${undefined} hidden onChange=${(e) => { onFile(e.target.files?.[0]); e.target.value = ''; }} />
+        <div class="row-wrap">
+          <button class="btn btn-outline btn-s" onClick=${() => fileRef.current?.click()}><${Icon} name="upload" />${preview && !removePhoto ? 'Replace' : 'Upload'}</button>
+          ${preview && !removePhoto ? html`<button class="btn btn-ghost btn-s" onClick=${() => { setPhoto(null); setPreview(null); setRemovePhoto(true); }}>Remove</button>` : null}
+        </div>
+        ${photo && caps.vision ? html`<button class="btn btn-accent btn-s" onClick=${analyse} disabled=${analysing}>${analysing ? html`<${Spinner} />` : html`<${Icon} name="sparkle" />`}Auto-fill from photo</button>` : null}
+        ${photo && !caps.vision ? html`<p class="hint">Tip: we picked the colour from your photo. Choose the type below.</p>` : null}
+      </div>
+
+      <div class="stack-l">
+        <div class="field">
+          <span class="label">What is it?</span>
+          ${CAT_ORDER.map((cat) => html`<div key=${cat} class="stack" style=${{ gap: '8px', marginTop: '6px' }}>
+            <span class="eyebrow">${CATEGORIES[cat].label}</span>
+            <div class="type-grid">${typesFor(cat).map((t) => html`<button key=${t.id} class="type-opt" aria-pressed=${form.type === t.id ? 'true' : 'false'} onClick=${() => pickType(t.id)}><${GarmentArt} type=${t.id} color=${form.type === t.id ? form.color : '#b9b4a6'} pattern=${form.type === t.id ? form.pattern : 'solid'} />${t.label}</button>`)}</div>
+          </div>`)}
+        </div>
+
+        <div class="field">
+          <div class="spread"><span class="label">Colour</span><span class="small muted">${cap(cname)}</span></div>
+          <div class="swatches">
+            ${PALETTE.map((p) => html`<button key=${p.name} class="swatch" style=${{ background: p.hex }} aria-label=${p.name} title=${p.name} aria-pressed=${form.color === p.hex ? 'true' : 'false'} onClick=${() => set({ color: p.hex })}></button>`)}
+            <label class="swatch" style=${{ background: 'conic-gradient(red, yellow, lime, cyan, blue, magenta, red)', cursor: 'pointer', overflow: 'hidden' }} title="Custom colour"><span class="sr-only">Custom colour</span><input type="color" value=${form.color} onInput=${(e) => set({ color: e.target.value })} style=${{ opacity: 0, width: '100%', height: '100%', cursor: 'pointer' }} /></label>
+          </div>
+        </div>
+
+        <div class="field"><label for="g-name">Name <span class="faint">(optional)</span></label><input id="g-name" class="input" maxlength="80" placeholder=${`${cap(cname)} ${TYPES[form.type].label.toLowerCase()}`} value=${form.name} onInput=${(e) => set({ name: e.target.value })} /></div>
+
+        <div class="field"><span class="label">Pattern</span><div class="row-wrap">${PATTERNS.map((p) => html`<button key=${p} class="chip chip-s" aria-pressed=${form.pattern === p ? 'true' : 'false'} onClick=${() => set({ pattern: p })}>${cap(p)}</button>`)}</div></div>
+
+        <${Slider} id="g-warm" label="Warmth" value=${form.warmth} min=${0.5} max=${5} labels=${WARMTH_LABELS} onChange=${(v) => { setTouched((t) => ({ ...t, warmth: true })); set({ warmth: v }); }} />
+        <${Slider} id="g-formal" label="Dressiness" value=${form.formality} min=${1} max=${5} labels=${FORMALITY_LABELS} onChange=${(v) => { setTouched((t) => ({ ...t, formality: true })); set({ formality: v }); }} />
+
+        <div class="spread"><div><div class="label">Waterproof</div><div class="hint">Keeps you dry in the rain</div></div><${Switch} label="Waterproof" checked=${form.waterproof} onChange=${(v) => { setTouched((t) => ({ ...t, waterproof: true })); set({ waterproof: v }); }} /></div>
+        <div class="spread"><div><div class="label">Favourite</div><div class="hint">Favourites are chosen more often</div></div><${Switch} label="Favourite" checked=${form.favorite} onChange=${(v) => set({ favorite: v })} /></div>
+
+        <div class="size-row">
+          <div class="field"><label for="g-brand">Brand</label><input id="g-brand" class="input" maxlength="40" value=${form.brand} onInput=${(e) => set({ brand: e.target.value })} /></div>
+          <div class="field"><label for="g-notes">Notes</label><input id="g-notes" class="input" maxlength="300" value=${form.notes} onInput=${(e) => set({ notes: e.target.value })} /></div>
+        </div>
+      </div>
+    </div>
+  </${Sheet}>`;
+}
+
+export function ClosetView() {
+  const { garments, entitlements, capabilities, profile } = useStore();
+  const q = useQuery();
+  const [cat, setCat] = useState('all');
+  const [search, setSearch] = useState('');
+  const [sheet, setSheet] = useState(q.get('add') ? 'add' : null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadCloset().catch(setError);
+  }, []);
+  useEffect(() => {
+    if (q.get('add')) navigate('/closet', { replace: true });
+  }, []);
+
+  const counts = useMemo(() => {
+    const c = { all: garments?.length || 0 };
+    for (const g of garments || []) c[g.category] = (c[g.category] || 0) + 1;
+    return c;
+  }, [garments]);
+
+  const shown = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return (garments || []).filter((g) => (cat === 'all' || g.category === cat) && (!term || `${g.name} ${g.brand} ${TYPES[g.type]?.label} ${g.colorName}`.toLowerCase().includes(term)));
+  }, [garments, cat, search]);
+
+  const limit = entitlements?.closetLimit;
+  const full = limit != null && (garments?.length || 0) >= limit;
+  const openAdd = () => (full ? openUpgrade('closet') : setSheet('add'));
+
+  const fav = async (g) => {
+    upsertGarment({ ...g, favorite: !g.favorite });
+    try {
+      await api.patch(`/garments/${g.id}`, { favorite: !g.favorite });
+    } catch (e) {
+      upsertGarment(g);
+      fail(e);
+    }
+  };
+
+  const starter = async () => {
+    setBusy(true);
+    try {
+      await api.post('/garments/starter', {});
+      await loadCloset(true);
+      toast('Starter wardrobe added. Replace pieces with your own any time.');
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (error) return html`<div class="card card-pad stack center"><p>${error.message}</p><div><button class="btn btn-outline" onClick=${() => (setError(null), loadCloset(true).catch(setError))}>Try again</button></div></div>`;
+  if (!garments) return html`<div class="stack-l"><div class="skel" style=${{ height: '60px', width: '50%' }}></div><div class="grid">${[1, 2, 3, 4, 5, 6, 7, 8].map((i) => html`<div key=${i} class="skel" style=${{ aspectRatio: '0.85' }}></div>`)}</div></div>`;
+
+  return html`<div class="stack-l">
+    <header class="spread enter" style=${{ alignItems: 'flex-end', flexWrap: 'wrap' }}>
+      <div class="stack" style=${{ gap: '6px' }}>
+        <h1 class="display h-xl">Your closet</h1>
+        <p class="muted">${plural(garments.length, 'piece')}${limit != null ? ` of ${limit} on the free plan` : ''}</p>
+      </div>
+      <button class="btn btn-primary" onClick=${openAdd}><${Icon} name="plus" />Add a piece</button>
+    </header>
+
+    ${full ? html`<div class="upsell enter"><div class="grow"><b>Your closet is full</b><p>Pro has no limit, so every piece you own can be part of an outfit.</p></div><button class="btn btn-s" onClick=${() => openUpgrade('closet')}>See Pro</button></div>` : null}
+
+    ${garments.length === 0
+      ? html`<${Empty} title="Nothing here yet" text="Start with a starter wardrobe to see the outfits right away, or add your own pieces one by one. A photo is optional: we can pick the colour from it."
+          art=${html`<${GarmentArt} type="shirt" color="#8fa9c8" /><${GarmentArt} type="chinos" color="#a39a6a" /><${GarmentArt} type="loafers" color="#6b4a32" />`}>
+          <div class="row-wrap" style=${{ justifyContent: 'center' }}>
+            <button class="btn btn-primary" onClick=${openAdd}><${Icon} name="plus" />Add a piece</button>
+            <button class="btn btn-outline" onClick=${starter} disabled=${busy}>${busy ? html`<${Spinner} />` : null}Start with a starter wardrobe</button>
+          </div>
+        </${Empty}>`
+      : html`<div class="stack enter enter-2">
+          <div style=${{ position: 'relative', maxWidth: '420px' }}>
+            <input class="input" type="search" placeholder="Search your closet" aria-label="Search your closet" value=${search} onInput=${(e) => setSearch(e.target.value)} style=${{ paddingLeft: '42px' }} />
+            <${Icon} name="search" size="18" class="faint" style=${{ position: 'absolute', left: '14px', top: '14px' }} />
+          </div>
+          <div class="chips-scroll" role="group" aria-label="Filter by category">
+            <button class="chip" aria-pressed=${cat === 'all' ? 'true' : 'false'} onClick=${() => setCat('all')}>All ${counts.all}</button>
+            ${CAT_ORDER.filter((c) => counts[c]).map((c) => html`<button key=${c} class="chip" aria-pressed=${cat === c ? 'true' : 'false'} onClick=${() => setCat(c)}>${CATEGORIES[c].label} ${counts[c]}</button>`)}
+          </div>
+        </div>
+        ${shown.length
+          ? html`<div class="grid wide">${shown.map((g) => html`<${Tile} key=${g.id} g=${g} onOpen=${(x) => setSheet(x)} onFav=${fav} />`)}<button class="tile tile-add" onClick=${openAdd}><${Icon} name="plus" /><span>Add a piece</span></button></div>`
+          : html`<${Empty} title="No matches" text="Try a different search or category." />`}`}
+
+    ${sheet ? html`<${GarmentSheet} garment=${sheet === 'add' ? null : sheet} caps=${{ vision: capabilities.vision && entitlements?.photoTagging }} onClose=${() => setSheet(null)} />` : null}
+  </div>`;
+}
