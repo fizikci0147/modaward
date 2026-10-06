@@ -187,6 +187,17 @@ describe('shop API', () => {
     assert.ok(!looks.some((l) => l.pieces.some((p) => ['skirt', 'dress', 'heels', 'blouse'].includes(p.type))));
   });
 
+  test('identical requests are served from cache (no second CPU-heavy build); any change recomputes', async () => {
+    const { c } = await user({ pro: true });
+    const before = t.deps.shop.stats.computed;
+    await c.post('/api/shop/looks', { seed: 'memo', limit: 8 });
+    await c.post('/api/shop/looks', { seed: 'memo', limit: 8 });
+    assert.equal(t.deps.shop.stats.computed, before + 1);
+    await c.post('/api/garments', { type: 'tee', color: '#ffffff' });
+    await c.post('/api/shop/looks', { seed: 'memo', limit: 8 });
+    assert.equal(t.deps.shop.stats.computed, before + 2);
+  });
+
   test('the same seed returns the same looks; a new seed returns different ones', async () => {
     const { c } = await user({ pro: true });
     const ids = async (seed) => (await c.post('/api/shop/looks', { seed, limit: 10 })).json.looks.map((l) => l.id);

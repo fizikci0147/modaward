@@ -207,9 +207,9 @@ A.sandal = {
     `<path d="M10 83 H94" stroke="${c.dark}" stroke-width="2.4" opacity=".4"/>`
 };
 A.heel = {
-  vb: '8 20 94 78',
-  full: ['M12 34 Q12 28 18 28 Q22 28 26 36 Q36 52 56 60 Q76 66 92 68 Q99 69 98 75 Q96 80 88 79 L58 76 Q40 74 30 64 L27 56 Q20 52 16 48 Q12 42 12 34 Z', 'M21 50 L25 94 H31 L33 62 Z'],
-  detail: (c) => `<path d="M14 36 Q16 30 22 32 Q30 50 54 58" stroke="${c.light}" stroke-width="1.1" fill="none" opacity=".7"/><path d="M58 76 L88 79" stroke="${c.dark}" stroke-width="1.6" opacity=".5"/><path d="M25 94 H31" stroke="${c.dark}" stroke-width="2.4" opacity=".7"/>`
+  vb: '4 24 100 76',
+  full: ['M10 38 Q10 30 18 30 Q24 30 27 38 Q34 54 52 62 Q68 68 88 70 Q99 72 99 79 Q98 85 88 85 L62 84 Q48 83 40 76 Q33 69 29 62 Q18 60 12 52 Q10 46 10 38 Z', 'M17 52 L22 96 H28 L31 66 Z'],
+  detail: (c) => `<path d="M12 37 Q14 32 19 33 Q24 35 27 41" stroke="${c.light}" stroke-width="1.2" fill="none" opacity=".8"/><path d="M62 84 L90 85" stroke="${c.dark}" stroke-width="1.8" opacity=".55"/><path d="M22 96 H28" stroke="${c.dark}" stroke-width="2.4" opacity=".75"/><path d="M52 62 Q70 70 90 72" stroke="${c.light}" stroke-width="1" fill="none" opacity=".5"/>`
 };
 // ── accessories ─────────────────────────────────────────────────────────
 A.scarf = {

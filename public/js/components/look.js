@@ -20,7 +20,8 @@ function PieceImage({ p }) {
 export function Collage({ look }) {
   const main = [...look.pieces].filter((p) => p.slot !== 'accessory').sort((a, b) => SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot]);
   const withPhotos = main.filter((p) => p.product?.image || p.imageUrl).length;
-  if (withPhotos < 2) return html`<div class="collage"><${OutfitArt} items=${look.pieces} label=${`Illustration of ${look.title}`} /></div>`;
+  // a collage of mostly illustrations looks patchy: use real photos only when most pieces have one
+  if (withPhotos < Math.min(3, main.length)) return html`<div class="collage"><${OutfitArt} items=${look.pieces} label=${`Illustration of ${look.title}`} /></div>`;
   const cells = main.slice(0, 4);
   return html`<div class="collage" role="img" aria-label=${`Collage for ${look.title}`}>
     <div class=${`collage-grid n${Math.min(4, Math.max(2, cells.length))}`}>

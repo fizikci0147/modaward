@@ -21,7 +21,7 @@ const weekSchema = object({ seed: optional(string({ max: 40 }), undefined) });
 export function outfitRoutes({ outfits, repos }) {
   const r = Router();
   r.use(['/weather', '/outfits', '/plan'], requireUser);
-  const heavy = rateLimit({ windowMs: 60_000, max: 60, key: (req) => req.user.id, message: 'You are asking for outfits very quickly. Take a breath and try again.' });
+  const heavy = rateLimit({ windowMs: 60_000, max: 40, key: (req) => req.user.id, message: 'You are asking for outfits very quickly. Take a breath and try again.' });
 
   r.get('/weather', async (req, res) => res.json(await outfits.forecast(req.user)));
   r.post('/outfits/recommend', heavy, async (req, res) => res.json(await outfits.forDay(req.user, recommendSchema(req.body))));

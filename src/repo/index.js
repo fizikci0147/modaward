@@ -54,7 +54,8 @@ export function garmentFromRow(r) {
     archived: Boolean(r.archived),
     wearCount: r.wear_count ?? 0,
     lastWornOn: r.last_worn ?? null,
-    createdAt: r.created_at
+    createdAt: r.created_at,
+    updatedAt: r.updated_at
   };
 }
 

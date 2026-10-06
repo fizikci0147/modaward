@@ -16,6 +16,8 @@ for (const driver of ['node:sqlite', 'better-sqlite3']) {
       assert.equal(db.driver, driver);
       const tables = db.all("SELECT name FROM sqlite_master WHERE type='table'").map((r) => r.name);
       for (const t of ['users', 'sessions', 'garments', 'wear_log', 'catalog_products', 'schema_migrations']) assert.ok(tables.includes(t), t);
+      const indexes = db.all("SELECT name FROM sqlite_master WHERE type='index'").map((r) => r.name);
+      assert.ok(indexes.includes('idx_wear_garment'));
       db.close();
     });
 

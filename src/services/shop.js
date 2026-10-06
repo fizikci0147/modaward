@@ -9,6 +9,7 @@ import { TYPES, withDefaults } from '../shared/taxonomy.js';
 import { entitlements } from './plans.js';
 import { HttpError, badRequest, notFound, paymentRequired } from '../util/errors.js';
 import { colorName } from '../shared/color.js';
+import { hashString } from '../engine/rng.js';
 
 const forecastNeeded = () => new HttpError(409, 'location_required', 'Set your location so we can tailor looks to the weather.');
 
@@ -27,26 +28,39 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
     return w.days;
   }
 
+  // Building looks is CPU-bound (~1s of synchronous work), so identical requests are answered from
+  // a short-lived cache. The key covers everything that changes the result.
+  const memo = new Map();
+  const stats = { computed: 0 };
+
   return {
+    stats,
     async looks(user, { kind = 'both', storeMode, occasions, seed, limit = 18, curate = true } = {}) {
       const profile = repos.profiles.get(user.id);
       const ent = entitlements(user, config);
       const forecast = await days(profile);
       const cap = ent.shopLooks;
+      const wardrobe = repos.garments.list(user.id);
+      const taste = repos.profiles.getTaste(user.id);
+      const blocked = repos.feedback.blockedLooks(user.id);
+      const memoKey = hashString(JSON.stringify([user.id, kind, storeMode, occasions, seed, limit, curate, ent.plan, forecast[0].date, profile, wardrobe.map((g) => [g.id, g.updatedAt, g.favorite]), taste.n, blocked.size])).toString(36);
+      const hit = memo.get(memoKey);
+      if (hit && Date.now() - hit.at < 120_000) return hit.value;
+      stats.computed += 1;
       const built = buildLooks({
         profile,
-        wardrobe: repos.garments.list(user.id),
+        wardrobe,
         days: forecast,
         catalog,
         linker,
-        tasteState: repos.profiles.getTaste(user.id),
+        tasteState: taste,
         kind,
         storeMode,
         occasions,
         seed,
         // build a full feed even for free users so the number locked is honest
         limit: Math.max(limit, cap),
-        blocked: repos.feedback.blockedLooks(user.id)
+        blocked
       });
       let looks = built.looks;
       let note = null;
@@ -60,7 +74,10 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       const total = looks.length;
       const visible = looks.slice(0, Math.min(limit, cap));
       for (const l of visible) repos.looks.remember(user.id, l.id, l);
-      return { looks: visible, locked: Math.max(0, total - visible.length), reference: built.reference, occasions: built.occasions, storeMode: built.storeMode, usingProducts: built.usingProducts, stylistNote: note, plan: ent.plan };
+      const value = { looks: visible, locked: Math.max(0, total - visible.length), reference: built.reference, occasions: built.occasions, storeMode: built.storeMode, usingProducts: built.usingProducts, stylistNote: note, plan: ent.plan };
+      memo.set(memoKey, { at: Date.now(), value });
+      if (memo.size > 300) memo.delete(memo.keys().next().value);
+      return value;
     },
 
     async gaps(user, { storeMode } = {}) {

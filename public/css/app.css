@@ -562,3 +562,5 @@ ul { margin: 0; padding: 0; list-style: none; }
 .noscript { padding: 40px; }
 .offline { min-height: 100dvh; }
 .narrow-text { max-width: 36ch; }
+
+.piece-row .nm { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
