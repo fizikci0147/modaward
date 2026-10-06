@@ -275,7 +275,12 @@ export function createRepos(db) {
       db.run('INSERT INTO saved_looks (id,user_id,kind,payload,created_at) VALUES (?,?,?,?,?)', id, userId, kind, JSON.stringify(payload), now());
       return id;
     },
-    list: (userId) => db.all('SELECT * FROM saved_looks WHERE user_id = ? ORDER BY created_at DESC LIMIT 200', userId).map((r) => ({ id: r.id, kind: r.kind, createdAt: r.created_at, ...parse(r.payload, {}) })),
+    list: (userId) =>
+      db.all('SELECT * FROM saved_looks WHERE user_id = ? ORDER BY created_at DESC LIMIT 200', userId).map((r) => {
+        const payload = parse(r.payload, {});
+        // the saved-item id must win over the look's own id
+        return { ...payload, lookId: payload.id, id: r.id, kind: r.kind, createdAt: r.created_at };
+      }),
     remove: (userId, id) => db.run('DELETE FROM saved_looks WHERE id = ? AND user_id = ?', id, userId).changes > 0,
     count: (userId) => db.get('SELECT COUNT(*) AS n FROM saved_looks WHERE user_id = ?', userId).n
   };

@@ -37,8 +37,11 @@ export function createLinker({ secret, affiliates = {} }) {
       }
       if (parsed.protocol !== 'https:') return null;
       const host = hostOf(u);
-      const allowed = host === retailer.domain || host.endsWith(`.${retailer.domain}`) || host === 'www.google.com';
-      if (!allowed) return null;
+      // Search links must stay on the retailer (or Google's site: fallback). Product links come from
+      // imported affiliate feeds and often point at a network's tracking domain, so for those the
+      // signature, which only this server can mint, is the guarantee.
+      const onRetailer = host === retailer.domain || host.endsWith(`.${retailer.domain}`) || host === 'www.google.com';
+      if (k !== 'product' && !onRetailer) return null;
       return { retailer, destination: affiliateUrl(affiliates, r, u, k), kind: k, host };
     }
   };

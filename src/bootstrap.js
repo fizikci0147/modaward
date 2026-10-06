@@ -8,6 +8,9 @@ import { createWeatherService, openMeteoProvider, mockProvider } from './service
 import { createOutfitService } from './services/outfits.js';
 import { persistentSecret } from './services/secrets.js';
 import { createLinker } from './shop/links.js';
+import { createCatalog } from './shop/catalog.js';
+import { createShopService } from './services/shop.js';
+import { shopRoutes } from './http/routes/shop.js';
 import { createApp } from './app.js';
 
 /**
@@ -27,7 +30,10 @@ export async function createDeps(config, overrides = {}) {
   const linker = createLinker({ secret: persistentSecret(config.dataDir, 'link', config.linkSecret), affiliates: overrides.affiliates ?? {} });
 
   const deps = { config, db, repos, log, images, mailer, weather, linker, extraApiRoutes: [], capabilities: {}, ...overrides.extra };
+  deps.catalog = createCatalog(db);
   deps.outfits = createOutfitService({ repos, weather, config, stylist: deps.stylist ?? null });
+  deps.shop = createShopService({ repos, weather, catalog: deps.catalog, linker, config, stylist: deps.stylist ?? null });
+  deps.extraApiRoutes.push((api) => api.use(shopRoutes(deps)));
   return deps;
 }
 

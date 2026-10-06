@@ -37,7 +37,7 @@ export function prepareGarments(list) {
     if (raw.archived) continue;
     const g = withDefaults(raw);
     if (!g.category || !g.color) continue;
-    out.push({ ...g, _colorName: colorName(g.color) });
+    out.push({ ...g, colorName: g.colorName ?? colorName(g.color), _colorName: colorName(g.color) });
   }
   return out;
 }
@@ -83,6 +83,29 @@ function quickRank(items, env, limit, mustKeep) {
 }
 
 /**
+ * Shortlist a large set while keeping variety: best-ranked first, but no single garment type
+ * may fill more than its share, so a pool of 100 white tees cannot crowd out every other top.
+ */
+function diverseShortlist(items, limit, env, mustKeep) {
+  const occ = OCCASIONS[env.occasion] || OCCASIONS.casual;
+  const ranked = items
+    .map((g) => ({ g, v: 0.5 * Math.exp(-(((g.formality - occ.formality) / 1.4) ** 2)) + 0.5 * garmentAffinity(g, env.prefs) + (mustKeep?.(g) ? 1 : 0) }))
+    .sort((a, b) => b.v - a.v);
+  const types = new Set(items.map((g) => g.type));
+  const perType = Math.max(2, Math.ceil(limit / Math.max(1, types.size)) + 1);
+  const counts = new Map();
+  const out = [];
+  for (const { g } of ranked) {
+    const n = counts.get(g.type) || 0;
+    if (n >= perType) continue;
+    counts.set(g.type, n + 1);
+    out.push(g);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
+/**
  * Generate and fully score candidate outfits.
  *
  * @param {object} args
@@ -96,15 +119,22 @@ function quickRank(items, env, limit, mustKeep) {
  * @param {() => number} args.rand
  * @param {(parts: object) => boolean} [args.accept]   hard filter on final candidates
  * @param {(parts: object) => number} [args.bonus]     additive score adjustment (0–~0.2)
+ * @param {(core: object) => number} [args.coreBonus]   additive stage-1 adjustment (lets looks built around owned items surface)
  * @param {(g: object) => boolean} [args.mustKeep]    items never dropped by shortlisting
+ * @param {{tops?:number,bottoms?:number,dresses?:number}} [args.caps]  shortlist sizes for very large pools
  */
 export function generate(args) {
   const { garments, ctx, occasion, prefs, lastWorn, avoid, recentKeys, rand } = args;
   const env = { ctx, occasion, prefs, lastWorn, avoid, recentKeys, key: '' };
 
-  const tops = byCategory(garments, 'top');
-  const bottoms = byCategory(garments, 'bottom');
-  const dresses = byCategory(garments, 'dress');
+  const caps = args.caps || {};
+  const keepAlways = (g) => (heavyWetKeep(g) || args.mustKeep?.(g));
+  const heavyWetKeep = (g) => (ctx.rain === 'heavy' || ctx.snow) && g.waterproof;
+  const cap = (items, limit) => (limit && items.length > limit ? diverseShortlist(items, limit, env, keepAlways) : items);
+
+  const tops = cap(byCategory(garments, 'top'), caps.tops);
+  const bottoms = cap(byCategory(garments, 'bottom'), caps.bottoms);
+  const dresses = cap(byCategory(garments, 'dress'), caps.dresses);
   const outers = byCategory(garments, 'outerwear');
   const shoes = byCategory(garments, 'shoes');
 
@@ -143,6 +173,7 @@ export function generate(args) {
     const sty = styleScore(parts, prefs);
     const fresh = freshnessScore(parts, '', lastWorn, avoid, new Set());
     const s1 =
+      (args.coreBonus ? args.coreBonus(core) : 0) +
       WEIGHTS.thermal * bestThermal +
       WEIGHTS.occasion * occ +
       WEIGHTS.harmony * col +

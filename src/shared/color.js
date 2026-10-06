@@ -113,8 +113,8 @@ export const colorName = (hex) => nearestSwatch(hex).name;
 export function colorRole(hex) {
   const { h, s, l } = hexToHsl(hex);
   if (l < 0.14 || l > 0.9 || s < 0.14) return 'neutral';
-  // navy & denim blues
-  if (h >= 200 && h <= 250 && l < 0.5 && s < 0.65) return 'neutral';
+  // navy, denim and washed-out blues behave as neutrals (jeans go with everything)
+  if (h >= 195 && h <= 250 && ((l < 0.5 && s < 0.65) || s < 0.45)) return 'neutral';
   // warm tans, camel, brown, khaki
   if (h >= 20 && h <= 55 && s < 0.5 && l < 0.82) return 'neutral';
   return 'accent';
