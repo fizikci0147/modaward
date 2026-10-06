@@ -110,6 +110,7 @@ export function App() {
   else if (path === '/welcome') page = html`<${WelcomeView} />`;
   else if (path === '/pro') page = html`<${Shell} path=${path}><${ProView} /></${Shell}>`;
   else if (path === '/admin' && user.isAdmin) page = html`<${Shell} path=${path}><${AdminView} /></${Shell}>`;
+  else if (path === '/admin') page = html`<${Shell} path=${path}><div class="empty"><h1 class="display h-l">Not an admin account</h1><p class="muted">You are signed in as <b>${user.email}</b>. The admin tools open for the addresses listed in the server setting ADMIN_EMAILS. Add this address there, restart the app, then sign out and back in.</p><${Link} href="/" class="btn btn-primary">Back to today</${Link}></div></${Shell}>`;
   else {
     const view = { '/': TodayView, '/week': WeekView, '/closet': ClosetView, '/shop': ShopView, '/style': ProfileView }[path];
     page = view
