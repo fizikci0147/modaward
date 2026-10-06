@@ -30,11 +30,18 @@ describe('API', () => {
       assert.equal(res.headers.get('x-powered-by'), null);
     });
 
-    test('unknown API routes return JSON 404, unknown pages fall back to the SPA shell', async () => {
+    test('unknown API routes return JSON 404, unknown pages fall back to the SPA shell, dotfiles 404', async () => {
       const c = t.client();
       const api = await c.get('/api/nope');
       assert.equal(api.status, 404);
       assert.equal(api.json.error.code, 'not_found');
+      const page = await c.raw('GET', '/closet', undefined, { accept: 'text/html' });
+      assert.equal(page.status, 200);
+      assert.match(page.text, /<div id="root">/);
+      for (const probe of ['/.env', '/.git/config', '/src/config.js', '/package.json', '/data/modaward.db', '/server.js']) {
+        const r = await c.raw('GET', probe, undefined, { accept: 'text/html' });
+        assert.equal(r.status, 404, probe);
+      }
     });
   });
 

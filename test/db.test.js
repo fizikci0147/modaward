@@ -5,8 +5,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { openDb, now } from '../src/db/index.js';
 
+const hasNodeSqlite = await import('node:sqlite').then(() => true, () => false);
+const hasBetterSqlite = await import('better-sqlite3').then(() => true, () => false);
+
 for (const driver of ['node:sqlite', 'better-sqlite3']) {
-  describe(`database (${driver})`, () => {
+  const available = driver === 'node:sqlite' ? hasNodeSqlite : hasBetterSqlite;
+  describe(`database (${driver})`, { skip: available ? false : `${driver} is not available on this Node.js` }, () => {
     test('opens, migrates and reports the driver', async () => {
       const db = await openDb(':memory:', { driver });
       assert.equal(db.driver, driver);

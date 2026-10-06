@@ -91,7 +91,8 @@ export function createApp(deps) {
 
   // ── single-page app fallback ──
   app.use((req, res, next) => {
-    if ((req.method !== 'GET' && req.method !== 'HEAD') || path.extname(req.path) || !req.accepts('html')) return next();
+    // dotfile probes (/.env, /.git/config) get a plain 404, never the app shell
+    if ((req.method !== 'GET' && req.method !== 'HEAD') || path.extname(req.path) || /(^|\/)\./.test(req.path) || !req.accepts('html')) return next();
     res.setHeader('Cache-Control', 'no-cache');
     res.sendFile(path.join(config.publicDir, 'index.html'));
   });

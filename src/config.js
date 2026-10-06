@@ -76,7 +76,7 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
     ai: {
       apiKey: str(env.ANTHROPIC_API_KEY),
       model: str(env.AI_MODEL, 'claude-opus-5-5'),
-      dailyLimitPerUser: int(env.AI_DAILY_LIMIT, 40),
+      dailyLimitPerUser: int(env.AI_DAILY_LIMIT, 12),
       dailyLimitGlobal: int(env.AI_GLOBAL_DAILY_LIMIT, 2000)
     },
 

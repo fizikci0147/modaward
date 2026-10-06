@@ -1,7 +1,7 @@
 {
   "name": "modaward",
   "version": "5.0.0",
-  "description": "ModaWard — weather-aware outfit planner with a digital closet and multi-retailer style recommendations.",
+  "description": "ModaWard \u2014 weather-aware outfit planner with a digital closet and multi-retailer style recommendations.",
   "private": true,
   "main": "server.js",
   "scripts": {
@@ -14,7 +14,8 @@
     "icons": "node scripts/icons.mjs",
     "backup": "node scripts/backup.mjs",
     "catalog:import": "node scripts/import-feed.mjs",
-    "package": "node scripts/package.mjs"
+    "package": "node scripts/package.mjs",
+    "live:check": "node scripts/live-check.mjs"
   },
   "engines": {
     "node": ">=20.19.0"

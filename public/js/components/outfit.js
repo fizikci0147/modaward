@@ -25,6 +25,7 @@ export function OutfitCard({ outfit, occasionLabel, pager, worn, busy, onWear, o
       </div>
 
       ${stylistNote ? html`<p class="display" style=${{ fontSize: '22px', lineHeight: 1.2 }}>${stylistNote}</p>` : null}
+      ${outfit.note ? html`<p class="stylist-note"><${Icon} name="sparkle" size="15" /><span><b>Your stylist:</b> ${outfit.note}</span></p>` : null}
 
       <ul class="reasons">
         ${outfit.reasons.map((r) => html`<li key=${r.text}><${Icon} name=${REASON_ICON[r.kind] || 'check'} /><span>${r.text}</span></li>`)}

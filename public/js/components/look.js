@@ -93,6 +93,7 @@ export function LookCard({ look, saved, onSaved, onUnsave, onHide, readOnly = fa
         <span class="eyebrow">${look.archetypeLabel}</span>
         <h3 class="look-title">${look.title}</h3>
       </div>
+      ${look.note ? html`<p class="stylist-note"><${Icon} name="sparkle" size="15" /><span><b>Your stylist:</b> ${look.note}</span></p>` : null}
       <ul class="reasons">${look.reasons.slice(0, 3).map((r) => html`<li key=${r}><${Icon} name="check" /><span>${r}</span></li>`)}</ul>
       <ul class="piece-rows">${look.pieces.map((p, i) => html`<${PieceRow} key=${p.slot + p.name} p=${p} onDislikePiece=${readOnly ? null : () => send('dislike', { pieceIndex: i }).then(() => toast('We’ll avoid pieces like that.')).catch(() => {})} />`)}</ul>
       <div class="spread" style=${{ flexWrap: 'wrap' }}>

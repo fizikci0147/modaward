@@ -83,6 +83,22 @@ function TagInput({ values, onChange, placeholder, max = 15, label }) {
   </div>`;
 }
 
+function StyleDna() {
+  const [d, setD] = useState(null);
+  useEffect(() => { api.get('/insights').then(setD).catch(() => {}); }, []);
+  if (!d) return null;
+  const total = d.palette.reduce((n, p) => n + p.count, 0) || 1;
+  return html`<section class="card section-card enter">
+    <div class="spread" style=${{ alignItems: 'flex-start' }}><div class="stack" style=${{ gap: '6px' }}><h2 class="display h-m">Your style DNA</h2><p class="muted small" style=${{ maxWidth: '60ch' }}>${d.signals >= 3 ? `Learned from ${plural(d.signals, 'reaction')}. The more you love and skip, the sharper it gets.` : 'Love or skip a few outfits and looks, and what we learn about your taste will appear here.'}</p></div>${d.signals ? html`<span class="badge">${d.confidence}% confident</span>` : null}</div>
+    ${d.palette.length ? html`<div class="stack" style=${{ gap: '10px' }}><span class="label">Your closet’s palette</span><div class="dna-bar" role="img" aria-label=${`Closet palette: ${d.palette.map((p) => p.name).join(', ')}`}>${d.palette.map((p) => html`<span key=${p.name} title=${p.name} style=${{ background: p.hex, flexGrow: p.count / total * 100 }}></span>`)}</div><div class="small muted">${d.closet.neutralShare}% neutrals${d.closet.neverWorn ? ` · ${plural(d.closet.neverWorn, 'piece')} not worn yet` : ''}</div></div>` : null}
+    ${d.loves.length || d.avoids.length ? html`<div class="size-row">
+      ${d.loves.length ? html`<div class="stack" style=${{ gap: '8px' }}><span class="label">You tend to love</span><div class="row-wrap">${d.loves.map((t) => html`<span class="badge badge-ok" key=${t}>${t}</span>`)}</div></div>` : null}
+      ${d.avoids.length ? html`<div class="stack" style=${{ gap: '8px' }}><span class="label">You tend to skip</span><div class="row-wrap">${d.avoids.map((t) => html`<span class="badge badge-clay" key=${t}>${t}</span>`)}</div></div>` : null}
+    </div>` : null}
+    ${d.archetypes.length ? html`<div class="stack" style=${{ gap: '10px' }}><span class="label">What your closet says</span>${d.archetypes.map((a) => html`<div key=${a.id} class="stack" style=${{ gap: '4px' }}><div class="spread small"><span>${a.label}</span><span class="muted num">${a.share}%</span></div><div class="meter"><i style=${{ width: `${a.share}%` }}></i></div></div>`)}</div>` : null}
+  </section>`;
+}
+
 function StyleSection({ profile }) {
   const [status, save] = useSaver();
   const s = profile.style;
@@ -99,6 +115,7 @@ function StyleSection({ profile }) {
   };
   const dept = profile.department;
   return html`<div class="stack-l">
+    <${StyleDna} />
     <${Section} title="Your style" blurb="Vote on each style. We use it to choose what to show you, and it keeps learning from every outfit you love or skip." status=${status}>
       <${ArchetypeGrid} value=${s.archetypes} onChange=${(archetypes) => save({ style: { archetypes, quizDone: true } })} />
     </${Section}>
@@ -267,6 +284,24 @@ const SECTIONS = [
 
 export function ProfileView() {
   const { profile, user, entitlements, capabilities } = useStore();
+  // returning from Stripe: the webhook may land a moment after the redirect, so poll briefly
+  useEffect(() => {
+    if (!new URLSearchParams(location.search).get('upgraded')) return;
+    let tries = 0;
+    const timer = setInterval(async () => {
+      tries += 1;
+      try {
+        await refreshMe();
+        if (state.entitlements?.plan === 'pro') {
+          clearInterval(timer);
+          toast('Welcome to Pro. Everything is unlocked.');
+          navigate('/style?section=account', { replace: true });
+        }
+      } catch { /* keep trying */ }
+      if (tries >= 12) clearInterval(timer);
+    }, 1500);
+    return () => clearInterval(timer);
+  }, []);
   const [section, setSection] = useState(() => new URLSearchParams(location.search).get('section') || 'style');
   const c = profileCompleteness();
   const nextItem = c.next[0];

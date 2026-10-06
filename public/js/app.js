@@ -13,6 +13,7 @@ import { AuthView } from '/js/views/auth.js';
 import { WelcomeView } from '/js/views/welcome.js';
 import { ProView } from '/js/views/pro.js';
 import { PrivacyView, TermsView } from '/js/views/legal.js';
+import { AdminView } from '/js/views/admin.js';
 
 const NAV = [
   ['/', 'Today', 'sun-cloud'],
@@ -22,7 +23,7 @@ const NAV = [
   ['/style', 'You', 'user']
 ];
 const PUBLIC = new Set(['/login', '/register', '/forgot', '/reset', '/privacy', '/terms', '/pro']);
-const TITLES = { '/': 'Today', '/week': 'The week ahead', '/closet': 'Your closet', '/shop': 'Shop', '/style': 'You', '/pro': 'Pro', '/privacy': 'Privacy', '/terms': 'Terms', '/login': 'Sign in', '/register': 'Create account', '/welcome': 'Welcome' };
+const TITLES = { '/': 'Today', '/week': 'The week ahead', '/closet': 'Your closet', '/shop': 'Shop', '/style': 'You', '/pro': 'Pro', '/privacy': 'Privacy', '/terms': 'Terms', '/login': 'Sign in', '/register': 'Create account', '/welcome': 'Welcome', '/admin': 'Business' };
 
 function Splash() {
   return html`<div style=${{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}><div class="brand" style=${{ fontSize: '30px', opacity: 0.9 }}><${Logo} size=${30} />ModaWard</div></div>`;
@@ -43,6 +44,7 @@ function Shell({ path, children }) {
     <nav class="rail" aria-label="Main">
       <${Link} href="/" class="brand"><${Logo} size=${28} />ModaWard</${Link}>
       ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="rail-link" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${label}</${Link}>`)}
+      ${user?.isAdmin ? html`<${Link} href="/admin" class="rail-link" aria-current=${isCurrent('/admin') ? 'page' : undefined}><${Icon} name="shield" />Business</${Link}>` : null}
       <div class="rail-foot">
         ${!pro ? html`<${Link} href="/pro" class="btn btn-primary"><${Icon} name="crown" />Go Pro</${Link}>` : html`<div class="row" style=${{ padding: '0 12px' }}><${ProBadge} /><span class="small muted">Thank you</span></div>`}
         ${installPrompt ? html`<button class="btn btn-outline btn-s" onClick=${install}><${Icon} name="download" />Install app</button>` : null}
@@ -107,6 +109,7 @@ export function App() {
   else if (!user) page = html`<${Splash} />`;
   else if (path === '/welcome') page = html`<${WelcomeView} />`;
   else if (path === '/pro') page = html`<${Shell} path=${path}><${ProView} /></${Shell}>`;
+  else if (path === '/admin' && user.isAdmin) page = html`<${Shell} path=${path}><${AdminView} /></${Shell}>`;
   else {
     const view = { '/': TodayView, '/week': WeekView, '/closet': ClosetView, '/shop': ShopView, '/style': ProfileView }[path];
     page = view
