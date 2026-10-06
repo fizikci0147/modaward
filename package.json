@@ -15,7 +15,8 @@
     "backup": "node scripts/backup.mjs",
     "catalog:import": "node scripts/import-feed.mjs",
     "package": "node scripts/package.mjs",
-    "live:check": "node scripts/live-check.mjs"
+    "live:check": "node scripts/live-check.mjs",
+    "doctor": "node scripts/doctor.mjs"
   },
   "engines": {
     "node": ">=20.19.0"

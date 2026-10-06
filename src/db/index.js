@@ -135,9 +135,23 @@ export async function openDb(file, { driver } = {}) {
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA busy_timeout = 5000');
   if (file !== ':memory:') {
-    const mode = db.get('PRAGMA journal_mode = WAL');
-    if (String(mode?.journal_mode).toLowerCase() !== 'wal') db.exec('PRAGMA journal_mode = DELETE');
-    db.exec('PRAGMA synchronous = NORMAL');
+    // WAL is faster, but needs shared-memory support that some hosting filesystems lack:
+    // fall back to the classic journal instead of failing to start.
+    try {
+      const mode = db.get('PRAGMA journal_mode = WAL');
+      if (String(mode?.journal_mode).toLowerCase() !== 'wal') db.exec('PRAGMA journal_mode = DELETE');
+    } catch {
+      try {
+        db.exec('PRAGMA journal_mode = DELETE');
+      } catch {
+        /* keep the default */
+      }
+    }
+    try {
+      db.exec('PRAGMA synchronous = NORMAL');
+    } catch {
+      /* keep the default */
+    }
   }
   migrate(db);
   return db;

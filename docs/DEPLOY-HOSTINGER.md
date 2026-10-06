@@ -89,6 +89,17 @@ This writes consistent snapshots to `DATA_DIR/backups` and keeps the newest 14.
 
 ## Troubleshooting
 
+### "503 Service Unavailable"
+
+A 503 from Hostinger means the platform could not reach a running Node process. Work down this list; the first three fix almost every case.
+
+1. **Startup file.** Set the entry/startup file to `server.js`. (`app.js` and `index.js` also work, because hosts differ in what they default to.)
+2. **Dependencies.** Run `npm install --omit=dev` in the app folder (hPanel → Node.js app → *Run NPM install*, or SSH). A missing `node_modules` is the most common cause.
+3. **Node version.** Choose **22.x or 24.x** in hPanel, then restart.
+4. **Ask the app.** Set the environment variable `SHOW_STARTUP_ERRORS=1` and restart. If the app itself fails to start, the 503 page now says why (and the same reason is written to `startup-error.log` in the app folder). Remove the variable once fixed.
+5. **Full check over SSH.** `cd` into the app folder and run `npm run doctor`. It checks Node version, files, dependencies, the SQLite driver, the data folder and `APP_URL`, and prints the fix for each failure.
+6. **Still plain "503" with no message from ModaWard.** Then Node never started at all (wrong folder, wrong startup file, or the platform's own limit). Check the application's log in hPanel and confirm the startup file exists in the folder hPanel points at.
+
 | Symptom | Likely cause |
 |---|---|
 | App won't start, "No SQLite driver available" | Node.js version is below 22.5 and `better-sqlite3` was not installed. Pick Node 22+, or run `npm install` again. |

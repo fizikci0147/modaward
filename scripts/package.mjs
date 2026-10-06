@@ -18,7 +18,7 @@ for (const script of ['check.mjs']) {
   if (r.status !== 0) process.exit(1);
 }
 
-const include = ['server.js', 'package.json', 'package-lock.json', '.env.example', 'README.md', 'src', 'public', 'docs', 'scripts/backup.mjs', 'scripts/import-feed.mjs', 'scripts/package.json'];
+const include = ['server.js', 'app.js', 'index.js', 'package.json', 'package-lock.json', '.env.example', 'README.md', 'src', 'public', 'docs', 'scripts/backup.mjs', 'scripts/import-feed.mjs', 'scripts/doctor.mjs', 'scripts/live-check.mjs', 'scripts/package.json'];
 const out = path.join(root, 'dist');
 fs.mkdirSync(out, { recursive: true });
 const file = path.join(out, `modaward-${pkg.version}.zip`);
