@@ -20,6 +20,15 @@ describe('API', () => {
       assert.equal((await c.get('/ready')).json.ok, true);
     });
 
+    test('API responses are private and uncacheable (they differ per signed-in user)', async () => {
+      const c = t.client();
+      for (const url of ['/api/auth/me', '/api/nope']) {
+        const res = await c.get(url);
+        assert.equal(res.headers.get('cache-control'), 'private, no-store', url);
+        assert.match(res.headers.get('vary') || '', /cookie/i);
+      }
+    });
+
     test('sends a strict CSP and security headers, never X-Powered-By', async () => {
       const res = await t.client().get('/health');
       const csp = res.headers.get('content-security-policy');

@@ -73,6 +73,12 @@ export function createApp(deps) {
 
   // ── API ──
   const api = express.Router();
+  // Responses depend on who is signed in: no proxy, CDN or browser may store or share them.
+  api.use((_req, res, next) => {
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('Vary', 'Cookie');
+    next();
+  });
   api.use(rateLimit({ windowMs: 60_000, max: config.limits.api, message: 'Too many requests. Please slow down.' }));
   api.use(sessionAuth(repos));
   const big = express.json({ limit: '5mb' });
