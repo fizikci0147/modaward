@@ -19,9 +19,11 @@ for (const driver of ['node:sqlite', 'better-sqlite3']) {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mw-db-'));
       const file = path.join(dir, 'a.db');
       const a = await openDb(file, { driver });
+      const first = a.get('SELECT COUNT(*) AS n FROM schema_migrations').n;
+      assert.ok(first >= 2);
       a.close();
       const b = await openDb(file, { driver });
-      assert.equal(b.get('SELECT COUNT(*) AS n FROM schema_migrations').n, 1);
+      assert.equal(b.get('SELECT COUNT(*) AS n FROM schema_migrations').n, first);
       b.close();
       fs.rmSync(dir, { recursive: true });
     });

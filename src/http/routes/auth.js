@@ -5,18 +5,12 @@ import { HttpError, conflict, forbidden, unauthorized } from '../../util/errors.
 import { hashPassword, verifyPassword, verifyAgainstDummy, assertStrongPassword, needsRehash } from '../../services/passwords.js';
 import { publicUser } from '../../repo/index.js';
 import { entitlements } from '../../services/plans.js';
+import { baseUrl } from '../base-url.js';
 
 const registerSchema = object({ email: emailRule(), password: string({ min: 1, max: 200, trim: false }), name: optional(string({ max: 60 }), '') });
 const loginSchema = object({ email: emailRule(), password: string({ min: 1, max: 200, trim: false }) });
 const forgotSchema = object({ email: emailRule() });
 const resetSchema = object({ token: string({ min: 64, max: 64 }), password: string({ min: 1, max: 200, trim: false }) });
-
-/** Where reset links point. Never trust the Host header in production. */
-function baseUrl(config, req) {
-  if (config.appUrl) return config.appUrl;
-  if (config.production) return null;
-  return `${req.protocol}://${req.get('host')}`;
-}
 
 export function authRoutes({ config, repos, mailer, log, capabilities }) {
   const r = Router();
@@ -29,7 +23,7 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
   });
 
   const me = (user) => ({
-    user: user ? publicUser(user) : null,
+    user: user ? { ...publicUser(user), isAdmin: config.adminEmails.includes(user.email.toLowerCase()) } : null,
     profile: user ? repos.profiles.get(user.id) : null,
     capabilities,
     entitlements: user ? entitlements(user, config) : null

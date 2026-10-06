@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { requireUser, rateLimit } from '../middleware.js';
-import { object, string, integer, oneOf, optional, arrayOf } from '../../util/validate.js';
+import { object, string, integer, oneOf, optional, arrayOf, boolean } from '../../util/validate.js';
 import { OCCASION_IDS } from '../../shared/taxonomy.js';
 import { SIGNALS } from '../../ai/taste.js';
 import { RETAILERS } from '../../shop/retailers.js';
@@ -10,7 +10,8 @@ const looksSchema = object({
   storeMode: optional(oneOf(['mix', 'single']), undefined),
   occasions: optional(arrayOf(oneOf(OCCASION_IDS), { max: 5, unique: true }), undefined),
   seed: optional(string({ max: 40 }), undefined),
-  limit: optional(integer({ min: 1, max: 36 }), 18)
+  limit: optional(integer({ min: 1, max: 36 }), 18),
+  curate: optional(boolean(), true)
 });
 const gapsSchema = object({ storeMode: optional(oneOf(['mix', 'single']), undefined) });
 const feedbackSchema = object({

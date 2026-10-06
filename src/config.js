@@ -63,6 +63,7 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
     sharedDir: path.join(ROOT, 'src', 'shared'),
 
     limits: { auth: int(env.AUTH_RATE_MAX, 20), api: int(env.API_RATE_MAX, 400) },
+    adminEmails: str(env.ADMIN_EMAILS).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
     registrationOpen: bool(env.ALLOW_REGISTRATION, true),
     sessionDays: int(env.SESSION_DAYS, 30),
 

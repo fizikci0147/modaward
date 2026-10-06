@@ -6,14 +6,21 @@ import { createImageStore } from './services/images.js';
 import { createMailer } from './services/mailer.js';
 import { createWeatherService, openMeteoProvider, mockProvider } from './services/weather.js';
 import { createOutfitService } from './services/outfits.js';
+import { createShopService } from './services/shop.js';
+import { createUsage } from './services/usage.js';
+import { createCutoutService } from './services/cutout.js';
+import { createBilling } from './services/billing.js';
 import { persistentSecret } from './services/secrets.js';
 import { createLinker } from './shop/links.js';
 import { createCatalog } from './shop/catalog.js';
-import { createShopService } from './services/shop.js';
+import { createAiClient } from './ai/client.js';
+import { createStylist } from './ai/stylist.js';
 import { shopRoutes } from './http/routes/shop.js';
-import { createUsage } from './services/usage.js';
-import { createCutoutService } from './services/cutout.js';
 import { photoRoutes } from './http/routes/photos.js';
+import { billingRoutes } from './http/routes/billing.js';
+import { aiRoutes } from './http/routes/ai.js';
+import { insightsRoutes } from './http/routes/insights.js';
+import { adminRoutes } from './http/routes/admin.js';
 import { createApp } from './app.js';
 
 /**
@@ -26,22 +33,30 @@ export async function createDeps(config, overrides = {}) {
   const repos = createRepos(db);
   const images = overrides.images ?? createImageStore(config.dataDir);
   const mailer = overrides.mailer ?? createMailer(config, log);
+  const usage = createUsage(db);
 
   const provider = overrides.weatherProvider ?? (config.weather.provider === 'mock' ? mockProvider() : openMeteoProvider({ apiKey: config.weather.apiKey }));
   const weather = createWeatherService({ provider, cacheMinutes: config.weather.cacheMinutes });
-
   const linker = createLinker({ secret: persistentSecret(config.dataDir, 'link', config.linkSecret), affiliates: overrides.affiliates ?? {} });
+  const catalog = createCatalog(db);
 
-  const deps = { config, db, repos, log, images, mailer, weather, linker, extraApiRoutes: [], capabilities: {}, ...overrides.extra };
-  deps.catalog = createCatalog(db);
-  deps.outfits = createOutfitService({ repos, weather, config, stylist: deps.stylist ?? null });
-  deps.shop = createShopService({ repos, weather, catalog: deps.catalog, linker, config, stylist: deps.stylist ?? null });
-  deps.extraApiRoutes.push((api) => api.use(shopRoutes(deps)));
+  // optional integrations: each is null when its key is absent, and the app degrades gracefully
+  const ai = await createAiClient(config, usage, log, overrides.aiClient);
+  const stylist = ai ? createStylist({ ai, db, log }) : null;
+  const cutoutService = overrides.cutoutService === undefined ? createCutoutService(config, usage, log, overrides.fetch) : overrides.cutoutService;
+  const billing = overrides.billing === undefined ? createBilling(config, repos, log, overrides.fetch) : overrides.billing;
 
-  deps.usage = createUsage(db);
-  deps.cutoutService = overrides.cutoutService === undefined ? createCutoutService(config, deps.usage, log, overrides.fetch) : overrides.cutoutService;
-  deps.capabilities.cutoutService = Boolean(deps.cutoutService);
-  deps.extraApiRoutes.push((api) => api.use(photoRoutes(deps)));
+  const capabilities = {
+    ai: Boolean(stylist),
+    vision: Boolean(stylist),
+    cutoutService: Boolean(cutoutService),
+    billing: Boolean(billing && (config.stripe.priceMonthly || config.stripe.priceYearly))
+  };
+
+  const deps = { config, db, repos, log, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
+  deps.outfits = createOutfitService({ repos, weather, config, stylist });
+  deps.shop = createShopService({ repos, weather, catalog, linker, config, stylist });
+  for (const routes of [shopRoutes, photoRoutes, billingRoutes, aiRoutes, insightsRoutes, adminRoutes]) deps.extraApiRoutes.push((api) => api.use(routes(deps)));
   return deps;
 }
 
