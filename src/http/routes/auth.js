@@ -26,7 +26,8 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
     user: user ? { ...publicUser(user), isAdmin: config.adminEmails.includes(user.email.toLowerCase()) } : null,
     profile: user ? repos.profiles.get(user.id) : null,
     capabilities,
-    entitlements: user ? entitlements(user, config) : null
+    entitlements: user ? entitlements(user, config) : null,
+    app: { version: config.version, build: config.build.id }
   });
 
   r.get('/me', (req, res) => res.json(me(req.user)));

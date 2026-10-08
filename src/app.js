@@ -2,6 +2,7 @@ import { localeMiddleware } from './i18n/index.js';
 import express from 'express';
 import compression from 'compression';
 import path from 'node:path';
+import fs from 'node:fs';
 import { requestContext, securityHeaders, csrf, rateLimit, sessionAuth, errorHandler } from './http/middleware.js';
 import { authRoutes } from './http/routes/auth.js';
 import { accountRoutes } from './http/routes/account.js';
@@ -56,6 +57,10 @@ export function createApp(deps) {
 
   // ── static assets ──
   const staticOpts = { index: false, etag: true, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
+  // The service worker's cache name carries the build id, so every release invalidates old caches by itself.
+  const swSource = fs.readFileSync(path.join(config.publicDir, 'sw.js'), 'utf8');
+  const swBody = swSource.replace(/const VERSION = '[^']*';/, `const VERSION = 'mw-${config.build.id}';`);
+  app.get('/sw.js', (_req, res) => res.type('application/javascript').set('Cache-Control', 'no-cache').send(swBody));
   app.use('/shared', express.static(config.sharedDir, { ...staticOpts, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
   app.use(
     express.static(config.publicDir, {

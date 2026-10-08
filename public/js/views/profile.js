@@ -273,6 +273,7 @@ function AccountSection({ user, entitlements, capabilities }) {
     <${Section} title=${t('Your data')} blurb=${t('You own your closet and your data. Download everything, or delete it for good.')}>
       <div class="row-wrap"><button class="btn btn-outline" onClick=${exportData}><${Icon} name="download" />${t('Download my data')}</button><button class="btn btn-danger" onClick=${del}><${Icon} name="trash" />${t('Delete account')}</button></div>
     </${Section}>
+    ${state.app ? html`<p class="tiny faint">ModaWard ${state.app.version} · ${state.app.build}</p>` : null}
     <button class="btn btn-ghost" style=${{ justifySelf: 'start' }} onClick=${logout}><${Icon} name="logout" />${t('Sign out')}</button>
   </div>`;
 }

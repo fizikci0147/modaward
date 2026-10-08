@@ -41,6 +41,13 @@ Requires Node.js **20.19+** (22 or 24 recommended: they include SQLite built in;
 | `npm run catalog:import -- --retailer hm --file feed.csv` | Load an affiliate product feed (see [docs/BUSINESS.md](docs/BUSINESS.md)). |
 | `npm run vendor` / `npm run icons` | Rebuild the bundled frontend dependencies / PNG app icons. |
 
+## Releasing
+
+1. Bump the version: `npm version patch|minor|major --no-git-tag-version` (fix = patch, new feature = minor, owner must act = major).
+2. Add a `## [x.y.z] · date` section to [CHANGELOG.md](CHANGELOG.md).
+3. Commit, then `npm run package`. The zip is `dist/modaward-<version>-<commit>.zip`; packaging refuses uncommitted changes or a missing changelog entry, so a zip always equals one commit.
+4. After uploading, open `/health`: `version` and `build` must match the zip name. The same numbers show under *You → Account* and Business → System.
+
 ## Documentation
 
 - **[docs/DEPLOY-HOSTINGER.md](docs/DEPLOY-HOSTINGER.md)**: put it live on your Hostinger plan, step by step.

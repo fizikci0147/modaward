@@ -18,7 +18,8 @@ export const state = {
   toasts: [],
   upgrade: null, // { reason, message } while the upgrade sheet is open
   installPrompt: null,
-  locale: 'en' // bumps re-renders when the language changes
+  locale: 'en', // bumps re-renders when the language changes
+  app: null // { version, build } of the server this page is talking to
 };
 
 const subs = new Set();
@@ -66,7 +67,7 @@ async function applyMe(me) {
   // a saved language on the account wins over this browser's guess
   const saved = me.profile?.locale;
   if (saved && saved !== getLocale()) await loadLocale(saved);
-  set({ user: me.user, profile: me.profile, entitlements: me.entitlements, capabilities: me.capabilities || {}, locale: getLocale() });
+  set({ user: me.user, profile: me.profile, entitlements: me.entitlements, capabilities: me.capabilities || {}, locale: getLocale(), app: me.app || null });
 }
 
 /** Switch language now, remember it in this browser and, when signed in, on the account. */

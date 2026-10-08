@@ -445,3 +445,30 @@ describe('API', () => {
     });
   });
 });
+
+describe('versioning', () => {
+  let t;
+  before(async () => {
+    t = await startTestServer();
+  });
+  after(() => t.close());
+
+  test('health, the signed-in app info and the service worker agree on the version and build', async () => {
+    const c = t.client();
+    const health = (await c.get('/health')).json;
+    assert.match(health.version, /^\d+\.\d+\.\d+$/);
+    assert.ok(health.build);
+    await registerUser(c);
+    const me = (await c.get('/api/auth/me')).json;
+    assert.deepEqual(me.app, { version: health.version, build: health.build });
+    const sw = (await c.get('/sw.js')).text;
+    assert.ok(sw.includes(`const VERSION = 'mw-${health.build}';`), 'the cache name is stamped with the build');
+  });
+
+  test('the changelog has an entry for the current version', async () => {
+    const fs = await import('node:fs');
+    const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+    const log = fs.readFileSync(new URL('../CHANGELOG.md', import.meta.url), 'utf8');
+    assert.ok(log.includes(`## [${pkg.version}]`), `CHANGELOG.md needs a "## [${pkg.version}]" section`);
+  });
+});
