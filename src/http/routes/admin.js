@@ -13,7 +13,7 @@ const codeSchema = object({
 const grantSchema = object({ email: email(), days: integer({ min: 1, max: 3660 }) });
 
 /** Operator dashboard data. Access is limited to the emails in ADMIN_EMAILS. */
-export function adminRoutes({ db, config, usage, catalog, codes }) {
+export function adminRoutes({ db, config, usage, catalog, codes, weather, capabilities, mailer }) {
   const r = Router();
   r.use('/admin', requireUser, (req, _res, next) => (config.adminEmails.includes(req.user.email.toLowerCase()) ? next() : next(forbidden('Not found.'))));
 
@@ -56,6 +56,22 @@ export function adminRoutes({ db, config, usage, catalog, codes }) {
       signups,
       catalogue: { products: catalog.count(), byRetailer: catalog.byRetailer() },
       ai: { today: usage.totals() }
+    });
+  });
+
+  /** One-click health check of everything the live site depends on, with the exact failure reasons. */
+  r.get('/admin/system', async (_req, res) => {
+    const probe = await weather.probe();
+    res.json({
+      checkedAt: new Date().toISOString(),
+      node: process.version,
+      uptimeMinutes: Math.round(process.uptime() / 60),
+      database: db.driver,
+      production: config.production,
+      appUrl: config.appUrl || null,
+      trustProxy: config.trustProxy ?? null,
+      weather: { provider: weather.provider, probe, lastError: weather.lastError },
+      integrations: { ai: Boolean(capabilities?.ai), stripe: Boolean(capabilities?.billing), email: Boolean(mailer?.configured), backgroundRemovalService: Boolean(capabilities?.cutoutService) }
     });
   });
 

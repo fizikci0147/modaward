@@ -197,12 +197,37 @@ function Users() {
   </section>`;
 }
 
+function System() {
+  const [s, setS] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try { setS(await api.get('/admin/system')); } catch (e) { fail(e); }
+    setBusy(false);
+  };
+  useEffect(() => { run(); }, []);
+  const Row = ({ label, ok, detail }) => html`<tr><td>${label}</td><td>${ok === null ? html`<span class="faint">–</span>` : ok ? '✓ OK' : '✕ Problem'}</td><td class="small muted">${detail}</td></tr>`;
+  return html`<section class="card card-pad stack"><div class="spread"><h2 class="display h-s">System check</h2><button class="btn btn-outline btn-s" onClick=${run} disabled=${busy}>${busy ? 'Checking…' : 'Run again'}</button></div>
+    ${!s ? html`<div class="skel" style=${{ height: '160px' }}></div>` : html`
+      <table class="table"><thead><tr><th>Check</th><th>Result</th><th>Details</th></tr></thead><tbody>
+        <${Row} label="Weather service" ok=${s.weather.probe.ok} detail=${s.weather.probe.ok ? `${s.weather.provider} answered in ${s.weather.probe.ms} ms` : `${s.weather.probe.error}${s.weather.probe.status ? ` (HTTP ${s.weather.probe.status})` : ''}${s.weather.probe.reason ? `: ${s.weather.probe.reason}` : ''}`} />
+        <${Row} label="Last weather error" ok=${s.weather.lastError ? false : null} detail=${s.weather.lastError ? `${s.weather.lastError.message} · ${new Date(s.weather.lastError.at).toLocaleString()}` : 'none since the app last started'} />
+        <${Row} label="Web address (APP_URL)" ok=${Boolean(s.appUrl)} detail=${s.appUrl || 'Not set. Password-reset and payment links need it.'} />
+        <${Row} label="Email (SMTP)" ok=${s.integrations.email} detail=${s.integrations.email ? 'configured' : 'Not configured: password-reset emails only go to the server log.'} />
+        <${Row} label="Payments (Stripe)" ok=${s.integrations.stripe} detail=${s.integrations.stripe ? 'configured' : 'Not switched on yet.'} />
+        <${Row} label="AI stylist" ok=${s.integrations.ai} detail=${s.integrations.ai ? 'configured' : 'Not switched on (no ANTHROPIC_API_KEY).'} />
+        <${Row} label="Server" ok=${true} detail=${`Node ${s.node} · database ${s.database} · up ${s.uptimeMinutes} min · ${s.production ? 'production' : 'development'}`} />
+      </tbody></table>
+      <p class="faint small">Checked ${new Date(s.checkedAt).toLocaleString()}.</p>`}
+  </section>`;
+}
+
 export function AdminView() {
   const [tab, setTab] = useState('overview');
   return html`<div class="stack-l">
     <header class="stack"><h1 class="display h-xl">Business</h1>
-      <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }} role="tablist">${[['overview', 'Overview'], ['users', 'Users'], ['access', 'Pro access']].map(([id, label]) => html`<button key=${id} role="tab" class="chip" aria-selected=${tab === id} onClick=${() => setTab(id)}>${label}</button>`)}</div>
+      <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }} role="tablist">${[['overview', 'Overview'], ['users', 'Users'], ['access', 'Pro access'], ['system', 'System']].map(([id, label]) => html`<button key=${id} role="tab" class="chip" aria-selected=${tab === id} onClick=${() => setTab(id)}>${label}</button>`)}</div>
     </header>
-    ${tab === 'overview' ? html`<${Overview} />` : tab === 'users' ? html`<${Users} />` : html`<${Access} />`}
+    ${tab === 'overview' ? html`<${Overview} />` : tab === 'users' ? html`<${Users} />` : tab === 'system' ? html`<${System} />` : html`<${Access} />`}
   </div>`;
 }

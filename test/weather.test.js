@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizeOpenMeteo, openMeteoProvider, createWeatherService, mockProvider } from '../src/services/weather.js';
+import { normalizeOpenMeteo, openMeteoProvider, createWeatherService, mockProvider, describeError } from '../src/services/weather.js';
 
 /** Shape mirrors the documented Open-Meteo response, including nulls at the horizon edge. */
 function openMeteoFixture() {
@@ -163,5 +163,24 @@ describe('mock provider', () => {
     assert.deepEqual(a, b);
     assert.equal(a.days.length, 8);
     assert.ok(a.days.some((d) => d.precipProb >= 70));
+  });
+});
+
+describe('weather failure reporting', () => {
+  test('describeError explains the cause and never leaks URLs', () => {
+    const e = new TypeError('fetch failed', { cause: Object.assign(new Error('connect ETIMEDOUT https://api.open-meteo.com/v1/forecast?apikey=SECRET'), { code: 'ETIMEDOUT' }) });
+    const d = describeError(e);
+    assert.match(d, /ETIMEDOUT/);
+    assert.doesNotMatch(d, /SECRET|open-meteo\.com/);
+  });
+  test('probe reports the exact failure instead of throwing', async () => {
+    const p = openMeteoProvider({ fetch: async () => { throw new TypeError('fetch failed', { cause: Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' }) }); } });
+    const r = await p.probe();
+    assert.equal(r.ok, false);
+    assert.match(r.error, /ENOTFOUND/);
+    const blocked = openMeteoProvider({ fetch: async () => new Response('{"reason":"Too many requests"}', { status: 429 }) });
+    const r2 = await blocked.probe();
+    assert.equal(r2.status, 429);
+    assert.match(r2.reason, /Too many/);
   });
 });

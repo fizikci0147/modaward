@@ -154,3 +154,23 @@ describe('admin activity statistics', () => {
     assert.equal(t.deps.repos.users.purgeActivity(400), 1);
   });
 });
+
+describe('admin system check', () => {
+  let t;
+  let admin;
+  before(async () => {
+    t = await startTestServer({ env: { ADMIN_EMAILS: 'boss@example.com' } });
+    admin = t.client();
+    await registerUser(admin, { email: 'boss@example.com' });
+  });
+  after(() => t.close());
+  test('reports weather and integrations to admins only', async () => {
+    const s = (await admin.get('/api/admin/system')).json;
+    assert.equal(s.weather.probe.ok, true);
+    assert.equal(s.integrations.stripe, false);
+    assert.ok(s.node.startsWith('v'));
+    const other = t.client();
+    await registerUser(other, { email: 'z@example.com' });
+    assert.equal((await other.get('/api/admin/system')).status, 403);
+  });
+});

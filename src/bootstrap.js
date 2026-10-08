@@ -37,7 +37,7 @@ export async function createDeps(config, overrides = {}) {
   const usage = createUsage(db);
 
   const provider = overrides.weatherProvider ?? (config.weather.provider === 'mock' ? mockProvider() : openMeteoProvider({ apiKey: config.weather.apiKey }));
-  const weather = createWeatherService({ provider, cacheMinutes: config.weather.cacheMinutes });
+  const weather = createWeatherService({ provider, cacheMinutes: config.weather.cacheMinutes, log });
   const linker = createLinker({ secret: persistentSecret(config.dataDir, 'link', config.linkSecret), affiliates: overrides.affiliates ?? {} });
   const catalog = createCatalog(db);
 

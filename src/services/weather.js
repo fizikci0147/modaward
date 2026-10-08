@@ -29,6 +29,14 @@ const DAILY = [
 ];
 const CURRENT = ['temperature_2m', 'apparent_temperature', 'weather_code', 'precipitation', 'wind_speed_10m', 'is_day'];
 
+/** A short, safe description of why a request failed (never includes URLs or keys). */
+export function describeError(err) {
+  const cause = err?.cause;
+  const code = cause?.code || err?.code || err?.name;
+  const text = String(cause?.message || err?.message || err).replace(/https?:\/\/\S+/g, '[url]').slice(0, 160);
+  return code && !text.includes(String(code)) ? `${code}: ${text}` : text;
+}
+
 const num = (v, fallback = 0) => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 
 /**
@@ -105,11 +113,14 @@ export function openMeteoProvider({ fetch: doFetch = globalThis.fetch, apiKey = 
 
   async function getJson(url) {
     let lastError;
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const res = await doFetch(url, { signal: AbortSignal.timeout(8000), headers: { accept: 'application/json' } });
+        const res = await doFetch(url, { signal: AbortSignal.timeout(10_000), headers: { accept: 'application/json' } });
         if (res.status >= 500) throw new Error(`upstream ${res.status}`);
-        if (!res.ok) throw new HttpError(502, 'weather_failed', 'The weather service rejected the request.');
+        if (!res.ok) {
+          const body = await res.text().catch(() => '');
+          throw new HttpError(502, 'weather_failed', 'The weather service rejected the request.', { status: res.status, reason: body.slice(0, 200) });
+        }
         return await res.json();
       } catch (e) {
         if (e instanceof HttpError) throw e;
@@ -133,6 +144,16 @@ export function openMeteoProvider({ fetch: doFetch = globalThis.fetch, apiKey = 
       });
       if (apiKey) q.set('apikey', apiKey);
       return normalizeOpenMeteo(await getJson(`${forecastBase}?${q}`));
+    },
+    /** Used by the admin System check: one real request, with timing and the exact failure. */
+    async probe() {
+      const started = Date.now();
+      try {
+        await this.forecast({ lat: 40.7128, lon: -74.006 });
+        return { ok: true, ms: Date.now() - started };
+      } catch (e) {
+        return { ok: false, ms: Date.now() - started, error: describeError(e), status: e?.details?.status, reason: e?.details?.reason };
+      }
     },
     async geocode(query) {
       const q = new URLSearchParams({ name: query, count: '6', language: 'en', format: 'json' });
@@ -161,6 +182,9 @@ const MOCK_CITIES = [
 export function mockProvider({ clock = () => new Date() } = {}) {
   return {
     name: 'mock',
+    async probe() {
+      return { ok: true, ms: 0 };
+    },
     async forecast({ lat, lon }) {
       const start = clock();
       const rand = rng(hashString(`${lat.toFixed(1)},${lon.toFixed(1)}`));
@@ -203,15 +227,20 @@ export function mockProvider({ clock = () => new Date() } = {}) {
  *
  * @param {{provider: ReturnType<typeof openMeteoProvider>, cacheMinutes?: number, staleHours?: number, now?: () => number}} opts
  */
-export function createWeatherService({ provider, cacheMinutes = 20, staleHours = 6, now = () => Date.now() }) {
+export function createWeatherService({ provider, cacheMinutes = 20, staleHours = 6, now = () => Date.now(), log = null }) {
   const cache = new Map();
   const inflight = new Map();
   const geoCache = new Map();
+  let lastError = null;
 
   const keyOf = (lat, lon) => `${lat.toFixed(2)},${lon.toFixed(2)}`;
 
   return {
     provider: provider.name,
+    get lastError() {
+      return lastError;
+    },
+    probe: () => provider.probe?.() ?? Promise.resolve({ ok: true, ms: 0 }),
     async forecast({ lat, lon, name = '' }) {
       const key = keyOf(lat, lon);
       const hit = cache.get(key);
@@ -226,6 +255,8 @@ export function createWeatherService({ provider, cacheMinutes = 20, staleHours =
           return { ...data, stale: false };
         })
         .catch((err) => {
+          lastError = { at: new Date().toISOString(), message: describeError(err) };
+          log?.warn('weather.failed', { message: lastError.message });
           if (hit && now() - hit.at < staleHours * 3_600_000) return { ...hit.data, stale: true };
           throw err instanceof HttpError ? err : new HttpError(503, 'weather_unavailable', 'Weather is temporarily unavailable. Please try again in a minute.');
         })
@@ -243,7 +274,9 @@ export function createWeatherService({ provider, cacheMinutes = 20, staleHours =
       let data;
       try {
         data = await provider.geocode(query.trim());
-      } catch {
+      } catch (err) {
+        lastError = { at: new Date().toISOString(), message: `city search: ${describeError(err)}` };
+        log?.warn('geocode.failed', { message: lastError.message });
         throw new HttpError(503, 'geocode_unavailable', 'City search is temporarily unavailable.');
       }
       geoCache.set(q, { at: now(), data });
