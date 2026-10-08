@@ -77,12 +77,14 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
     if (user && base) {
       const token = repos.resets.create(user.id);
       const link = `${base}/reset?token=${token}`;
+      const t = req.t;
+      const hello = user.name ? t('Hi {name},', { name: user.name }) : t('Hi,');
       try {
         await mailer.send({
           to: user.email,
-          subject: 'Reset your ModaWard password',
-          text: `Hi${user.name ? ' ' + user.name : ''},\n\nUse this link within one hour to choose a new password:\n${link}\n\nIf you did not ask for this, you can ignore this email.\n\nModaWard`,
-          html: `<p>Hi${user.name ? ' ' + user.name : ''},</p><p><a href="${link}">Choose a new password</a>. The link works for one hour.</p><p>If you did not ask for this, you can ignore this email.</p>`
+          subject: t('Reset your ModaWard password'),
+          text: `${hello}\n\n${t('Use this link within one hour to choose a new password:')}\n${link}\n\n${t('If you did not ask for this, you can ignore this email.')}\n\nModaWard`,
+          html: `<p>${hello}</p><p><a href="${link}">${t('Choose a new password')}</a>. ${t('The link works for one hour.')}</p><p>${t('If you did not ask for this, you can ignore this email.')}</p>`
         });
       } catch (e) {
         log.error('auth.reset_mail_failed', { user: user.id, message: e.message });

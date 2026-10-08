@@ -138,6 +138,7 @@ function Overview() {
       <${Bars} title="Cities" rows=${m.audience.cities} total=${profiled} empty="Shows once people set a location." />
       <${Bars} title="Shopping for" rows=${m.audience.departments} total=${profiled} />
       <${Bars} title="Age range" rows=${m.audience.ages} total=${profiled} empty="People can add this in their profile." />
+      <${Bars} title="Language chosen" rows=${m.audience.languages || []} total=${profiled} />
       <${Bars} title="What they dress for" rows=${m.audience.occasions} total=${profiled} />
       <${Bars} title="Closet by category" rows=${m.closetMix} />
       <${Bars} title="Brands in closets" rows=${m.topGarmentBrands} />

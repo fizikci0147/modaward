@@ -28,7 +28,8 @@ async function run(label, contextOptions) {
     if (m.type() === 'error' || m.type() === 'warning') problems.push(`console.${m.type()}: ${m.text()}`);
   });
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
-  page.on('requestfailed', (r) => problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`));
+  // a request the browser cancels because the test navigated away mid-load is not a failure
+  page.on('requestfailed', (r) => r.failure()?.errorText !== 'net::ERR_ABORTED' && problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`));
   page.on('response', (r) => {
     if (r.status() >= 400 && !/\/api\/(auth\/me|outfits\/recommend)/.test(r.url()) && !/favicon/.test(r.url())) problems.push(`HTTP ${r.status()} ${r.url()}`);
   });
@@ -41,6 +42,15 @@ async function run(label, contextOptions) {
   await page.getByRole('heading', { name: 'Welcome back' }).waitFor();
   await shot('01-login');
   ok(`${label}: signed-out visitors land on the sign-in page`);
+
+  // ── language picker on the sign-in screen ──
+  const picker = page.locator('.lang-picker select');
+  await picker.selectOption('es');
+  await page.getByRole('heading', { name: 'Te damos la bienvenida' }).waitFor();
+  if ((await page.evaluate(() => document.documentElement.lang)) !== 'es') fail(`${label}: <html lang> did not follow the language`);
+  await picker.selectOption('en');
+  await page.getByRole('heading', { name: 'Welcome back' }).waitFor();
+  ok(`${label}: the sign-in screen can be switched to Spanish and back`);
 
   // ── register ──
   await page.getByRole('link', { name: 'Create an account' }).click();
@@ -170,6 +180,21 @@ async function run(label, contextOptions) {
     await shot(`14-profile-${s.split(' ')[0].toLowerCase()}`);
   }
   ok(`${label}: profile sections render`);
+
+  // ── the language is remembered on the account ──
+  await page.getByRole('button', { name: 'About you' }).click();
+  await page.locator('.lang-picker select').selectOption('de');
+  await page.getByRole('link', { name: 'Heute' }).first().waitFor();
+  await page.waitForTimeout(500); // let the profile save finish
+  await page.reload();
+  await page.getByRole('link', { name: 'Heute' }).first().waitFor();
+  const savedLocale = await page.evaluate(() => fetch('/api/profile', { credentials: 'same-origin' }).then((r) => r.json()).then((d) => d.profile.locale));
+  if (savedLocale !== "de") fail(`${label}: language was not saved on the account (got ${savedLocale})`);
+  await page.getByRole('button', { name: 'Über dich' }).click();
+  await page.locator('.lang-picker select').selectOption('en');
+  await page.getByRole('link', { name: 'Today' }).first().waitFor();
+  await page.waitForTimeout(500);
+  ok(`${label}: switching language updates the whole app and is saved on the account`);
 
   // ── pro ──
   await page.goto('/pro');

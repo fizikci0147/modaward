@@ -53,6 +53,24 @@ Claude is an *editor* on top of the deterministic engine, never the source of tr
 
 Classical, in-browser, private: model the backdrop from the photo's border in CIE Lab (k-means, ≤ 3 clusters), score each pixel against it with shadow discounting, Otsu-threshold, flood-fill from the border so interior details survive, drop specks, fill pin-holes, feather the edge. A self-check *declines* rather than ships a bad cut-out (low contrast, no clear backdrop, cluttered). Runs in a Web Worker. The same pure code is unit-tested in Node on synthetic photos with ground truth. An optional server-side remove.bg path covers hard photos for Pro.
 
+## Languages
+
+English text is the translation key: `t('Take the style quiz')`, with `{placeholders}` for values and `tn(n, '{n} piece', '{n} pieces')` for plurals (`Intl.PluralRules` picks the form). A missing translation falls back to the English text, so a gap never breaks a screen.
+
+- **One mechanism for browser and server.** `src/shared/i18n.js` is the core. The browser loads `/shared/locales/<code>.js` on demand (`public/js/i18n.js`); the server loads the same files at start (`src/i18n/index.js`).
+- **Which language.** The browser sends `X-Locale` with every API call (what the person chose, saved on their account as `profile.locale`); without it the server uses `Accept-Language`, then English. The request language drives outfit reasons, weather tips, shop look titles and reasons, closet-gap advice, error and validation messages, the password-reset email, starter-wardrobe names, and the language the AI stylist writes its notes in.
+- **Labels defined at module level** (garment types, colour names, occasions…) are wrapped in `L('…')`, an identity marker the extractor can see; the screen calls `t(label)` when it renders. Colour names and other ids stay English in the database and API.
+- **Not translated on purpose:** the Business (admin) screens, the legal pages (a mistranslated legal text is worse than an English one), garment names the person typed, and retailer product titles.
+- **Dates, numbers, currency** use `Intl` in the active language; 24-hour clocks outside English.
+
+**Add a language**
+1. Add its code and native name to `LOCALES` in `src/shared/i18n.js`.
+2. `node scripts/i18n.mjs scaffold <code>` writes `src/shared/locales/<code>.js` with every string and an empty value; fill it in.
+3. `node scripts/i18n.mjs check` must pass (every string present, placeholders identical), then add the code to `ENABLED_LOCALES`.
+4. Add the language name to `LANGUAGE_NAME` in `src/ai/stylist.js` so the AI notes follow.
+
+**When code adds or changes text:** wrap it in `t()`/`tn()`/`L()`, run `node scripts/i18n.mjs check`, and add the new strings to each locale file. `npm run check` fails until every enabled language is complete. Right-to-left languages (Arabic, Hebrew) need a layout pass and are not enabled.
+
 ## Data
 
 SQLite (WAL) via `node:sqlite`, or `better-sqlite3` on older Node, behind one adapter (`src/db/index.js`). Migrations are numbered `.sql` files applied at startup. All SQL is in `src/repo`, parameterised and scoped by user id. Deleting a user cascades everywhere. Photos are files named with 128 random bits and are served only to their owner.

@@ -78,7 +78,7 @@ export function profileRoutes({ repos, weather }) {
 
   r.get('/geo/search', async (req, res) => {
     const q = string({ min: 2, max: 80 })(req.query.q, 'q');
-    res.json({ results: await weather.geocode(q) });
+    res.json({ results: await weather.geocode(q, req.locale) });
   });
 
   return r;

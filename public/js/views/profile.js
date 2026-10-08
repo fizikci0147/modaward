@@ -191,7 +191,7 @@ function SizesFitSection({ profile }) {
       <div class="field"><span class="label">${t('Bottoms')}</span><${ToggleGroup} label=${t('Bottom fit')} options=${FIT_BOTTOMS.map((f) => [f, t(cap(f))])} value=${profile.fit.bottoms} onChange=${(v) => save({ fit: { bottoms: v } })} /></div>
       <div class="stack" style=${{ gap: '12px' }}>
         <span class="label">${t('Show off or cover up?')}</span>
-        ${Object.entries(areas).map(([a, areaName]) => html`<div class="spread" key=${a}><span>${t(areaName)}</span><div class="segmented" role="group" aria-label=${t(areaName)}>${[['show', t('Show off')], ['none', t('No preference')], ['cover', t('Cover up')]].map(([id, text]) => html`<button key=${id} aria-pressed=${stateOf(a) === id ? 'true' : 'false'} onClick=${() => setArea(a, id)}>${text}</button>`)}</div></div>`)}
+        ${Object.entries(areas).map(([a, areaName]) => html`<div class="spread" key=${a} style=${{ flexWrap: 'wrap' }}><span>${t(areaName)}</span><div class="segmented" role="group" aria-label=${t(areaName)}>${[['show', t('Show off')], ['none', t('No preference')], ['cover', t('Cover up')]].map(([id, text]) => html`<button key=${id} aria-pressed=${stateOf(a) === id ? 'true' : 'false'} onClick=${() => setArea(a, id)}>${text}</button>`)}</div></div>`)}
       </div>
     </${Section}>
   </div>`;

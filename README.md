@@ -13,6 +13,7 @@ It is an installable web app (PWA) with an Express server and a SQLite database.
 | **Learns** | An on-device-style taste model (online logistic regression) trains on love / skip / wear / save signals. "Style DNA" shows what it learned. |
 | **AI stylist (optional)** | Claude orders the engine's candidates and writes a stylist's note; it can read a garment photo and pre-fill the form. It can only choose among weather-safe candidates and its output is validated. |
 | **Pro subscriptions** | Stripe Checkout + billing portal + signed webhooks. Free vs Pro limits are enforced on the server. |
+| **Languages** | English, Spanish, French, German, Portuguese, Italian and Turkish: the screens, outfit explanations, weather tips, error messages, emails and the AI stylist's notes. Picked automatically from the browser, changeable any time, and saved on the account. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#languages). |
 | **Revenue** | Affiliate redirects with click tracking, retailer product-feed importer (real product photos and prices), admin metrics. |
 
 ## Quick start
@@ -34,6 +35,7 @@ Requires Node.js **20.19+** (22 or 24 recommended: they include SQLite built in;
 | `npm test` | 200+ unit and integration tests (engine, shopping, security, billing, AI, background removal…). |
 | `npm run test:e2e` | Real-browser end-to-end flow on phone and desktop viewports; fails on console errors and CSP violations. `SHOTS=/tmp/shots npm run test:e2e` saves screenshots. |
 | `npm run check` | Static gate: syntax, browser import resolution, CSP-clean HTML, manifest and service-worker assets. |
+| `node scripts/i18n.mjs check` | Every language has every string, with matching placeholders (also part of `npm run check`). |
 | `npm run package` | Build `dist/modaward-<version>.zip` for upload to a host. |
 | `npm run backup` | Consistent SQLite backup (safe while running). |
 | `npm run catalog:import -- --retailer hm --file feed.csv` | Load an affiliate product feed (see [docs/BUSINESS.md](docs/BUSINESS.md)). |

@@ -158,8 +158,8 @@ ul { margin: 0; padding: 0; list-style: none; }
   .main { padding: 34px 40px 80px; }
 }
 
-.stack { display: grid; gap: 16px; }
-.stack-l { display: grid; gap: 28px; }
+.stack { grid-template-columns: minmax(0, 1fr); display: grid; gap: 16px; }
+.stack-l { display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px; }
 .row { display: flex; align-items: center; gap: 12px; }
 .row-wrap { display: flex; flex-wrap: wrap; gap: 8px; }
 .spread { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -257,7 +257,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .hero-temp { font-family: var(--font-display); font-size: clamp(5rem, 14vw, 8.2rem); line-height: 0.82; letter-spacing: -0.04em; }
 .hero-temp sup { font-size: 0.34em; vertical-align: top; position: relative; top: 0.18em; margin-left: 2px; letter-spacing: 0; }
 .hero-cond { font-size: 17px; font-weight: 500; }
-.hero-grid { display: grid; gap: 22px; }
+.hero-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
 @media (min-width: 760px) { .hero-grid { grid-template-columns: auto 1fr; align-items: end; gap: 40px; } }
 
 .chart { width: 100%; height: 104px; overflow: visible; }
@@ -392,7 +392,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .shop-link svg { width: 14px; height: 14px; }
 .shop-link:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
 .price { font-variant-numeric: tabular-nums; font-weight: 600; }
-.look-actions { display: flex; gap: 8px; align-items: center; }
+.look-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .locked-card { display: grid; place-items: center; text-align: center; gap: 12px; padding: 40px 24px; background: repeating-linear-gradient(135deg, var(--surface-2), var(--surface-2) 10px, var(--surface) 10px, var(--surface) 20px); border-style: dashed; }
 
 .gap-card { display: grid; gap: 14px; padding: 18px; }
@@ -403,7 +403,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .mini .ph img { width: 100%; height: 100%; object-fit: cover; }
 
 /* ── profile ──────────────────────────────────────── */
-.profile-grid { display: grid; gap: 22px; }
+.profile-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; }
 @media (min-width: 980px) { .profile-grid { grid-template-columns: 220px 1fr; align-items: start; } .profile-nav { position: sticky; top: 26px; } }
 .profile-nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
 .profile-nav::-webkit-scrollbar { display: none; }

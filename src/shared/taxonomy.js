@@ -55,6 +55,17 @@ export const ARCHETYPES = Object.freeze({
 
 export const ARCHETYPE_IDS = Object.freeze(Object.keys(ARCHETYPES));
 
+/** Lower-case words for use inside sentences ("Matches your minimalist style"). */
+export const ARCHETYPE_WORD = Object.freeze({
+  minimal: L('minimalist'),
+  classic: L('classic'),
+  casual: L('easy casual'),
+  sporty: L('athleisure'),
+  street: L('streetwear'),
+  polished: L('polished'),
+  boho: L('boho & relaxed romantic')
+});
+
 /**
  * @typedef {object} TypeDef
  * @property {string} id

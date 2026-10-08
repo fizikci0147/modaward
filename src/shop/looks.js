@@ -19,6 +19,7 @@ import { TYPES, TYPE_IDS, OCCASIONS, ARCHETYPES } from '../shared/taxonomy.js';
 import { colorRole } from '../shared/color.js';
 import { budgetTier } from '../shared/profile.js';
 import { L, createTranslator } from '../shared/i18n.js';
+import { ARCHETYPE_WORD } from '../shared/taxonomy.js';
 import { buildPool, queryFor } from './pool.js';
 import { assignRetailers, priceBand } from './assign.js';
 import { searchUrl } from './retailers.js';
@@ -26,7 +27,6 @@ import { searchUrl } from './retailers.js';
 /** The profile's "what do you dress for" answers → engine occasions. */
 const OCCASION_MAP = { work: 'work', casual: 'casual', weekend: 'casual', date: 'evening', travel: 'casual', active: 'active', events: 'formal' };
 const OCCASION_NOUN = { work: L('for work'), casual: L('for every day'), evening: L('for dinner'), formal: L('for events'), active: L('for the gym') };
-const ARCH_WORD = { minimal: L('minimalist'), classic: L('classic'), casual: L('easy casual'), sporty: L('athleisure'), street: L('streetwear'), polished: L('polished'), boho: L('boho & relaxed romantic') };
 const upper1 = (s) => s.replace(/^./, (c) => c.toUpperCase());
 const ENGLISH = createTranslator('en');
 export const BUDGET_KEY = { top: 'top', bottom: 'bottom', dress: 'dress', outerwear: 'outerwear', shoes: 'shoes' };
@@ -133,11 +133,11 @@ export function pieceCard({ slot, piece }, retailer, ctx) {
   return { ...base, source: 'spec', name: piece.name, retailer: retailerInfo, query, link: linker.link(retailer.id, searchUrl(retailer, query), 'search') };
 }
 
-function buildReasons({ parts, scores, kind, occasion, ref, units, profile, taste, cards, t }) {
+function buildReasons({ parts, scores, kind, occasion, ref, units, profile, taste, cards, t, locale = 'en' }) {
   const reasons = [];
   const weights = profile.style?.archetypes || {};
   const arch = dominantArchetype(parts, weights);
-  if ((weights[arch] ?? 0) >= 0.6) reasons.push(t('Matches your {style} style.', { style: t(ARCH_WORD[arch]) }));
+  if ((weights[arch] ?? 0) >= 0.6) reasons.push(t('Matches your {style} style.', { style: t(ARCHETYPE_WORD[arch]) }));
   const palette = paletteOf(parts);
   if (scores.color.note && scores.color.score >= 0.8) {
     const names = palette.slice(0, 3).map((c) => t(c));
@@ -149,7 +149,7 @@ function buildReasons({ parts, scores, kind, occasion, ref, units, profile, tast
   if (kind === 'owned') {
     const owned = cards.filter((c) => c.source === 'owned');
     if (owned.length) {
-      const items = owned.map((o) => o.name.toLowerCase()).slice(0, 2);
+      const items = owned.map((o) => (locale === 'de' ? o.name : o.name.toLowerCase())).slice(0, 2);
       reasons.unshift(t('Built around your {items}.', { items: items.length > 1 ? t('{list} and {last}', { list: items[0], last: items[1] }) : items[0] }));
     }
   }
@@ -306,7 +306,7 @@ export function buildLooks(args) {
       currency: priced.find((c) => c.product?.currency)?.product.currency ?? 'USD',
       storeCount: store.size,
       singleStore: store.size === 1 ? [...store][0] : null,
-      reasons: buildReasons({ parts: r.parts, scores: r.scores, kind: r.kind, occasion: r.occasion, ref: ref.ctx, units, profile, taste, cards, t })
+      reasons: buildReasons({ parts: r.parts, scores: r.scores, kind: r.kind, occasion: r.occasion, ref: ref.ctx, units, profile, taste, cards, t, locale })
     };
   });
 

@@ -7,6 +7,7 @@
  *  - manifest icons and service-worker precache entries exist
  */
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { transformSync } from 'esbuild';
@@ -77,6 +78,12 @@ for (const p of shell) if (p !== '/' && !fs.existsSync(path.join(root, 'public',
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 if (!fs.existsSync(path.join(root, pkg.main))) fail(`package: main ${pkg.main} is missing`);
 if (!fs.existsSync(path.join(root, 'src', 'package.json'))) fail('package: src/package.json ({"type":"module"}) is missing');
+
+// 6. every enabled language is complete and its placeholders match
+{
+  const i18n = spawnSync(process.execPath, [path.join(root, 'scripts', 'i18n.mjs'), 'check'], { encoding: 'utf8' });
+  if (i18n.status !== 0) fail(`translations: ${(i18n.stderr || i18n.stdout).trim().split('\n').join('\n  ')}`);
+}
 
 if (errors.length) {
   console.error(errors.map((e) => `✖ ${e}`).join('\n'));

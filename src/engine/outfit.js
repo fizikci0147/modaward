@@ -290,7 +290,7 @@ const tempText = (c, units) => (units === 'imperial' ? `${Math.round(cToF(c))}°
 
 // Words slotted into the sentences below. L() marks them for the translation files.
 const STYLE_WORD = { minimal: L('minimal'), classic: L('classic'), casual: L('casual'), sporty: L('sporty'), street: L('streetwear'), polished: L('polished'), boho: L('boho') };
-const OCCASION_WORD = { casual: L('casual'), work: L('work'), evening: L('dinner / evening'), formal: L('formal event'), active: L('active') };
+const OCCASION_WORD = { casual: L('everyday wear'), work: L('work'), evening: L('dinner / evening'), formal: L('formal event'), active: L('active') };
 
 function explain({ parts, scores, ctx, occasion, prefs, units }) {
   const { t, locale } = ctx;
@@ -300,7 +300,8 @@ function explain({ parts, scores, ctx, occasion, prefs, units }) {
     Math.round(ctx.minFeels) === Math.round(ctx.maxFeels)
       ? tempText(ctx.minFeels, units)
       : t('{low} to {high}', { low: tempText(ctx.minFeels, units), high: tempText(ctx.maxFeels, units) });
-  const lower = (name) => name.toLowerCase();
+  // German nouns keep their capital letter; everywhere else item names read better in lower case mid-sentence
+  const lower = (name) => (locale === 'de' ? name : name.toLowerCase());
 
   const th = scores.thermal;
   if (parts.outer && th.outer === 'sometimes') {
@@ -355,7 +356,9 @@ function explain({ parts, scores, ctx, occasion, prefs, units }) {
   }
   if (scores.color.score < 0.5 && scores.color.note) warnings.push(`${t(scores.color.note)}.`);
 
-  return { reasons: reasons.slice(0, 4), warnings };
+  // a sentence that opens with an item name must still start with a capital, in every language
+  const sentence = (s) => s.replace(/^./u, (c) => c.toUpperCase());
+  return { reasons: reasons.slice(0, 4).map((r) => ({ ...r, text: sentence(r.text) })), warnings: warnings.map(sentence) };
 }
 
 const idsOf = (parts) => ({

@@ -155,8 +155,8 @@ export function openMeteoProvider({ fetch: doFetch = globalThis.fetch, apiKey = 
         return { ok: false, ms: Date.now() - started, error: describeError(e), status: e?.details?.status, reason: e?.details?.reason };
       }
     },
-    async geocode(query) {
-      const q = new URLSearchParams({ name: query, count: '6', language: 'en', format: 'json' });
+    async geocode(query, language = 'en') {
+      const q = new URLSearchParams({ name: query, count: '6', language, format: 'json' });
       if (apiKey) q.set('apikey', apiKey);
       const json = await getJson(`${geoBase}?${q}`);
       return (json.results || []).map((r) => ({
@@ -266,14 +266,14 @@ export function createWeatherService({ provider, cacheMinutes = 20, staleHours =
       return { ...data, location: { ...data.location, name } };
     },
 
-    async geocode(query) {
-      const q = query.trim().toLowerCase();
-      if (q.length < 2) return [];
+    async geocode(query, language = 'en') {
+      const q = `${language}:${query.trim().toLowerCase()}`;
+      if (query.trim().length < 2) return [];
       const hit = geoCache.get(q);
       if (hit && now() - hit.at < 24 * 3_600_000) return hit.data;
       let data;
       try {
-        data = await provider.geocode(query.trim());
+        data = await provider.geocode(query.trim(), language);
       } catch (err) {
         lastError = { at: new Date().toISOString(), message: `city search: ${describeError(err)}` };
         log?.warn('geocode.failed', { message: lastError.message });

@@ -176,6 +176,7 @@ function audienceInsight(db, nowS) {
   const age = {};
   const cities = {};
   const styles = {};
+  const languages = {};
   const occasions = {};
   let quiz = 0;
   let located = 0;
@@ -189,6 +190,7 @@ function audienceInsight(db, nowS) {
     if (p.department) dept[p.department] = (dept[p.department] || 0) + 1;
     if (p.ageRange) age[p.ageRange] = (age[p.ageRange] || 0) + 1;
     if (p.location?.name) (located += 1, (cities[p.location.name] = (cities[p.location.name] || 0) + 1));
+    languages[p.locale || 'not chosen'] = (languages[p.locale || 'not chosen'] || 0) + 1;
     if (p.style?.quizDone) quiz += 1;
     for (const [k, w] of Object.entries(p.style?.archetypes || {})) if (w > 0) styles[k] = (styles[k] || 0) + 1;
     for (const o of p.lifestyle?.occasions || []) occasions[o] = (occasions[o] || 0) + 1;
@@ -221,7 +223,7 @@ function audienceInsight(db, nowS) {
 
   return {
     plans: { free: total - paid - comped, paid, comped },
-    audience: { departments: top(dept), ages: top(age), cities: top(cities, 10), styles: top(styles, 10), occasions: top(occasions), profiled: total },
+    audience: { departments: top(dept), ages: top(age), cities: top(cities, 10), styles: top(styles, 10), occasions: top(occasions), languages: top(languages), profiled: total },
     funnel: steps,
     retention: { cohort, week1: pct(returned, cohort), day1: pct(day1, n('SELECT COUNT(*) AS n FROM users WHERE created_at BETWEEN ? AND ?', nowS - 60 * day, nowS - 2 * day)) },
     closetMix: db.all('SELECT category AS label, COUNT(*) AS count FROM garments WHERE archived = 0 GROUP BY category ORDER BY count DESC'),

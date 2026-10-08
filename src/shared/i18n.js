@@ -1,6 +1,7 @@
 /**
  * Translation core, shared by the browser and the server.
  *
+ * Translations are listed in docs/ARCHITECTURE.md#languages.
  * Source text is English and doubles as the lookup key: `t('Take the style quiz')`. A locale file
  * (src/shared/locales/<code>.js) maps English strings to translations; anything missing falls back
  * to the English text, so a gap never breaks a screen. Placeholders use {name}.
@@ -20,7 +21,7 @@ export const LOCALES = Object.freeze({
 });
 export const DEFAULT_LOCALE = 'en';
 /** Languages offered to people (picker and auto-detection). Add a code here once its locale file is complete. */
-export const ENABLED_LOCALES = Object.freeze(['en']);
+export const ENABLED_LOCALES = Object.freeze(['en', 'es', 'fr', 'de', 'pt', 'it', 'tr']);
 export const isLocale = (code) => typeof code === 'string' && Object.hasOwn(LOCALES, code);
 
 /** First supported language from a list of BCP-47 tags ("es-MX" → "es"). */

@@ -14,7 +14,7 @@ export function OutfitCard({ outfit, occasionLabel, pager, worn, busy, onWear, o
       ${pager || null}
     </div>
     <div class="outfit-body">
-      <div class="spread" style=${{ alignItems: 'flex-start' }}>
+      <div class="spread" style=${{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
         <div class="stack" style=${{ gap: '2px' }}>
           <span class="eyebrow">${t('{occasion} outfit', { occasion: occasionLabel })}</span>
           <div class="match"><b class="num">${outfit.score}</b><span class="muted small">${t('match')}</span></div>

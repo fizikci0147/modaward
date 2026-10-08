@@ -57,6 +57,9 @@ export function createStylist({ ai, db, log }) {
   const cachePut = (userId, key, value, ttlS) =>
     db.run('INSERT OR REPLACE INTO ai_cache (key, user_id, value, expires_at) VALUES (?,?,?,?)', key, userId, JSON.stringify(value), now() + ttlS);
 
+  const LANGUAGE_NAME = { es: 'Spanish', fr: 'French', de: 'German', pt: 'Portuguese', it: 'Italian', tr: 'Turkish' };
+const languageNote = (locale) => (LANGUAGE_NAME[locale] ? `\n\nWrite the headline and every note in ${LANGUAGE_NAME[locale]}.` : '');
+
   /** Order `items` by the model's picks without dropping anything; unmentioned items follow in their original order. */
   function applyPicks(items, picks, noteField, maxSlip) {
     const byId = new Map(items.map((i) => [i.id, i]));
@@ -82,9 +85,10 @@ export function createStylist({ ai, db, log }) {
 
   return {
     /** Re-rank and annotate the engine's outfits for a day. Returns null when AI should be skipped. */
-    async curateDay({ user, profile, day, tips, occasion, outfits }) {
+    async curateDay({ user, profile, day, tips, occasion, outfits, locale = 'en' }) {
       if (outfits.length < 2) return null;
       const input = {
+        language: locale,
         occasion,
         weather: { lowFeelsC: Math.round(day.minFeels), highFeelsC: Math.round(day.maxFeels), rain: day.rain, snow: day.snow, notes: tips.map((t) => t.text) },
         person: personSummary(profile),
@@ -100,7 +104,7 @@ export function createStylist({ ai, db, log }) {
         result = await ai.askJson({
           user,
           kind: 'curate_day',
-          system: `${SYSTEM_BASE}\n\nTask: the person is choosing what to wear today. Order the outfits from best to second best, and so on, for them and for this weather and occasion, and write a one-sentence styling note for each. Also write a short headline (max 110 characters) for the day that fits the weather and occasion.`,
+          system: `${SYSTEM_BASE}${languageNote(locale)}\n\nTask: the person is choosing what to wear today. Order the outfits from best to second best, and so on, for them and for this weather and occasion, and write a one-sentence styling note for each. Also write a short headline (max 110 characters) for the day that fits the weather and occasion.`,
           content: [{ type: 'text', text: JSON.stringify(input) }],
           schema: {
             type: 'object',
@@ -121,9 +125,10 @@ export function createStylist({ ai, db, log }) {
     },
 
     /** Re-rank and annotate the shopping looks. */
-    async curateLooks({ user, profile, looks, reference }) {
+    async curateLooks({ user, profile, looks, reference, locale = 'en' }) {
       if (looks.length < 3) return null;
       const input = {
+        language: locale,
         weatherAhead: reference.range,
         wetDays: reference.wetDays,
         person: personSummary(profile),
@@ -142,7 +147,7 @@ export function createStylist({ ai, db, log }) {
         result = await ai.askJson({
           user,
           kind: 'curate_looks',
-          system: `${SYSTEM_BASE}\n\nTask: these are shopping looks assembled by the app for the person. Pick the ones that suit them best, in order, and for each write one sentence on why it works for them or how to wear it. Prefer variety across occasions and across new looks and looks built around their closet. Also write a headline (max 110 characters) introducing this selection.`,
+          system: `${SYSTEM_BASE}${languageNote(locale)}\n\nTask: these are shopping looks assembled by the app for the person. Pick the ones that suit them best, in order, and for each write one sentence on why it works for them or how to wear it. Prefer variety across occasions and across new looks and looks built around their closet. Also write a headline (max 110 characters) introducing this selection.`,
           content: [{ type: 'text', text: JSON.stringify(input) }],
           schema: {
             type: 'object',
