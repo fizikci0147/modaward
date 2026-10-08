@@ -13,7 +13,7 @@ import { CUTOUT_MESSAGES } from '/shared/cutout.js';
 
 const CAT_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory'];
 
-function Tile({ g, onOpen, onFav }) {
+function Tile({ g, onOpen, onFav, onRemove }) {
   return html`<div class="tile enter">
     <button class="tile-btn" onClick=${() => onOpen(g)} aria-label=${`Edit ${g.name}`}>
       <div class="tile-art">${g.imageUrl ? html`<img class=${/\.png/.test(g.imageUrl) ? 'cutout' : ''} src=${g.imageUrl} alt="" loading="lazy" decoding="async" />` : html`<${GarmentArt} type=${g.type} color=${g.color} pattern=${g.pattern} />`}</div>
@@ -23,6 +23,7 @@ function Tile({ g, onOpen, onFav }) {
       </div>
     </button>
     <button class=${`fav ${g.favorite ? 'on' : ''}`} onClick=${() => onFav(g)} aria-label=${g.favorite ? 'Remove from favourites' : 'Add to favourites'} aria-pressed=${g.favorite ? 'true' : 'false'}><${Icon} name="heart" /></button>
+    <button class="remove" onClick=${() => onRemove(g)} aria-label=${`Remove ${g.name}`} title="Remove from closet"><${Icon} name="trash" /></button>
   </div>`;
 }
 
@@ -241,6 +242,16 @@ export function ClosetView() {
   const full = limit != null && (garments?.length || 0) >= limit;
   const openAdd = () => (full ? openUpgrade('closet') : setSheet('add'));
 
+  const remove = async (g) => {
+    if (!confirm(`Remove “${g.name}” from your closet?`)) return;
+    try {
+      await api.del(`/garments/${g.id}`);
+      removeGarment(g.id);
+      toast(`Removed ${g.name}`);
+    } catch (e) {
+      fail(e);
+    }
+  };
   const fav = async (g) => {
     upsertGarment({ ...g, favorite: !g.favorite });
     try {
@@ -297,7 +308,7 @@ export function ClosetView() {
           </div>
         </div>
         ${shown.length
-          ? html`<div class="grid wide">${shown.map((g) => html`<${Tile} key=${g.id} g=${g} onOpen=${(x) => setSheet(x)} onFav=${fav} />`)}<button class="tile tile-add" onClick=${openAdd}><${Icon} name="plus" /><span>Add a piece</span></button></div>`
+          ? html`<div class="grid wide">${shown.map((g) => html`<${Tile} key=${g.id} g=${g} onOpen=${(x) => setSheet(x)} onFav=${fav} onRemove=${remove} />`)}<button class="tile tile-add" onClick=${openAdd}><${Icon} name="plus" /><span>Add a piece</span></button></div>`
           : html`<${Empty} title="No matches" text="Try a different search or category." />`}`}
 
     ${sheet ? html`<${GarmentSheet} garment=${sheet === 'add' ? null : sheet} caps=${{ vision: capabilities.vision && entitlements?.photoTagging, cutoutService: capabilities.cutoutService && entitlements?.photoTagging }} onClose=${() => setSheet(null)} />` : null}

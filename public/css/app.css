@@ -322,6 +322,21 @@ ul { margin: 0; padding: 0; list-style: none; }
 .tile .fav { position: absolute; top: 9px; right: 9px; width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb, var(--surface) 85%, transparent); display: grid; place-items: center; backdrop-filter: blur(6px); }
 .tile .fav svg { width: 15px; height: 15px; }
 .tile .fav.on { color: var(--clay); }
+.tile .remove { position: absolute; top: 9px; left: 9px; width: 30px; height: 30px; border-radius: 50%; background: color-mix(in srgb, var(--surface) 85%, transparent); display: grid; place-items: center; backdrop-filter: blur(6px); color: var(--ink-2); }
+.tile .remove svg { width: 15px; height: 15px; }
+.tile .remove:hover { color: var(--clay); }
+@media (hover: hover) { .tile .remove { opacity: 0; transition: opacity 0.15s; } .tile:hover .remove, .tile .remove:focus-visible { opacity: 1; } }
+.heat { display: grid; grid-template-columns: 38px repeat(24, minmax(14px, 1fr)); gap: 3px; min-width: 520px; align-items: center; }
+.heat-c { display: block; aspect-ratio: 1; border-radius: 4px; background: var(--accent); }
+.cols { display: flex; align-items: flex-end; gap: 3px; height: 110px; }
+.col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.col i { display: block; width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; }
+.heat-h { font-size: 10px; color: var(--ink-3); white-space: nowrap; }
+.heat-d { font-size: 11px; color: var(--ink-3); }
+.rate svg { width: 16px; height: 16px; }
+.rate.on { background: var(--clay); border-color: var(--clay); color: #fff; }
+.chip-x { width: 20px; height: 20px; margin-left: 2px; border-radius: 50%; display: inline-grid; place-items: center; color: var(--ink-3); }
+.chip-x:hover { background: var(--line-2); color: var(--ink); }
 .tile-add { display: grid; place-items: center; gap: 8px; align-content: center; min-height: 200px; border-style: dashed; color: var(--ink-3); background: transparent; }
 .tile-add:hover { color: var(--ink); border-color: var(--ink); background: var(--surface); }
 .tile-add svg { width: 28px; height: 28px; }

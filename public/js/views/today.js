@@ -13,16 +13,16 @@ import { navigate } from '/js/router.js';
 const OCC = Object.entries(OCCASIONS).map(([id, o]) => ({ id, label: o.label }));
 
 /** Loads (and reloads) outfits for one day/occasion. */
-export function useOutfits(date, occasion, seed) {
+export function useOutfits(date, occasion, seed, excludeIds = []) {
   const [s, setS] = useState({ loading: true, error: null, data: null });
   useEffect(() => {
     const ctl = new AbortController();
     setS((p) => ({ ...p, loading: true, error: null }));
-    api.post('/outfits/recommend', { date, occasion, seed: String(seed), count: 3 }, { signal: ctl.signal })
+    api.post('/outfits/recommend', { date, occasion, seed: String(seed), count: 3, ...(excludeIds.length ? { excludeIds } : {}) }, { signal: ctl.signal })
       .then((data) => setS({ loading: false, error: null, data }))
       .catch((error) => error.name !== 'AbortError' && setS({ loading: false, error, data: null }));
     return () => ctl.abort();
-  }, [date, occasion, seed]);
+  }, [date, occasion, seed, excludeIds.join(',')]);
   return [s, setS];
 }
 
@@ -74,13 +74,15 @@ export function TodayView() {
   const [loved, setLoved] = useState({});
   const [dir, setDir] = useState('l');
   const [dropped, setDropped] = useState([]);
+  const [skipped, setSkipped] = useState([]); // pieces left out of today's suggestions: [{id, name}]
   const hasLocation = Boolean(profile?.location);
-  const [s, setS] = useOutfits(undefined, occasion, hasLocation ? seed : 'x');
+  const [s, setS] = useOutfits(undefined, occasion, hasLocation ? seed : 'x', skipped.map((p) => p.id));
 
   useEffect(() => {
     sessionStorage.setItem('mw.occasion', occasion);
     setIndex(0);
     setDropped([]);
+    setSkipped([]);
   }, [occasion]);
   useEffect(() => {
     setIndex(0);
@@ -138,6 +140,13 @@ export function TodayView() {
     }
     if (outfits.length <= 1) setSeed((x) => x + 1);
   };
+  const swap = (item) => {
+    setSkipped((list) => (list.some((p) => p.id === item.id) ? list : [...list, { id: item.id, name: item.name }]));
+    setIndex(0);
+    // the swap is also a signal: this piece, in this combination, was not wanted
+    api.post('/outfits/feedback', { itemIds: [item.id], signal: 'dislike' }).catch(() => {});
+    toast(`Swapped out ${item.name}.`);
+  };
   const go = (delta) => {
     setDir(delta > 0 ? 'l' : 'r');
     setIndex((i) => (i + delta + outfits.length) % outfits.length);
@@ -180,7 +189,9 @@ export function TodayView() {
         ? html`<${NoLocation} />`
         : html`<div class="card card-pad stack center"><p>${s.error.message}</p><div><button class="btn btn-outline" onClick=${() => setSeed((x) => x + 1)}>Try again</button></div></div>`
       : null}
-    ${data && !outfit ? html`<${EmptyCloset} missing=${data.missing} onDone=${() => setSeed((x) => x + 1)} />` : null}
+    ${data && !outfit && skipped.length
+      ? html`<div class="card card-pad stack center"><p>There are no other outfits without ${skipped.map((p) => p.name).join(', ')}.</p><div><button class="btn btn-outline" onClick=${() => setSkipped([])}>Bring them back</button></div></div>`
+      : data && !outfit ? html`<${EmptyCloset} missing=${data.missing} onDone=${() => setSeed((x) => x + 1)} />` : null}
     ${outfit
       ? html`<div key=${outfit.key} class=${dir === 'l' ? 'slide-l' : 'slide-r'} onTouchStart=${onTouchStart} onTouchEnd=${onTouchEnd} style=${{ opacity: s.loading ? 0.55 : 1, transition: 'opacity .2s' }}>
           <${OutfitCard}
@@ -195,8 +206,12 @@ export function TodayView() {
             onUndo=${undo}
             onLove=${love}
             onDislike=${dislike}
+            onSwap=${swap}
             onShuffle=${() => setSeed((x) => x + 1)} />
         </div>`
+      : null}
+    ${skipped.length && outfit
+      ? html`<div class="row-wrap small muted" style=${{ alignItems: 'center' }}><span>Not using today:</span>${skipped.map((p) => html`<button key=${p.id} class="chip chip-s" title="Use it again" onClick=${() => setSkipped((l) => l.filter((x) => x.id !== p.id))}>${p.name}<${Icon} name="x" size="12" /></button>`)}</div>`
       : null}
     ${data?.stylistNote == null && state.entitlements?.plan === 'free' && outfit
       ? html`<div class="upsell enter"><div class="grow"><b>Plan the whole week</b><p>Free plans see 3 days. Pro plans every day, with a stylist’s notes.</p></div><button class="btn btn-s" onClick=${() => openUpgrade('plan')}>See Pro</button></div>`

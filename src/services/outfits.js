@@ -42,7 +42,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       return { ...w, units: profile.units, locked: entitlements(user, config).planDays };
     },
 
-    async forDay(user, { date, occasion = 'casual', seed, count = 3, curate = true }) {
+    async forDay(user, { date, occasion = 'casual', seed, count = 3, curate = true, excludeIds }) {
       if (!OCCASION_IDS.includes(occasion)) throw badRequest('Unknown occasion.');
       const profile = repos.profiles.get(user.id);
       const w = await forecastFor(profile);
@@ -54,6 +54,8 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
 
       const day = w.days[index];
       const input = engineInputs(user, profile, w.today);
+      // pieces the person asked to leave out of today's suggestions
+      if (excludeIds?.length) input.garments = input.garments.filter((g) => !excludeIds.includes(g.id));
       const result = recommend({
         garments: input.garments,
         day,

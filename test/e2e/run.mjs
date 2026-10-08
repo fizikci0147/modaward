@@ -80,6 +80,17 @@ async function run(label, contextOptions) {
   await shot('06-today-worn');
   ok(`${label}: today shows weather + outfit, occasion switch and "wearing this" work`);
 
+  // ── dislike controls: swap one piece out, and rate the whole outfit ──
+  await page.getByRole('button', { name: 'Undo' }).click().catch(() => {});
+  const swapBtn = page.getByRole('button', { name: /^Swap out / }).first();
+  const swapName = ((await swapBtn.getAttribute('aria-label')) || '').replace('Swap out ', '');
+  await swapBtn.click();
+  await page.getByText('Not using today:').waitFor();
+  await page.locator('.piece-chip', { hasText: swapName }).waitFor({ state: 'detached', timeout: 5000 }).catch(() => fail(`${label}: swapped piece "${swapName}" is still in the outfit`));
+  await page.getByRole('button', { name: swapName }).click(); // chip under the card brings it back
+  await page.getByRole('button', { name: 'Dislike this outfit' }).waitFor();
+  ok(`${label}: a single piece can be swapped out and brought back; Dislike is a labelled control`);
+
   // ── week ──
   await page.goto('/week');
   await page.getByRole('heading', { name: 'The week ahead' }).waitFor();

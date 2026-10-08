@@ -332,6 +332,18 @@ describe('API', () => {
       assert.ok(o.reasons.length > 0);
     });
 
+    test('pieces the person swapped out are left out of the suggestions', async () => {
+      const { c } = await ready();
+      const first = (await c.post('/api/outfits/recommend', { occasion: 'casual', count: 3 })).json.outfits[0];
+      const dropped = first.items[0];
+      const res = await c.post('/api/outfits/recommend', { occasion: 'casual', count: 3, excludeIds: [dropped.id] });
+      assert.equal(res.status, 200);
+      assert.ok(res.json.outfits.length > 0);
+      for (const o of res.json.outfits) assert.ok(!o.itemIds.includes(dropped.id), 'excluded piece must not appear');
+      assert.equal((await c.post('/api/outfits/recommend', { excludeIds: ['not-an-id'] })).status, 400);
+      assert.equal((await c.post('/api/outfits/feedback', { itemIds: [dropped.id], signal: 'dislike' })).status, 200);
+    });
+
     test('free plan limits planning to three days; other days are locked, not leaked', async () => {
       const { c } = await ready();
       const week = (await c.post('/api/plan', {})).json;

@@ -117,6 +117,7 @@ function readCookie(req, name) {
 
 /** Resolve the session cookie to `req.user` (row) and `req.sessionToken`. Never throws. */
 export function sessionAuth(repos) {
+  const lastHour = new Map(); // userId -> hour already recorded, so most requests do no database write
   return (req, _res, next) => {
     const token = readCookie(req, COOKIE);
     if (token) {
@@ -124,6 +125,14 @@ export function sessionAuth(repos) {
       if (row) {
         req.user = row;
         req.sessionToken = token;
+        // "last seen" feeds the activity numbers; refresh at most every 10 minutes
+        if (!row.last_seen_at || Date.now() / 1000 - row.last_seen_at > 600) repos.users.touch(row.id);
+        const hour = Math.floor(Date.now() / 3_600_000);
+        if (lastHour.get(row.id) !== hour) {
+          repos.users.recordActivity(row.id);
+          lastHour.set(row.id, hour);
+          if (lastHour.size > 20_000) lastHour.clear();
+        }
       }
     }
     next();

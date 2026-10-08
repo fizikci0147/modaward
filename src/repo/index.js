@@ -82,6 +82,9 @@ export function createRepos(db) {
     setPassword: (id, hash) => db.run('UPDATE users SET password_hash = ? WHERE id = ?', hash, id),
     setName: (id, name) => db.run('UPDATE users SET name = ? WHERE id = ?', name, id),
     touch: (id) => db.run('UPDATE users SET last_seen_at = ? WHERE id = ?', now(), id),
+    /** Mark this person active in the current hour (one cheap row per person per hour). */
+    recordActivity: (id) => db.run('INSERT OR IGNORE INTO user_activity (user_id, hour) VALUES (?, ?)', id, Math.floor(now() / 3600)),
+    purgeActivity: (days = 400) => db.run('DELETE FROM user_activity WHERE hour < ?', Math.floor(now() / 3600) - days * 24).changes,
     remove: (id) => db.run('DELETE FROM users WHERE id = ?', id),
     setPlan(id, { plan, status, renewsAt, customerId, subscriptionId }) {
       db.run(

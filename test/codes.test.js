@@ -79,3 +79,78 @@ describe('admin access and Pro codes', () => {
     assert.equal(t.deps.repos.users.byId(row.id).plan, 'free');
   });
 });
+
+describe('admin business insight', () => {
+  let t;
+  let admin;
+  before(async () => {
+    t = await startTestServer({ env: { ADMIN_EMAILS: 'boss@example.com' } });
+    admin = t.client();
+    await registerUser(admin, { email: 'boss@example.com' });
+    const a = t.client();
+    await registerUser(a, { email: 'ann_100%@example.com', name: 'Ann' });
+    await registerUser(t.client(), { email: 'ben@example.com', name: 'Ben' });
+  });
+  after(() => t.close());
+
+  test('metrics include funnel, audience, plans and retention', async () => {
+    const m = (await admin.get('/api/admin/metrics')).json;
+    assert.equal(m.funnel[0].count, 3);
+    assert.equal(m.funnel[0].percent, 100);
+    assert.ok(m.funnel.length >= 8);
+    assert.deepEqual(Object.keys(m.plans).sort(), ['comped', 'free', 'paid']);
+    assert.equal(m.plans.free, 3);
+    assert.ok(Array.isArray(m.audience.cities) && Array.isArray(m.audience.styles));
+    assert.equal(typeof m.retention.week1, 'number');
+  });
+
+  test('user list searches, filters, escapes wildcards and is admin-only', async () => {
+    const all = (await admin.get('/api/admin/users')).json;
+    assert.equal(all.total, 3);
+    assert.ok(all.users.every((u) => u.email && 'pieces' in u && 'last_seen_at' in u));
+    assert.equal((await admin.get('/api/admin/users?q=ben')).json.users.length, 1);
+    assert.equal((await admin.get('/api/admin/users?q=100%25')).json.users.length, 1, 'a literal % matches only that user');
+    assert.equal((await admin.get('/api/admin/users?q=%25')).json.users.length, 1, 'a bare % is not a wildcard');
+    assert.equal((await admin.get('/api/admin/users?plan=pro')).json.total, 0);
+    const outsider = t.client();
+    await registerUser(outsider, { email: 'x@example.com' });
+    assert.equal((await outsider.get('/api/admin/users')).status, 403);
+  });
+});
+
+describe('admin activity statistics', () => {
+  let t;
+  let admin;
+  before(async () => {
+    t = await startTestServer({ env: { ADMIN_EMAILS: 'boss@example.com' } });
+    admin = t.client();
+    await registerUser(admin, { email: 'boss@example.com' });
+  });
+  after(() => t.close());
+
+  test('use is recorded once per person per hour and summarised by hour, weekday and day', async () => {
+    await admin.get('/api/auth/me');
+    await admin.get('/api/auth/me');
+    await admin.get('/api/garments');
+    assert.equal(t.deps.db.get('SELECT COUNT(*) AS n FROM user_activity').n, 1, 'one row per person per hour');
+    const a = (await admin.get('/api/admin/activity?tz=-300')).json;
+    assert.equal(a.heat.length, 7);
+    assert.equal(a.heat[0].length, 24);
+    assert.equal(a.byHour.reduce((s, n) => s + n, 0), 1);
+    assert.equal(a.byWeekday.reduce((s, n) => s + n, 0), 1);
+    assert.equal(a.mau, 1);
+    assert.equal(a.daily.at(-1).users, 1);
+    // the busiest hour matches the viewer's own clock
+    const localHour = new Date(Date.now() - 300 * 60_000).getUTCHours();
+    assert.equal(a.byHour[localHour], 1);
+    const localDay = new Date(Date.now() - 300 * 60_000).getUTCDay();
+    assert.equal(a.byWeekday[localDay], 1);
+    assert.equal((await t.client().get('/api/admin/activity')).status, 401);
+  });
+
+  test('signing out and deleting data keeps the table consistent', async () => {
+    assert.equal(t.deps.repos.users.purgeActivity(400), 0);
+    t.deps.db.run('UPDATE user_activity SET hour = hour - 24 * 500');
+    assert.equal(t.deps.repos.users.purgeActivity(400), 1);
+  });
+});

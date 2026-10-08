@@ -30,8 +30,9 @@ export function Collage({ look }) {
   </div>`;
 }
 
-function PieceRow({ p, onDislikePiece }) {
+function PieceRow({ p, onDislikePiece, removed }) {
   const price = p.product?.priceCents ? money(p.product.priceCents, p.product.currency) : null;
+  if (removed) return html`<li class="piece-row"><span class="sw" style=${{ background: p.color, opacity: 0.35 }}></span><div><div class="nm" style=${{ textDecoration: 'line-through', opacity: 0.6 }}>${p.name}</div><div class="rt">Removed. You’ll get different pieces in new looks.</div></div></li>`;
   return html`<li class="piece-row">
     <span class="sw" style=${{ background: p.color }}></span>
     <div>
@@ -42,13 +43,14 @@ function PieceRow({ p, onDislikePiece }) {
       ${p.link
         ? html`<a class="shop-link" href=${p.link} target="_blank" rel="noopener sponsored" aria-label=${`Shop ${p.name} at ${p.retailer.name}`}>Shop <${Icon} name="external" /></a>`
         : null}
-      ${p.source !== 'owned' && onDislikePiece ? html`<button class="icon-btn" style=${{ width: '30px', height: '30px' }} aria-label="Not this piece" title="Not this piece" onClick=${onDislikePiece}><${Icon} name="x" size="14" /></button>` : null}
+      ${p.source !== 'owned' && onDislikePiece ? html`<button class="icon-btn" style=${{ width: '30px', height: '30px' }} aria-label=${`Dislike ${p.name}`} title="Dislike this piece" onClick=${onDislikePiece}><${Icon} name="thumbdown" size="14" /></button>` : null}
     </div>
   </li>`;
 }
 
 export function LookCard({ look, saved, onSaved, onUnsave, onHide, readOnly = false }) {
   const [rate, setRate] = useState('');
+  const [gone, setGone] = useState({});
   const [busy, setBusy] = useState(false);
   const send = async (signal, extra = {}) => {
     try {
@@ -96,7 +98,7 @@ export function LookCard({ look, saved, onSaved, onUnsave, onHide, readOnly = fa
       </div>
       ${look.note ? html`<p class="stylist-note"><${Icon} name="sparkle" size="15" /><span><b>Your stylist:</b> ${look.note}</span></p>` : null}
       <ul class="reasons">${look.reasons.slice(0, 3).map((r) => html`<li key=${r}><${Icon} name="check" /><span>${r}</span></li>`)}</ul>
-      <ul class="piece-rows">${look.pieces.map((p, i) => html`<${PieceRow} key=${p.slot + p.name} p=${p} onDislikePiece=${readOnly ? null : () => send('dislike', { pieceIndex: i }).then(() => toast('We’ll avoid pieces like that.')).catch(() => {})} />`)}</ul>
+      <ul class="piece-rows">${look.pieces.map((p, i) => html`<${PieceRow} key=${p.slot + p.name} p=${p} removed=${Boolean(gone[i])} onDislikePiece=${readOnly ? null : () => send('dislike', { pieceIndex: i }).then(() => { setGone((g) => ({ ...g, [i]: true })); toast('Removed. We’ll avoid pieces like that.'); }).catch(() => {})} />`)}</ul>
       <div class="spread" style=${{ flexWrap: 'wrap' }}>
         <div class="small muted">
           ${priced ? html`<b class="price" style=${{ color: 'var(--ink)' }}>${money(priced, look.currency)}</b> for ${look.newCount} new ${look.newCount === 1 ? 'piece' : 'pieces'}` : `${look.newCount} new ${look.newCount === 1 ? 'piece' : 'pieces'}`}
@@ -105,8 +107,8 @@ export function LookCard({ look, saved, onSaved, onUnsave, onHide, readOnly = fa
         ${readOnly
           ? html`<button class="btn btn-ghost btn-s" onClick=${onUnsave}><${Icon} name="trash" />Remove</button>`
           : html`<div class="look-actions">
-              <button class=${`icon-btn ${rate === 'love' ? 'on' : ''}`} aria-label="Love this look" aria-pressed=${rate === 'love' ? 'true' : 'false'} onClick=${love}><${Icon} name="heart" /></button>
-              <button class="icon-btn" aria-label="Not for me" onClick=${dislike}><${Icon} name="x" /></button>
+              <button class=${`btn btn-outline btn-s rate ${rate === 'love' ? 'on' : ''}`} aria-label="Love this look" aria-pressed=${rate === 'love' ? 'true' : 'false'} onClick=${love}><${Icon} name="heart" />${rate === 'love' ? 'Loved' : 'Love'}</button>
+              <button class="btn btn-outline btn-s rate" aria-label="Dislike this look" title="Hide this look and learn what you don’t like" onClick=${dislike}><${Icon} name="thumbdown" />Dislike</button>
               ${saved ? html`<button class="btn btn-outline btn-s" onClick=${() => onUnsave?.(look, saved)}><${Icon} name="check" />Saved</button>` : html`<button class="btn btn-primary btn-s" onClick=${save} disabled=${busy}><${Icon} name="bookmark" />Save</button>`}
             </div>`}
       </div>
