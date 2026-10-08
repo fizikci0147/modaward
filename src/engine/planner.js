@@ -61,7 +61,9 @@ export function planWeek(args) {
       seed: args.seed,
       count: args.count ?? 3,
       units: args.units,
-      nowHour: index === 0 ? args.nowHour ?? null : null
+      nowHour: index === 0 ? args.nowHour ?? null : null,
+      t: args.t,
+      locale: args.locale
     });
 
     const chosen = result.outfits[0];

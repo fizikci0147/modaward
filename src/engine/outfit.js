@@ -8,6 +8,7 @@
  *   4. Choose a diverse top-N, then add weather-driven accessories to each.
  */
 import { OCCASIONS, withDefaults } from '../shared/taxonomy.js';
+import { L } from '../shared/i18n.js';
 import { colorName } from '../shared/color.js';
 import { cToF } from '../shared/weather-codes.js';
 import { buildContext, dayTips, fmtHour } from './context.js';
@@ -287,42 +288,52 @@ export function pickAccessories(parts, ctx, occasion, prefs, accessories, rand) 
 
 const tempText = (c, units) => (units === 'imperial' ? `${Math.round(cToF(c))}°` : `${Math.round(c)}°`);
 
+// Words slotted into the sentences below. L() marks them for the translation files.
+const STYLE_WORD = { minimal: L('minimal'), classic: L('classic'), casual: L('casual'), sporty: L('sporty'), street: L('streetwear'), polished: L('polished'), boho: L('boho') };
+const OCCASION_WORD = { casual: L('casual'), work: L('work'), evening: L('dinner / evening'), formal: L('formal event'), active: L('active') };
+
 function explain({ parts, scores, ctx, occasion, prefs, units }) {
+  const { t, locale } = ctx;
   const reasons = [];
   const warnings = [];
   const range =
     Math.round(ctx.minFeels) === Math.round(ctx.maxFeels)
       ? tempText(ctx.minFeels, units)
-      : `${tempText(ctx.minFeels, units)} to ${tempText(ctx.maxFeels, units)}`;
+      : t('{low} to {high}', { low: tempText(ctx.minFeels, units), high: tempText(ctx.maxFeels, units) });
+  const lower = (name) => name.toLowerCase();
 
   const th = scores.thermal;
   if (parts.outer && th.outer === 'sometimes') {
     const hrs = th.outerOnHours;
     const morning = hrs.length && hrs[0] === ctx.hours[0].hour;
     const evening = hrs.length && hrs[hrs.length - 1] === ctx.hours[ctx.hours.length - 1].hour;
-    let when = '';
-    if (morning && !evening) when = ` Wear it through ${fmtHour(hrs[hrs.length - 1] + 1)}, then it can come off.`;
-    else if (evening && !morning) when = ` You'll want it from about ${fmtHour(hrs[0])}.`;
-    reasons.push({ kind: 'weather', text: `Built for ${range} with a removable ${parts.outer.name.toLowerCase()}.${when}` });
+    const item = lower(parts.outer.name);
+    let text;
+    if (morning && !evening) text = t('Built for {range} with a removable {item}. Wear it through {time}, then it can come off.', { range, item, time: fmtHour(hrs[hrs.length - 1] + 1, locale) });
+    else if (evening && !morning) text = t('Built for {range} with a removable {item}. You’ll want it from about {time}.', { range, item, time: fmtHour(hrs[0], locale) });
+    else text = t('Built for {range} with a removable {item}.', { range, item });
+    reasons.push({ kind: 'weather', text });
   } else if (parts.outer && th.outer === 'always') {
-    reasons.push({ kind: 'weather', text: `The ${parts.outer.name.toLowerCase()} keeps you comfortable all day at ${range}.` });
+    reasons.push({ kind: 'weather', text: t('The {item} keeps you comfortable all day at {range}.', { item: lower(parts.outer.name), range }) });
   } else if (th.score >= 0.7) {
-    reasons.push({ kind: 'weather', text: `Right for ${range}${parts.outer ? '' : ', no jacket needed'}.` });
+    reasons.push({ kind: 'weather', text: parts.outer ? t('Right for {range}.', { range }) : t('Right for {range}, no jacket needed.', { range }) });
   }
 
   if (ctx.rain !== 'none' || ctx.snow) {
     const wetOuter = parts.outer?.waterproof;
     const wetShoes = parts.shoes?.waterproof;
-    if (wetOuter && wetShoes) reasons.push({ kind: 'protection', text: `Waterproof ${parts.outer.name.toLowerCase()} and ${parts.shoes.name.toLowerCase()} for the ${ctx.snow ? 'snow' : 'rain'}.` });
-    else if (wetOuter) reasons.push({ kind: 'protection', text: `${parts.outer.name} keeps you dry.` });
-    else if (wetShoes) reasons.push({ kind: 'protection', text: `${parts.shoes.name} can handle wet ground.` });
-    if (parts.shoes?.open) warnings.push(`${parts.shoes.name} will get wet today.`);
+    if (wetOuter && wetShoes) {
+      const vars = { outer: lower(parts.outer.name), shoes: lower(parts.shoes.name) };
+      reasons.push({ kind: 'protection', text: ctx.snow ? t('Waterproof {outer} and {shoes} for the snow.', vars) : t('Waterproof {outer} and {shoes} for the rain.', vars) });
+    } else if (wetOuter) reasons.push({ kind: 'protection', text: t('{item} keeps you dry.', { item: parts.outer.name }) });
+    else if (wetShoes) reasons.push({ kind: 'protection', text: t('{item} can handle wet ground.', { item: parts.shoes.name }) });
+    if (parts.shoes?.open) warnings.push(t('{item} will get wet today.', { item: parts.shoes.name }));
     if (!wetOuter && ctx.rain === 'heavy' && !parts.accessories.some((a) => a.type === 'umbrella')) {
-      warnings.push('No waterproof layer in this look. Take an umbrella.');
+      warnings.push(t('No waterproof layer in this look. Take an umbrella.'));
     }
   }
 
-  if (scores.color.note && scores.color.score >= 0.8) reasons.push({ kind: 'color', text: `${scores.color.note}.` });
+  if (scores.color.note && scores.color.score >= 0.8) reasons.push({ kind: 'color', text: `${t(scores.color.note)}.` });
 
   if (prefs.hasProfile) {
     const tally = {};
@@ -330,19 +341,19 @@ function explain({ parts, scores, ctx, occasion, prefs, units }) {
     const top = Object.entries(tally)
       .filter(([tag]) => (prefs.archetypes[tag] ?? 0.5) >= 0.65)
       .sort((a, b) => b[1] - a[1])[0];
-    if (top && scores.style >= 0.6) reasons.push({ kind: 'style', text: `Leans ${top[0] === 'street' ? 'streetwear' : top[0]}, a style you told us you love.` });
+    if (top && scores.style >= 0.6) reasons.push({ kind: 'style', text: t('Leans {style}, a style you told us you love.', { style: t(STYLE_WORD[top[0]] ?? top[0]) }) });
   }
 
   if (scores.occasion.score >= 0.82) {
-    reasons.push({ kind: 'occasion', text: `Right level of dressed-up for ${OCCASIONS[occasion].label.toLowerCase()}.` });
+    reasons.push({ kind: 'occasion', text: t('Right level of dressed-up for {occasion}.', { occasion: t(OCCASION_WORD[occasion] ?? OCCASIONS[occasion].label.toLowerCase()) }) });
   } else if (scores.occasion.spread >= 2.5) {
-    warnings.push('Some pieces here are much dressier than others.');
+    warnings.push(t('Some pieces here are much dressier than others.'));
   }
 
   if (scores.fresh >= 0.97 && mainPieces(parts).some((g) => !g.wearCount)) {
-    reasons.push({ kind: 'fresh', text: 'Includes pieces you have not worn yet.' });
+    reasons.push({ kind: 'fresh', text: t('Includes pieces you have not worn yet.') });
   }
-  if (scores.color.score < 0.5 && scores.color.note) warnings.push(scores.color.note + '.');
+  if (scores.color.score < 0.5 && scores.color.note) warnings.push(`${t(scores.color.note)}.`);
 
   return { reasons: reasons.slice(0, 4), warnings };
 }
@@ -390,7 +401,7 @@ export function recommend(args) {
   const occasion = OCCASIONS[args.occasion] ? args.occasion : 'casual';
   const units = args.units || 'metric';
   const garments = prepareGarments(args.garments);
-  const ctx = buildContext(args.day, { units, nowHour: args.nowHour ?? null });
+  const ctx = buildContext(args.day, { units, nowHour: args.nowHour ?? null, t: args.t, locale: args.locale });
   const tips = dayTips(ctx);
   const missing = missingEssentials(garments);
   const summary = {

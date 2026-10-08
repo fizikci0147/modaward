@@ -1,3 +1,4 @@
+import { loadLocales } from './i18n/index.js';
 import path from 'node:path';
 import { openDb } from './db/index.js';
 import { createRepos } from './repo/index.js';
@@ -31,6 +32,7 @@ import { createApp } from './app.js';
 export async function createDeps(config, overrides = {}) {
   const log = overrides.log ?? createLogger({ level: config.production ? 'info' : 'warn' });
   const db = overrides.db ?? (await openDb(overrides.dbFile ?? path.join(config.dataDir, 'modaward.db')));
+  await loadLocales(log);
   const repos = createRepos(db);
   const images = overrides.images ?? createImageStore(config.dataDir);
   const mailer = overrides.mailer ?? createMailer(config, log);

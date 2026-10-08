@@ -18,7 +18,12 @@ for (const script of ['check.mjs']) {
   if (r.status !== 0) process.exit(1);
 }
 
-const include = ['server.js', 'app.js', 'index.js', 'package.json', 'package-lock.json', '.env.example', 'README.md', 'src', 'public', 'docs', 'scripts/backup.mjs', 'scripts/import-feed.mjs', 'scripts/doctor.mjs', 'scripts/live-check.mjs', 'scripts/package.json'];
+// stamp the build so /health and the Business > System tab can say exactly which version is live
+const sha = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout?.trim() || 'unknown';
+const dirty = (spawnSync('git', ['status', '--porcelain'], { cwd: root, encoding: 'utf8' }).stdout || '').trim() ? '+local' : '';
+fs.writeFileSync(path.join(root, 'BUILD.json'), JSON.stringify({ id: `${pkg.version}-${sha}${dirty}`, builtAt: new Date().toISOString() }) + '\n');
+
+const include = ['BUILD.json', 'server.js', 'app.js', 'index.js', 'package.json', 'package-lock.json', '.env.example', 'README.md', 'src', 'public', 'docs', 'scripts/backup.mjs', 'scripts/import-feed.mjs', 'scripts/doctor.mjs', 'scripts/live-check.mjs', 'scripts/package.json'];
 const out = path.join(root, 'dist');
 fs.mkdirSync(out, { recursive: true });
 const file = path.join(out, `modaward-${pkg.version}.zip`);

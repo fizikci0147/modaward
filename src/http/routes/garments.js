@@ -49,7 +49,7 @@ export function garmentRoutes({ config, repos, images }) {
     const input = createSchema(req.body);
     assertCanAddGarments(req.user, config, repos.garments.count(req.user.id));
     const { image, ...data } = input;
-    data.name ||= `${colorName(data.color)} ${TYPES[data.type].label}`.replace(/^./, (c) => c.toUpperCase());
+    data.name ||= req.t('{color} {type}', { color: req.t(colorName(data.color)), type: req.t(TYPES[data.type].label).toLowerCase() }).replace(/^./, (c) => c.toUpperCase());
     let saved = null;
     if (image) saved = images.save(image);
     try {
@@ -64,7 +64,7 @@ export function garmentRoutes({ config, repos, images }) {
   r.post('/garments/starter', (req, res) => {
     const { department } = starterSchema(req.body ?? {});
     const dept = department || repos.profiles.get(req.user.id).department;
-    const items = starterWardrobe(dept);
+    const items = starterWardrobe(dept, req.t);
     assertCanAddGarments(req.user, config, repos.garments.count(req.user.id), items.length);
     const created = repos.db.transaction(() => items.map((item) => repos.garments.create(req.user.id, item)));
     res.status(201).json({ garments: created });

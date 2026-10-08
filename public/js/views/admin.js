@@ -216,6 +216,7 @@ function System() {
         <${Row} label="Email (SMTP)" ok=${s.integrations.email} detail=${s.integrations.email ? 'configured' : 'Not configured: password-reset emails only go to the server log.'} />
         <${Row} label="Payments (Stripe)" ok=${s.integrations.stripe} detail=${s.integrations.stripe ? 'configured' : 'Not switched on yet.'} />
         <${Row} label="AI stylist" ok=${s.integrations.ai} detail=${s.integrations.ai ? 'configured' : 'Not switched on (no ANTHROPIC_API_KEY).'} />
+        <${Row} label="Version running" ok=${true} detail=${`${s.build?.id || 'unknown'}${s.build?.builtAt ? ` · built ${new Date(s.build.builtAt).toLocaleString()}` : ''}`} />
         <${Row} label="Server" ok=${true} detail=${`Node ${s.node} · database ${s.database} · up ${s.uptimeMinutes} min · ${s.production ? 'production' : 'development'}`} />
       </tbody></table>
       <p class="faint small">Checked ${new Date(s.checkedAt).toLocaleString()}.</p>`}

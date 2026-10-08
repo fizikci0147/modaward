@@ -18,13 +18,17 @@ import { hashString, rng } from '../engine/rng.js';
 import { TYPES, TYPE_IDS, OCCASIONS, ARCHETYPES } from '../shared/taxonomy.js';
 import { colorRole } from '../shared/color.js';
 import { budgetTier } from '../shared/profile.js';
+import { L, createTranslator } from '../shared/i18n.js';
 import { buildPool, queryFor } from './pool.js';
 import { assignRetailers, priceBand } from './assign.js';
 import { searchUrl } from './retailers.js';
 
 /** The profile's "what do you dress for" answers → engine occasions. */
 const OCCASION_MAP = { work: 'work', casual: 'casual', weekend: 'casual', date: 'evening', travel: 'casual', active: 'active', events: 'formal' };
-const OCCASION_NOUN = { work: 'for work', casual: 'for every day', evening: 'for dinner', formal: 'for events', active: 'for the gym' };
+const OCCASION_NOUN = { work: L('for work'), casual: L('for every day'), evening: L('for dinner'), formal: L('for events'), active: L('for the gym') };
+const ARCH_WORD = { minimal: L('minimalist'), classic: L('classic'), casual: L('easy casual'), sporty: L('athleisure'), street: L('streetwear'), polished: L('polished'), boho: L('boho & relaxed romantic') };
+const upper1 = (s) => s.replace(/^./, (c) => c.toUpperCase());
+const ENGLISH = createTranslator('en');
 export const BUDGET_KEY = { top: 'top', bottom: 'bottom', dress: 'dress', outerwear: 'outerwear', shoes: 'shoes' };
 
 export function shopOccasions(profile) {
@@ -42,9 +46,9 @@ export function referenceDay(days) {
   return { day: mid.d, ctx: mid.ctx, wetDays, coldest: Math.min(...scored.map((s) => s.ctx.minFeels)), warmest: Math.max(...scored.map((s) => s.ctx.maxFeels)) };
 }
 
-const rangeText = (ctx, units) => {
+const rangeText = (ctx, units, t = ENGLISH.t) => {
   const f = (c) => (units === 'imperial' ? Math.round((c * 9) / 5 + 32) : Math.round(c));
-  return `${f(ctx.minFeels)}° to ${f(ctx.maxFeels)}°`;
+  return t('{low}° to {high}°', { low: f(ctx.minFeels), high: f(ctx.maxFeels) });
 };
 
 const slotOrder = (parts) => {
@@ -104,7 +108,7 @@ function dominantArchetype(parts, weights) {
 export function pieceCard({ slot, piece }, retailer, ctx) {
   const { profile, catalog, linker, budgetCaps } = ctx;
   const type = TYPES[piece.type];
-  const base = { slot, type: piece.type, label: type.label, color: piece.color, colorName: piece.colorName, pattern: piece.pattern, category: piece.category, source: piece.source };
+  const base = { slot, type: piece.type, label: (ctx.t ?? ENGLISH.t)(type.label), color: piece.color, colorName: piece.colorName, pattern: piece.pattern, category: piece.category, source: piece.source };
 
   if (piece.source === 'owned') return { ...base, name: piece.name, ownedId: piece.id, imageUrl: piece.imageUrl ?? null, retailer: null };
 
@@ -129,26 +133,30 @@ export function pieceCard({ slot, piece }, retailer, ctx) {
   return { ...base, source: 'spec', name: piece.name, retailer: retailerInfo, query, link: linker.link(retailer.id, searchUrl(retailer, query), 'search') };
 }
 
-function buildReasons({ parts, scores, kind, occasion, ref, units, profile, taste, cards }) {
+function buildReasons({ parts, scores, kind, occasion, ref, units, profile, taste, cards, t }) {
   const reasons = [];
   const weights = profile.style?.archetypes || {};
   const arch = dominantArchetype(parts, weights);
-  if ((weights[arch] ?? 0) >= 0.6) reasons.push(`Matches your ${ARCHETYPES[arch].label.toLowerCase()} style.`);
+  if ((weights[arch] ?? 0) >= 0.6) reasons.push(t('Matches your {style} style.', { style: t(ARCH_WORD[arch]) }));
   const palette = paletteOf(parts);
   if (scores.color.note && scores.color.score >= 0.8) {
-    const names = palette.slice(0, 3);
-    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0] ?? '';
-    reasons.push(`${list.replace(/^./, (c) => c.toUpperCase())}: ${scores.color.note.charAt(0).toLowerCase() + scores.color.note.slice(1)}.`);
+    const names = palette.slice(0, 3).map((c) => t(c));
+    const list = names.length > 1 ? t('{list} and {last}', { list: names.slice(0, -1).join(', '), last: names[names.length - 1] }) : names[0] ?? '';
+    const note = t(scores.color.note);
+    reasons.push(`${upper1(list)}: ${note.charAt(0).toLowerCase() + note.slice(1)}.`);
   }
-  reasons.push(`Right for the week's ${rangeText(ref, units)}${ref.rain !== 'none' ? ', with a chance of rain covered' : ''}.`);
+  reasons.push(ref.rain !== 'none' ? t("Right for the week's {range}, with a chance of rain covered.", { range: rangeText(ref, units, t) }) : t("Right for the week's {range}.", { range: rangeText(ref, units, t) }));
   if (kind === 'owned') {
     const owned = cards.filter((c) => c.source === 'owned');
-    if (owned.length) reasons.unshift(`Built around your ${owned.map((o) => o.name.toLowerCase()).slice(0, 2).join(' and ')}.`);
+    if (owned.length) {
+      const items = owned.map((o) => o.name.toLowerCase()).slice(0, 2);
+      reasons.unshift(t('Built around your {items}.', { items: items.length > 1 ? t('{list} and {last}', { list: items[0], last: items[1] }) : items[0] }));
+    }
   }
-  if (taste && taste.confidence >= 0.3 && taste.score(mainPieces(parts)) >= 0.62) reasons.push('Similar to looks you have loved.');
+  if (taste && taste.confidence >= 0.3 && taste.score(mainPieces(parts)) >= 0.62) reasons.push(t('Similar to looks you have loved.'));
   const caps = profile.budget || {};
   const bought = cards.filter((c) => c.source !== 'owned' && c.product?.priceCents);
-  if (bought.length && bought.every((c) => !caps[BUDGET_KEY[c.category]] || c.product.priceCents <= caps[BUDGET_KEY[c.category]] * 100)) reasons.push('Every priced piece is within your budget.');
+  if (bought.length && bought.every((c) => !caps[BUDGET_KEY[c.category]] || c.product.priceCents <= caps[BUDGET_KEY[c.category]] * 100)) reasons.push(t('Every priced piece is within your budget.'));
   return reasons.slice(0, 4);
 }
 
@@ -169,6 +177,8 @@ function buildReasons({ parts, scores, kind, occasion, ref, units, profile, tast
  */
 export function buildLooks(args) {
   const { profile, wardrobe, days, catalog, linker } = args;
+  const t = args.t ?? ENGLISH.t;
+  const locale = args.locale ?? 'en';
   const units = profile.units || 'imperial';
   const kind = args.kind || 'both';
   const storeMode = args.storeMode || (profile.style?.mixStores === false ? 'single' : 'mix');
@@ -183,7 +193,7 @@ export function buildLooks(args) {
   const owned = prepareGarments(wardrobe).filter((g) => g.category !== 'accessory').map((g) => ({ ...g, source: 'owned' }));
   const products = catalog && !catalog.isEmpty() ? catalog.pieces({ department: profile.department, types: TYPE_IDS.filter((t) => TYPES[t].category !== 'accessory'), retailers: profile.style?.stores, seed }) : [];
   const budgetCaps = Object.fromEntries(Object.entries(BUDGET_KEY).map(([cat, key]) => [cat, profile.budget?.[key]]));
-  const cardCtx = { profile, catalog, linker, budgetCaps };
+  const cardCtx = { profile, catalog, linker, budgetCaps, t };
 
   const kinds = kind === 'both' ? ['new', 'owned'] : [kind];
   const totalSlots = occasions.length * kinds.length;
@@ -196,7 +206,7 @@ export function buildLooks(args) {
   for (const occasion of occasions) {
     for (const k of kinds) {
       if (k === 'owned' && !owned.length) continue;
-      const pool = buildPool({ profile, products, ref: ref.ctx, occasion, seed: `${seed}|${occasion}` });
+      const pool = buildPool({ profile, products, ref: ref.ctx, occasion, seed: `${seed}|${occasion}`, t, locale });
       const garments = k === 'owned' ? [...pool, ...owned] : pool;
       if (!garments.length) continue;
 
@@ -273,7 +283,7 @@ export function buildLooks(args) {
     const retailers = assignRetailers(buy, profile, storeMode);
     const cards = slots.map((s) => {
       const retailer = s.piece.source === 'owned' ? null : retailers.get(s.piece.id);
-      return retailer || s.piece.source === 'owned' ? pieceCard(s, retailer, cardCtx) : { slot: s.slot, type: s.piece.type, label: TYPES[s.piece.type].label, color: s.piece.color, colorName: s.piece.colorName, source: 'spec', name: s.piece.name, retailer: null };
+      return retailer || s.piece.source === 'owned' ? pieceCard(s, retailer, cardCtx) : { slot: s.slot, type: s.piece.type, label: t(TYPES[s.piece.type].label), color: s.piece.color, colorName: s.piece.colorName, source: 'spec', name: s.piece.name, retailer: null };
     });
     const palette = paletteOf(r.parts);
     const priced = cards.filter((c) => c.source !== 'owned');
@@ -285,9 +295,9 @@ export function buildLooks(args) {
       key: r.key,
       kind: r.kind,
       occasion: r.occasion,
-      title: `${palette.slice(0, 2).join(' & ').replace(/^./, (c) => c.toUpperCase())} ${OCCASION_NOUN[r.occasion]}`,
+      title: t('{colors} {occasion}', { colors: upper1(palette.slice(0, 2).map((c) => t(c)).join(' & ')), occasion: t(OCCASION_NOUN[r.occasion]) }),
       archetype: arch,
-      archetypeLabel: ARCHETYPES[arch].label,
+      archetypeLabel: t(ARCHETYPES[arch].label),
       palette,
       score: Math.round(Math.max(0, Math.min(1, r.total)) * 100),
       pieces: cards,
@@ -296,13 +306,13 @@ export function buildLooks(args) {
       currency: priced.find((c) => c.product?.currency)?.product.currency ?? 'USD',
       storeCount: store.size,
       singleStore: store.size === 1 ? [...store][0] : null,
-      reasons: buildReasons({ parts: r.parts, scores: r.scores, kind: r.kind, occasion: r.occasion, ref: ref.ctx, units, profile, taste, cards })
+      reasons: buildReasons({ parts: r.parts, scores: r.scores, kind: r.kind, occasion: r.occasion, ref: ref.ctx, units, profile, taste, cards, t })
     };
   });
 
   return {
     looks,
-    reference: { date: ref.day.date, range: rangeText(ref.ctx, units), wetDays: ref.wetDays, coldest: ref.coldest, warmest: ref.warmest },
+    reference: { date: ref.day.date, range: rangeText(ref.ctx, units, t), wetDays: ref.wetDays, coldest: ref.coldest, warmest: ref.warmest },
     occasions,
     storeMode,
     usingProducts: products.length > 0

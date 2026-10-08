@@ -7,12 +7,15 @@
  */
 import { badRequest } from './errors.js';
 
-const fail = (path, message) => {
-  throw badRequest(`${path || 'value'}: ${message}`, { field: path });
+const fillIn = (text, vars) => text.replace(/\{(\w+)\}/g, (whole, key) => (key in vars ? String(vars[key]) : whole));
+
+/** `reason` is an English template with {placeholders}; it is rendered now and translatable later. */
+const fail = (path, reason, vars = {}) => {
+  throw badRequest(`${path || 'value'}: ${fillIn(reason, vars)}`, { field: path }, { template: '{field}: {reason}', vars: { field: path || 'value' }, nested: { reason: { template: reason, vars } } });
 };
 
-const rangeMessage = (min, max) =>
-  Number.isFinite(min) && Number.isFinite(max) ? `must be between ${min} and ${max}` : Number.isFinite(min) ? `must be at least ${min}` : `must be at most ${max}`;
+const rangeReason = (min, max) =>
+  Number.isFinite(min) && Number.isFinite(max) ? ['must be between {min} and {max}', { min, max }] : Number.isFinite(min) ? ['must be at least {min}', { min }] : ['must be at most {max}', { max }];
 
 export const string =
   ({ min = 0, max = 500, trim = true, pattern, patternMessage } = {}) =>
@@ -20,8 +23,8 @@ export const string =
     if (v === undefined || v === null) fail(path, 'is required');
     if (typeof v !== 'string') fail(path, 'must be text');
     const s = trim ? v.trim() : v;
-    if (s.length < min) fail(path, min === 1 ? 'is required' : `must be at least ${min} characters`);
-    if (s.length > max) fail(path, `must be at most ${max} characters`);
+    if (s.length < min) (min === 1 ? fail(path, 'is required') : fail(path, 'must be at least {min} characters', { min }));
+    if (s.length > max) fail(path, 'must be at most {max} characters', { max });
     if (pattern && !pattern.test(s)) fail(path, patternMessage || 'has an invalid format');
     // strip control characters other than newline/tab
     // eslint-disable-next-line no-control-regex
@@ -34,7 +37,7 @@ export const integer =
     if (v === undefined || v === null) fail(path, 'is required');
     if (typeof v === 'string' && /^-?\d+$/.test(v)) v = Number(v);
     if (!Number.isInteger(v)) fail(path, 'must be a whole number');
-    if (v < min || v > max) fail(path, rangeMessage(min, max));
+    if (v < min || v > max) fail(path, ...rangeReason(min, max));
     return v;
   };
 
@@ -44,7 +47,7 @@ export const number =
     if (v === undefined || v === null) fail(path, 'is required');
     if (typeof v === 'string' && v.trim() !== '' && Number.isFinite(Number(v))) v = Number(v);
     if (typeof v !== 'number' || !Number.isFinite(v)) fail(path, 'must be a number');
-    if (v < min || v > max) fail(path, rangeMessage(min, max));
+    if (v < min || v > max) fail(path, ...rangeReason(min, max));
     return step ? Math.round(v / step) * step : v;
   };
 
@@ -59,7 +62,7 @@ export const oneOf =
   (values) =>
   (v, path = '') => {
     if (v === undefined || v === null) fail(path, 'is required');
-    if (!values.includes(v)) fail(path, `must be one of: ${values.join(', ')}`);
+    if (!values.includes(v)) fail(path, 'must be one of: {values}', { values: values.join(', ') });
     return v;
   };
 
@@ -81,8 +84,8 @@ export const arrayOf =
   (v, path = '') => {
     if (v === undefined || v === null) fail(path, 'is required');
     if (!Array.isArray(v)) fail(path, 'must be a list');
-    if (v.length > max) fail(path, `must have at most ${max} items`);
-    if (v.length < min) fail(path, `must have at least ${min} items`);
+    if (v.length > max) fail(path, 'must have at most {max} items', { max });
+    if (v.length < min) fail(path, 'must have at least {min} items', { min });
     const out = v.map((x, i) => item(x, `${path}[${i}]`));
     return unique ? [...new Set(out)] : out;
   };
@@ -119,7 +122,7 @@ export const record =
     if (v === undefined || v === null) fail(path, 'is required');
     if (v === null || typeof v !== 'object' || Array.isArray(v)) fail(path, 'must be an object');
     const keys = Object.keys(v);
-    if (keys.length > max) fail(path, `must have at most ${max} entries`);
+    if (keys.length > max) fail(path, 'must have at most {max} entries', { max });
     const out = {};
     for (const k of keys) out[keyCheck(k, `${path}.${k}`)] = valueCheck(v[k], `${path}.${k}`);
     return out;

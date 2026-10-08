@@ -160,26 +160,26 @@ export function harmony(colors) {
   let note = '';
   if (clusters.length === 0) {
     score = 0.92;
-    note = 'A calm, all-neutral palette';
+    note = L('A calm, all-neutral palette');
   } else if (clusters.length === 1) {
     score = 1;
-    note = 'One colour doing the talking, balanced by neutrals';
+    note = L('One colour doing the talking, balanced by neutrals');
   } else if (clusters.length === 2) {
     const d = hueDistance(clusters[0].h, clusters[1].h);
     if (d <= 60) {
       score = 0.9;
-      note = 'Analogous colours that sit side by side on the wheel';
+      note = L('Analogous colours that sit side by side on the wheel');
     } else if (d >= 150) {
       score = 0.82;
-      note = 'Complementary colours for a confident contrast';
+      note = L('Complementary colours for a confident contrast');
     } else {
       score = 0.45;
-      note = 'Two competing colours';
+      note = L('Two competing colours');
     }
     if (Math.min(clusters[0].s, clusters[1].s) > 0.7 && d > 60) score -= 0.12;
   } else {
     score = 0.28;
-    note = 'Too many colours at once';
+    note = L('Too many colours at once');
   }
 
   // dark neutral mismatch: navy + black, black + brown, navy + brown
@@ -190,7 +190,7 @@ export function harmony(colors) {
   }
   if (families.size >= 2) {
     score -= families.has('black') && families.has('brown') ? 0.18 : 0.1;
-    note = note || 'Dark tones that almost, but not quite, match';
+    note = note || L('Dark tones that almost, but not quite, match');
   }
 
   // tonal flatness: top and bottom nearly identical lightness AND different colours reads muddy

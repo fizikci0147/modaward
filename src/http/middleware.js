@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { HttpError, forbidden, tooMany, unauthorized, paymentRequired } from '../util/errors.js';
+import { HttpError, forbidden, tooMany, unauthorized, paymentRequired, localizedMessage } from '../util/errors.js';
 
 /** Request id + access log line (no query strings, no PII). */
 export function requestContext(log) {
@@ -158,16 +158,17 @@ export function errorHandler(log) {
   // eslint-disable-next-line no-unused-vars
   return (err, req, res, _next) => {
     let status = 500;
-    let body = { error: { code: 'internal_error', message: 'Something went wrong on our side. Please try again.' } };
+    const tr = req.t ?? ((x) => x);
+    let body = { error: { code: 'internal_error', message: tr('Something went wrong on our side. Please try again.') } };
     if (err instanceof HttpError) {
       status = err.status;
-      body = { error: { code: err.code, message: err.message, ...(err.details ? { details: err.details } : {}) } };
+      body = { error: { code: err.code, message: localizedMessage(err, req.t), ...(err.details ? { details: err.details } : {}) } };
     } else if (err?.type === 'entity.too.large') {
       status = 413;
-      body = { error: { code: 'too_large', message: 'That upload is too large.' } };
+      body = { error: { code: 'too_large', message: tr('That upload is too large.') } };
     } else if (err?.type === 'entity.parse.failed' || err instanceof SyntaxError) {
       status = 400;
-      body = { error: { code: 'bad_json', message: 'The request body was not valid JSON.' } };
+      body = { error: { code: 'bad_json', message: tr('The request body was not valid JSON.') } };
     } else {
       log.error('http.error', { id: req.id, path: req.path, message: err?.message, stack: err?.stack?.split('\n').slice(0, 4).join(' | ') });
     }

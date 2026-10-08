@@ -78,7 +78,7 @@ export function decodeDataUrl(encoded) {
   const info = sniffImage(data);
   if (!info) throw badRequest('That file is not a valid image.');
   if (info.width < 1 || info.height < 1 || info.width > MAX_DIMENSION || info.height > MAX_DIMENSION) {
-    throw badRequest(`Images can be at most ${MAX_DIMENSION}px wide or tall.`);
+    throw badRequest(`Images can be at most ${MAX_DIMENSION}px wide or tall.`, undefined, { template: 'Images can be at most {n}px wide or tall.', vars: { n: MAX_DIMENSION } });
   }
   return { data, info };
 }

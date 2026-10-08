@@ -2,6 +2,7 @@
  * Component scorers for an outfit. Each returns a number in 0–1 (higher is better).
  * They are pure and cheap because the engine evaluates thousands of combinations per request.
  */
+import { L } from '../shared/i18n.js';
 import { OCCASIONS } from '../shared/taxonomy.js';
 import { harmony, colorName } from '../shared/color.js';
 import { thermalScore } from './thermal.js';
@@ -97,10 +98,10 @@ export function harmonyScore(parts) {
   let note = result.note;
   if (loud.length >= 3) {
     score -= 0.5;
-    note = 'Too many patterns at once';
+    note = L('Too many patterns at once');
   } else if (loud.length === 2) {
     score -= 0.28;
-    note = 'Two patterns compete';
+    note = L('Two patterns compete');
   }
   return { score: clamp01(score), note };
 }

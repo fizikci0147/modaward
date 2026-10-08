@@ -29,8 +29,8 @@ export function shopRoutes({ shop }) {
   r.get('/shop/retailers', (_req, res) =>
     res.json({ retailers: RETAILERS.map(({ id, name, tier, departments }) => ({ id, name, tier, departments })) })
   );
-  r.post('/shop/looks', heavy, async (req, res) => res.json(await shop.looks(req.user, looksSchema(req.body ?? {}))));
-  r.post('/shop/gaps', heavy, async (req, res) => res.json(await shop.gaps(req.user, gapsSchema(req.body ?? {}))));
+  r.post('/shop/looks', heavy, async (req, res) => res.json(await shop.looks(req.user, { ...looksSchema(req.body ?? {}), locale: req.locale })));
+  r.post('/shop/gaps', heavy, async (req, res) => res.json(await shop.gaps(req.user, { ...gapsSchema(req.body ?? {}), locale: req.locale })));
   r.post('/shop/feedback', (req, res) => res.json(shop.feedback(req.user, feedbackSchema(req.body))));
   r.get('/shop/saved', (req, res) => res.json(shop.saved(req.user)));
   r.post('/shop/saved', (req, res) => res.status(201).json(shop.save(req.user, saveSchema(req.body).lookId)));

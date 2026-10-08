@@ -65,6 +65,7 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
     res.json({
       checkedAt: new Date().toISOString(),
       node: process.version,
+      build: config.build,
       uptimeMinutes: Math.round(process.uptime() / 60),
       database: db.driver,
       production: config.production,

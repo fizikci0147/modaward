@@ -2,6 +2,7 @@
  * Shopping service: personalised looks, closet gaps, feedback that trains the taste model,
  * and the saved-looks wishlist. Free accounts see a handful of looks; Pro sees the full feed.
  */
+import { translatorFor } from '../i18n/index.js';
 import { buildLooks } from '../shop/looks.js';
 import { gapSuggestions } from '../shop/gaps.js';
 import { TasteModel } from '../ai/taste.js';
@@ -35,7 +36,8 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
 
   return {
     stats,
-    async looks(user, { kind = 'both', storeMode, occasions, seed, limit = 18, curate = true } = {}) {
+    async looks(user, { kind = 'both', storeMode, occasions, seed, limit = 18, curate = true, locale = 'en' } = {}) {
+      const tr = translatorFor(locale);
       const profile = repos.profiles.get(user.id);
       const ent = entitlements(user, config);
       const forecast = await days(profile);
@@ -43,7 +45,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       const wardrobe = repos.garments.list(user.id);
       const taste = repos.profiles.getTaste(user.id);
       const blocked = repos.feedback.blockedLooks(user.id);
-      const memoKey = hashString(JSON.stringify([user.id, kind, storeMode, occasions, seed, limit, curate, ent.plan, forecast[0].date, profile, wardrobe.map((g) => [g.id, g.updatedAt, g.favorite]), taste.n, blocked.size])).toString(36);
+      const memoKey = hashString(JSON.stringify([user.id, locale, kind, storeMode, occasions, seed, limit, curate, ent.plan, forecast[0].date, profile, wardrobe.map((g) => [g.id, g.updatedAt, g.favorite]), taste.n, blocked.size])).toString(36);
       const hit = memo.get(memoKey);
       if (hit && Date.now() - hit.at < 120_000) return hit.value;
       stats.computed += 1;
@@ -60,12 +62,14 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
         seed,
         // build a full feed even for free users so the number locked is honest
         limit: Math.max(limit, cap),
-        blocked
+        blocked,
+        t: tr.t,
+        locale
       });
       let looks = built.looks;
       let note = null;
       if (curate && stylist && ent.aiStylist) {
-        const curated = await stylist.curateLooks({ user, profile, looks, reference: built.reference }).catch(() => null);
+        const curated = await stylist.curateLooks({ user, profile, looks, reference: built.reference, locale }).catch(() => null);
         if (curated) {
           looks = curated.looks;
           note = curated.headline;
@@ -80,10 +84,11 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       return value;
     },
 
-    async gaps(user, { storeMode } = {}) {
+    async gaps(user, { storeMode, locale = 'en' } = {}) {
+      const tr = translatorFor(locale);
       const profile = repos.profiles.get(user.id);
       const forecast = await days(profile);
-      return { gaps: gapSuggestions({ wardrobe: repos.garments.list(user.id), profile, days: forecast, catalog, linker, storeMode }) };
+      return { gaps: gapSuggestions({ wardrobe: repos.garments.list(user.id), profile, days: forecast, catalog, linker, storeMode, t: tr.t, tn: tr.tn }) };
     },
 
     feedback(user, { lookId, signal, pieceIndex }) {
@@ -110,7 +115,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       if (!look) throw notFound('That look has expired. Refresh to see new ones.');
       const ent = entitlements(user, config);
       if (ent.savedLooks !== null && repos.saved.count(user.id) >= ent.savedLooks) {
-        throw paymentRequired(`The free plan saves ${ent.savedLooks} looks. Upgrade to Pro for unlimited saves.`, { feature: 'saved', limit: ent.savedLooks });
+        throw paymentRequired(`The free plan saves ${ent.savedLooks} looks. Upgrade to Pro for unlimited saves.`, { feature: 'saved', limit: ent.savedLooks }, { template: 'The free plan saves {n} looks. Upgrade to Pro for unlimited saves.', vars: { n: ent.savedLooks } });
       }
       const id = repos.saved.add(user.id, 'look', look);
       this.feedback(user, { lookId, signal: 'save' });

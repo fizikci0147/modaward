@@ -25,6 +25,16 @@ const int = (v, fallback) => {
 };
 const str = (v, fallback = '') => (v == null ? fallback : String(v).trim());
 
+/** Written by `npm run package`: which build is this? Missing in development. */
+function readBuild() {
+  try {
+    const b = JSON.parse(fs.readFileSync(path.join(ROOT, 'BUILD.json'), 'utf8'));
+    return { id: String(b.id), builtAt: String(b.builtAt) };
+  } catch {
+    return { id: 'development', builtAt: null };
+  }
+}
+
 function resolveDataDir(explicit) {
   const candidates = explicit ? [explicit] : [path.join(os.homedir(), 'modaward-data'), path.join(ROOT, 'data')];
   for (const dir of candidates) {
@@ -50,6 +60,7 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
     root: ROOT,
     production,
     version: JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version,
+    build: readBuild(),
     port: int(env.PORT, 8080),
     host: str(env.HOST, '0.0.0.0'),
     trustProxy: /^\d+$/.test(trust) ? Number(trust) : bool(trust) ? 1 : false,

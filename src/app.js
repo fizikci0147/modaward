@@ -1,3 +1,4 @@
+import { localeMiddleware } from './i18n/index.js';
 import express from 'express';
 import compression from 'compression';
 import path from 'node:path';
@@ -38,8 +39,9 @@ export function createApp(deps) {
   app.use(requestContext(log));
   app.use(securityHeaders(config));
   app.use(compression());
+  app.use(localeMiddleware);
 
-  app.get('/health', (_req, res) => res.json({ ok: true, version: config.version, uptime: Math.round(process.uptime()) }));
+  app.get('/health', (_req, res) => res.json({ ok: true, version: config.version, build: config.build.id, uptime: Math.round(process.uptime()) }));
   app.get('/ready', (_req, res) => {
     try {
       repos.db.get('SELECT 1 AS ok');

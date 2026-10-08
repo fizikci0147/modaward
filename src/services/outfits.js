@@ -9,6 +9,7 @@ import { TasteModel, withTaste } from '../ai/taste.js';
 import { OCCASION_IDS } from '../shared/taxonomy.js';
 import { entitlements } from './plans.js';
 import { HttpError, badRequest, paymentRequired } from '../util/errors.js';
+import { translatorFor } from '../i18n/index.js';
 
 const needLocation = () => new HttpError(409, 'location_required', 'Set your location so we can check the weather.');
 
@@ -42,7 +43,8 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       return { ...w, units: profile.units, locked: entitlements(user, config).planDays };
     },
 
-    async forDay(user, { date, occasion = 'casual', seed, count = 3, curate = true, excludeIds }) {
+    async forDay(user, { date, occasion = 'casual', seed, count = 3, curate = true, excludeIds, locale = 'en' }) {
+      const tr = translatorFor(locale);
       if (!OCCASION_IDS.includes(occasion)) throw badRequest('Unknown occasion.');
       const profile = repos.profiles.get(user.id);
       const w = await forecastFor(profile);
@@ -66,14 +68,16 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
         seed,
         count,
         units: profile.units,
-        nowHour: target === w.today ? w.nowHour : null
+        nowHour: target === w.today ? w.nowHour : null,
+        t: tr.t,
+        locale
       });
 
       const byId = new Map(input.garments.map((g) => [g.id, g]));
       let outfits = result.outfits.map((o) => hydrate(o, byId));
       let stylistNote = null;
       if (curate && stylist && ent.aiStylist && outfits.length) {
-        const curated = await stylist.curateDay({ user, profile, day: result.context, tips: result.tips, occasion, outfits, byId }).catch(() => null);
+        const curated = await stylist.curateDay({ user, profile, day: result.context, tips: result.tips, occasion, outfits, byId, locale }).catch(() => null);
         if (curated) {
           outfits = curated.outfits;
           stylistNote = curated.headline;
@@ -91,7 +95,8 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       };
     },
 
-    async week(user, { seed, occasions } = {}) {
+    async week(user, { seed, occasions, locale = 'en' } = {}) {
+      const tr = translatorFor(locale);
       const profile = repos.profiles.get(user.id);
       const w = await forecastFor(profile);
       const ent = entitlements(user, config);
@@ -109,7 +114,9 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
         units: profile.units,
         seed,
         nowHour: w.nowHour,
-        count: 3
+        count: 3,
+        t: tr.t,
+        locale
       });
       const byId = new Map(input.garments.map((g) => [g.id, g]));
       const days = w.days.map((d, i) => {

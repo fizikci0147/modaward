@@ -13,6 +13,9 @@ import { assignRetailers } from './assign.js';
 import { pieceCard, shopOccasions, BUDGET_KEY } from './looks.js';
 import { withDefaults } from '../shared/taxonomy.js';
 import { hashString } from '../engine/rng.js';
+import { createTranslator } from '../shared/i18n.js';
+
+const ENGLISH = createTranslator('en');
 
 const has = (garments, pred) => garments.filter(pred);
 
@@ -41,7 +44,7 @@ function bestColors(typeId, wardrobe, profile, count = 2) {
 }
 
 /** @returns {{id:string,title:string,why:string,severity:'high'|'medium'|'low',typeIds:string[]}[]} */
-export function findGaps({ wardrobe, profile, days }) {
+export function findGaps({ wardrobe, profile, days, t = ENGLISH.t, tn = ENGLISH.tn }) {
   const g = prepareGarments(wardrobe);
   const ctxs = days.slice(0, 7).map((d) => buildContext(d));
   const wet = ctxs.filter((c) => c.rain !== 'none').length;
@@ -59,45 +62,45 @@ export function findGaps({ wardrobe, profile, days }) {
   const tops = has(g, (x) => x.category === 'top');
 
   if (wet >= 1 && !outer.some((x) => x.waterproof)) {
-    add({ id: 'rain-jacket', title: 'A rain jacket', why: `${wet} wet ${wet === 1 ? 'day' : 'days'} in the next ${ctxs.length}, and nothing in your closet keeps you dry.`, severity: wet >= 2 ? 'high' : 'medium', typeIds: ['raincoat', 'trench'] });
+    add({ id: 'rain-jacket', title: t('A rain jacket'), why: tn(wet, '{n} wet day in the next {total}, and nothing in your closet keeps you dry.', '{n} wet days in the next {total}, and nothing in your closet keeps you dry.', { total: ctxs.length }), severity: wet >= 2 ? 'high' : 'medium', typeIds: ['raincoat', 'trench'] });
   }
   if ((wet >= 1 || snow) && !shoes.some((x) => x.waterproof)) {
-    add({ id: 'wet-shoes', title: 'Waterproof shoes', why: snow ? 'Snow is in the forecast and none of your shoes can handle it.' : 'Wet days are coming and none of your shoes are weatherproof.', severity: snow || wet >= 2 ? 'high' : 'medium', typeIds: ['waterproofboots', 'rainboots'] });
+    add({ id: 'wet-shoes', title: t('Waterproof shoes'), why: snow ? t('Snow is in the forecast and none of your shoes can handle it.') : t('Wet days are coming and none of your shoes are weatherproof.'), severity: snow || wet >= 2 ? 'high' : 'medium', typeIds: ['waterproofboots', 'rainboots'] });
   }
   if (coldest < 6 && !outer.some((x) => x.warmth >= 4)) {
-    add({ id: 'warm-coat', title: 'A warm coat', why: `It drops to ${Math.round(coldest)}°C and your warmest outer layer is not built for that.`, severity: coldest < 0 ? 'high' : 'medium', typeIds: ['wool-coat', 'puffer'] });
+    add({ id: 'warm-coat', title: t('A warm coat'), why: t('It drops to {temp}°C and your warmest outer layer is not built for that.', { temp: Math.round(coldest) }), severity: coldest < 0 ? 'high' : 'medium', typeIds: ['wool-coat', 'puffer'] });
   }
   if (coldest < 3 && !g.some((x) => x.category === 'accessory' && ['scarf', 'beanie', 'gloves'].includes(x.type))) {
-    add({ id: 'cold-accessories', title: 'Scarf and beanie', why: 'Cold snaps are easier with the right accessories.', severity: 'low', typeIds: ['scarf', 'beanie'] });
+    add({ id: 'cold-accessories', title: t('Scarf and beanie'), why: t('Cold snaps are easier with the right accessories.'), severity: 'low', typeIds: ['scarf', 'beanie'] });
   }
   if (coldest < 14 && !tops.some((x) => ['sweater', 'cardigan'].includes(x.type))) {
-    add({ id: 'knit-layer', title: 'A layering knit', why: 'Cool days call for a sweater or cardigan, and you have neither.', severity: 'medium', typeIds: ['sweater', 'cardigan'] });
+    add({ id: 'knit-layer', title: t('A layering knit'), why: t('Cool days call for a sweater or cardigan, and you have neither.'), severity: 'medium', typeIds: ['sweater', 'cardigan'] });
   }
   if (hottest > 27 && tops.filter((x) => x.warmth <= 1).length < 3) {
-    add({ id: 'light-tops', title: 'Breathable summer tops', why: `Highs reach ${Math.round(hottest)}°C and you have fewer than three light tops.`, severity: 'medium', typeIds: ['tee', 'polo'] });
+    add({ id: 'light-tops', title: t('Breathable summer tops'), why: t('Highs reach {temp}°C and you have fewer than three light tops.', { temp: Math.round(hottest) }), severity: 'medium', typeIds: ['tee', 'polo'] });
   }
   if (uv >= 7 && !g.some((x) => x.type === 'sunglasses')) {
-    add({ id: 'sunglasses', title: 'Sunglasses', why: `UV index reaches ${Math.round(uv)} this week.`, severity: 'low', typeIds: ['sunglasses'] });
+    add({ id: 'sunglasses', title: t('Sunglasses'), why: t('UV index reaches {n} this week.', { n: Math.round(uv) }), severity: 'low', typeIds: ['sunglasses'] });
   }
   if ((occasions.has('work') || occasions.has('formal')) && !bottoms.some((x) => x.formality >= 4)) {
-    add({ id: 'tailored-bottoms', title: 'Tailored trousers', why: 'You dress for work or events, and none of your bottoms are tailored.', severity: 'high', typeIds: ['trousers'] });
+    add({ id: 'tailored-bottoms', title: t('Tailored trousers'), why: t('You dress for work or events, and none of your bottoms are tailored.'), severity: 'high', typeIds: ['trousers'] });
   }
   if ((occasions.has('work') || occasions.has('formal')) && !shoes.some((x) => x.formality >= 3.5)) {
-    add({ id: 'smart-shoes', title: 'Smart shoes', why: 'Nothing in your shoe rack is dressy enough for work or events.', severity: 'medium', typeIds: profile.department === 'women' ? ['flats', 'loafers'] : ['loafers', 'dressshoes'] });
+    add({ id: 'smart-shoes', title: t('Smart shoes'), why: t('Nothing in your shoe rack is dressy enough for work or events.'), severity: 'medium', typeIds: profile.department === 'women' ? ['flats', 'loafers'] : ['loafers', 'dressshoes'] });
   }
   if ((occasions.has('work') || occasions.has('formal') || occasions.has('date')) && !outer.some((x) => x.type === 'blazer')) {
-    add({ id: 'blazer', title: 'A blazer', why: 'One blazer instantly lifts everything you own.', severity: 'medium', typeIds: ['blazer'] });
+    add({ id: 'blazer', title: t('A blazer'), why: t('One blazer instantly lifts everything you own.'), severity: 'medium', typeIds: ['blazer'] });
   }
   if (tops.length >= 6 && bottoms.length * 3 <= tops.length) {
-    add({ id: 'more-bottoms', title: 'More bottoms', why: `You have ${tops.length} tops but only ${bottoms.length} ${bottoms.length === 1 ? 'bottom' : 'bottoms'}, so outfits keep repeating.`, severity: 'high', typeIds: ['chinos', 'jeans'] });
+    add({ id: 'more-bottoms', title: t('More bottoms'), why: tn(bottoms.length, 'You have {tops} tops but only {n} bottom, so outfits keep repeating.', 'You have {tops} tops but only {n} bottoms, so outfits keep repeating.', { tops: tops.length }), severity: 'high', typeIds: ['chinos', 'jeans'] });
   } else if (bottoms.filter((x) => colorRole(x.color) === 'neutral').length < 2 && tops.length >= 3) {
-    add({ id: 'neutral-bottoms', title: 'A neutral pair of trousers', why: 'Neutral bottoms go with every top you own.', severity: 'medium', typeIds: ['chinos', 'trousers'] });
+    add({ id: 'neutral-bottoms', title: t('A neutral pair of trousers'), why: t('Neutral bottoms go with every top you own.'), severity: 'medium', typeIds: ['chinos', 'trousers'] });
   }
   if (profile.department === 'women' && occasions.has('events') && !g.some((x) => x.category === 'dress')) {
-    add({ id: 'dress', title: 'A versatile dress', why: 'You shop for events and have no dresses.', severity: 'medium', typeIds: ['dress'] });
+    add({ id: 'dress', title: t('A versatile dress'), why: t('You shop for events and have no dresses.'), severity: 'medium', typeIds: ['dress'] });
   }
   if (shoes.length < 2 && g.length > 0) {
-    add({ id: 'second-shoes', title: 'A second pair of shoes', why: 'One pair cannot cover every day and every outfit.', severity: 'medium', typeIds: ['sneakers', 'boots'] });
+    add({ id: 'second-shoes', title: t('A second pair of shoes'), why: t('One pair cannot cover every day and every outfit.'), severity: 'medium', typeIds: ['sneakers', 'boots'] });
   }
 
   const rank = { high: 0, medium: 1, low: 2 };
@@ -105,11 +108,11 @@ export function findGaps({ wardrobe, profile, days }) {
 }
 
 /** Gaps with concrete, purchasable suggestions attached. */
-export function gapSuggestions({ wardrobe, profile, days, catalog, linker, storeMode = 'mix' }) {
+export function gapSuggestions({ wardrobe, profile, days, catalog, linker, storeMode = 'mix', t = ENGLISH.t, tn = ENGLISH.tn }) {
   const owned = prepareGarments(wardrobe);
   const budgetCaps = Object.fromEntries(Object.entries(BUDGET_KEY).map(([cat, key]) => [cat, profile.budget?.[key]]));
-  const ctx = { profile, catalog, linker, budgetCaps };
-  return findGaps({ wardrobe, profile, days }).map((gap) => {
+  const ctx = { profile, catalog, linker, budgetCaps, t };
+  return findGaps({ wardrobe, profile, days, t, tn }).map((gap) => {
     // best colour per type first, then second-best, so suggestions vary by garment as well as colour
     const perType = gap.typeIds.map((t) => bestColors(t, owned, profile, 2).map((p) => ({ ...p, type: t })));
     const picks = [];

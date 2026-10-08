@@ -96,7 +96,7 @@ export function activeArchetypes(profile) {
  * @param {number|string} [args.seed]
  * @param {number} [args.perType]     cap on spec pieces per type
  */
-export function buildPool({ profile, products = [], ref, occasion, seed = 0, perType = 14 }) {
+export function buildPool({ profile, products = [], ref, occasion, seed = 0, perType = 14, t = null, locale = 'en' }) {
   const allowed = allowedBy(profile);
   const archetypes = new Set(activeArchetypes(profile));
   const liked = ensureArray(profile.style?.likedColors);
@@ -115,7 +115,7 @@ export function buildPool({ profile, products = [], ref, occasion, seed = 0, per
     for (const spec of sample) {
       const piece = withDefaults({
         id: spec.id,
-        name: `${spec.colorName} ${spec.descriptor}`.replace(/^./, (c) => c.toUpperCase()),
+        name: (locale === 'en' || !t ? `${spec.colorName} ${spec.descriptor}` : t('{color} {type}', { color: t(spec.colorName), type: t(type.label).toLowerCase() })).replace(/^./, (c) => c.toUpperCase()),
         type: typeId,
         color: spec.color,
         pattern: spec.pattern,

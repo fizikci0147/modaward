@@ -5,6 +5,9 @@
  * All temperatures are °C internally; `units` only affects the wording of tips.
  */
 import { describeCode, cToF, kphToMph } from '../shared/weather-codes.js';
+import { createTranslator } from '../shared/i18n.js';
+
+const ENGLISH = createTranslator('en');
 
 const DEFAULT_WINDOW = [8, 21];
 
@@ -35,7 +38,8 @@ function synthesiseHours(day, [from, to]) {
 
 /**
  * @param {object} day  normalised forecast day (see services/weather.js)
- * @param {{window?:[number,number], nowHour?:number|null, units?:'metric'|'imperial'}} [opts]
+ * @param {{window?:[number,number], nowHour?:number|null, units?:'metric'|'imperial', t?:Function, locale?:string}} [opts]
+ *   `t` and `locale` choose the language of the tips and explanations (English by default)
  */
 export function buildContext(day, opts = {}) {
   const window = opts.window || DEFAULT_WINDOW;
@@ -76,6 +80,8 @@ export function buildContext(day, opts = {}) {
   const wetHours = hours.filter((h) => h.rainProb >= 50 || h.precipMm >= 0.3).map((h) => h.hour);
 
   return {
+    t: opts.t ?? ENGLISH.t,
+    locale: opts.locale ?? 'en',
     date: day.date,
     units,
     hours,
@@ -94,25 +100,33 @@ export function buildContext(day, opts = {}) {
   };
 }
 
-export const fmtHour = (h) => `${h % 12 === 0 ? 12 : h % 12}${h < 12 || h === 24 ? 'am' : 'pm'}`;
+/** 15 → "3pm" in English, "15:00" elsewhere (24-hour clocks). */
+export const fmtHour = (h, locale = 'en') => (locale === 'en' ? `${h % 12 === 0 ? 12 : h % 12}${h < 12 || h === 24 ? 'am' : 'pm'}` : `${h % 24}:00`);
 
 const fmtTemp = (c, units) => (units === 'imperial' ? `${Math.round(cToF(c))}°F` : `${Math.round(c)}°C`);
 
 /** @returns {{kind:string, icon:string, text:string}[]} */
 export function dayTips(ctx) {
+  const { t, locale } = ctx;
   const tips = [];
   const { units } = ctx;
+  const hourText = (h) => fmtHour(h, locale);
 
   if (ctx.snow) {
-    tips.push({ kind: 'snow', icon: 'snow', text: 'Snow expected. Grip, warm socks and a waterproof outer layer matter today.' });
+    tips.push({ kind: 'snow', icon: 'snow', text: t('Snow expected. Grip, warm socks and a waterproof outer layer matter today.') });
   } else if (ctx.rain !== 'none') {
     const first = ctx.wetHours[0];
-    const when = first != null ? ` from around ${fmtHour(first)}` : '';
-    tips.push({
-      kind: 'rain',
-      icon: 'umbrella',
-      text: `${ctx.rain === 'heavy' ? 'Heavy rain' : 'Showers'} likely${when} (${Math.round(ctx.maxRainProb)}% chance). Take an umbrella.`
-    });
+    const chance = Math.round(ctx.maxRainProb);
+    const heavy = ctx.rain === 'heavy';
+    const text =
+      first != null
+        ? heavy
+          ? t('Heavy rain likely from around {time} ({chance}% chance). Take an umbrella.', { time: hourText(first), chance })
+          : t('Showers likely from around {time} ({chance}% chance). Take an umbrella.', { time: hourText(first), chance })
+        : heavy
+          ? t('Heavy rain likely ({chance}% chance). Take an umbrella.', { chance })
+          : t('Showers likely ({chance}% chance). Take an umbrella.', { chance });
+    tips.push({ kind: 'rain', icon: 'umbrella', text });
   }
 
   if (ctx.swing >= 8) {
@@ -121,22 +135,29 @@ export function dayTips(ctx) {
     tips.push({
       kind: 'swing',
       icon: 'layers',
-      text: `A ${Math.round(units === 'imperial' ? ctx.swing * 1.8 : ctx.swing)}° swing: ${fmtTemp(cold.feels, units)} at ${fmtHour(cold.hour)}, ${fmtTemp(warm.feels, units)} at ${fmtHour(warm.hour)}. Dress in layers.`
+      text: t('A {n}° swing: {cold} at {coldTime}, {warm} at {warmTime}. Dress in layers.', {
+        n: Math.round(units === 'imperial' ? ctx.swing * 1.8 : ctx.swing),
+        cold: fmtTemp(cold.feels, units),
+        coldTime: hourText(cold.hour),
+        warm: fmtTemp(warm.feels, units),
+        warmTime: hourText(warm.hour)
+      })
     });
   }
 
   if (ctx.maxUv >= 6) {
-    tips.push({ kind: 'uv', icon: 'sun', text: `UV index up to ${Math.round(ctx.maxUv)}. Sunglasses and sunscreen.` });
+    tips.push({ kind: 'uv', icon: 'sun', text: t('UV index up to {n}. Sunglasses and sunscreen.', { n: Math.round(ctx.maxUv) }) });
   }
 
   if (ctx.maxWind >= 40) {
-    tips.push({ kind: 'wind', icon: 'wind', text: `Gusts up to ${units === 'imperial' ? Math.round(kphToMph(ctx.maxWind)) + ' mph' : Math.round(ctx.maxWind) + ' km/h'}. A windproof layer will help.` });
+    const speed = units === 'imperial' ? `${Math.round(kphToMph(ctx.maxWind))} mph` : `${Math.round(ctx.maxWind)} km/h`;
+    tips.push({ kind: 'wind', icon: 'wind', text: t('Gusts up to {speed}. A windproof layer will help.', { speed }) });
   }
 
   if (ctx.minFeels <= -5) {
-    tips.push({ kind: 'cold', icon: 'snow', text: 'Bitter cold. Cover hands, ears and neck.' });
+    tips.push({ kind: 'cold', icon: 'snow', text: t('Bitter cold. Cover hands, ears and neck.') });
   } else if (ctx.maxFeels >= 32) {
-    tips.push({ kind: 'heat', icon: 'sun', text: 'Very hot. Choose breathable, light fabrics and stay hydrated.' });
+    tips.push({ kind: 'heat', icon: 'sun', text: t('Very hot. Choose breathable, light fabrics and stay hydrated.') });
   }
 
   return tips;

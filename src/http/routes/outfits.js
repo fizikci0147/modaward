@@ -25,8 +25,8 @@ export function outfitRoutes({ outfits, repos }) {
   const heavy = rateLimit({ windowMs: 60_000, max: 40, key: (req) => req.user.id, message: 'You are asking for outfits very quickly. Take a breath and try again.' });
 
   r.get('/weather', async (req, res) => res.json(await outfits.forecast(req.user)));
-  r.post('/outfits/recommend', heavy, async (req, res) => res.json(await outfits.forDay(req.user, recommendSchema(req.body))));
-  r.post('/plan', heavy, async (req, res) => res.json(await outfits.week(req.user, weekSchema(req.body ?? {}))));
+  r.post('/outfits/recommend', heavy, async (req, res) => res.json(await outfits.forDay(req.user, { ...recommendSchema(req.body), locale: req.locale })));
+  r.post('/plan', heavy, async (req, res) => res.json(await outfits.week(req.user, { ...weekSchema(req.body ?? {}), locale: req.locale })));
   r.post('/outfits/wear', (req, res) => res.json(outfits.wear(req.user, wearSchema(req.body))));
   r.delete('/outfits/wear', (req, res) => res.json(outfits.unwear(req.user, date()(req.query.date, 'date'))));
   r.post('/outfits/feedback', (req, res) => res.json(outfits.feedback(req.user, feedbackSchema(req.body))));

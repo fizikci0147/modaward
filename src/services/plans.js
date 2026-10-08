@@ -21,6 +21,6 @@ export function entitlements(user, config) {
 export function assertCanAddGarments(user, config, currentCount, adding = 1) {
   const { closetLimit } = entitlements(user, config);
   if (closetLimit !== null && currentCount + adding > closetLimit) {
-    throw paymentRequired(`The free plan holds ${closetLimit} items. Upgrade to Pro for an unlimited closet.`, { feature: 'closet', limit: closetLimit });
+    throw paymentRequired(`The free plan holds ${closetLimit} items. Upgrade to Pro for an unlimited closet.`, { feature: 'closet', limit: closetLimit }, { template: 'The free plan holds {n} items. Upgrade to Pro for an unlimited closet.', vars: { n: closetLimit } });
   }
 }
