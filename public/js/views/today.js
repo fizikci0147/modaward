@@ -1,4 +1,5 @@
 import { html, useState, useEffect, useRef, useCallback } from '/js/ui.js';
+import { t, tn } from '/js/i18n.js';
 import { api } from '/js/api.js';
 import { useStore, loadCloset, updateProfile, toast, fail, state, openUpgrade } from '/js/store.js';
 import { Icon } from '/js/icons.js';
@@ -10,7 +11,7 @@ import { OCCASIONS } from '/shared/taxonomy.js';
 import { greeting } from '/js/format.js';
 import { navigate } from '/js/router.js';
 
-const OCC = Object.entries(OCCASIONS).map(([id, o]) => ({ id, label: o.label }));
+const occasionOptions = () => Object.entries(OCCASIONS).map(([id, o]) => ({ id, label: t(o.label) }));
 
 /** Loads (and reloads) outfits for one day/occasion. */
 export function useOutfits(date, occasion, seed, excludeIds = []) {
@@ -30,10 +31,10 @@ function Skeleton() {
   return html`<div class="stack-l"><div class="skel" style=${{ height: '250px', borderRadius: '28px' }}></div><div class="skel" style=${{ height: '420px', borderRadius: '20px' }}></div></div>`;
 }
 
-export function NoLocation({ title = 'Where are you dressing for?' }) {
+export function NoLocation({ title = t('Where are you dressing for?') }) {
   const save = (loc) => updateProfile({ location: loc }, { immediate: true, quiet: true }).catch(() => {});
   return html`<div class="card card-pad stack-l enter" style=${{ maxWidth: '520px', margin: '40px auto' }}>
-    <div class="stack"><h1 class="display h-l">${title}</h1><p class="muted">We check the forecast hour by hour, so every outfit is right for the weather you’ll actually be in.</p></div>
+    <div class="stack"><h1 class="display h-l">${title}</h1><p class="muted">${t('We check the forecast hour by hour, so every outfit is right for the weather you’ll actually be in.')}</p></div>
     <${LocationPicker} onPick=${save} />
   </div>`;
 }
@@ -45,21 +46,21 @@ export function EmptyCloset({ missing, onDone }) {
     try {
       await api.post('/garments/starter', {});
       await loadCloset(true);
-      toast('Starter wardrobe added. Swap in your own pieces any time.');
+      toast(t('Starter wardrobe added. Swap in your own pieces any time.'));
       onDone?.();
     } catch (e) {
       fail(e);
       setBusy(false);
     }
   };
-  const need = missing?.includes('bottom') && !missing?.includes('top') ? 'bottoms' : missing?.includes('top') && !missing?.includes('bottom') ? 'tops' : 'tops and bottoms';
+  const addTitle = missing?.includes('bottom') && !missing?.includes('top') ? t('Add some bottoms') : missing?.includes('top') && !missing?.includes('bottom') ? t('Add some tops') : t('Add some tops and bottoms');
   return html`<${Empty}
-    title=${state.garments?.length ? `Add some ${need}` : 'Your closet is empty'}
-    text="Add a few of the things you actually wear and we’ll start building outfits around them. Or begin with a starter wardrobe and swap pieces in as you go."
+    title=${state.garments?.length ? addTitle : t('Your closet is empty')}
+    text=${t('Add a few of the things you actually wear and we’ll start building outfits around them. Or begin with a starter wardrobe and swap pieces in as you go.')}
     art=${html`<${GarmentArt} type="tee" color="#f7f6f2" /><${GarmentArt} type="jeans" color="#2b3a55" /><${GarmentArt} type="sneakers" color="#f7f6f2" />`}>
     <div class="row-wrap" style=${{ justifyContent: 'center' }}>
-      <button class="btn btn-primary" onClick=${() => navigate('/closet?add=1')}><${Icon} name="plus" />Add a piece</button>
-      <button class="btn btn-outline" onClick=${starter} disabled=${busy}>${busy ? html`<${Spinner} />` : null}Start with a starter wardrobe</button>
+      <button class="btn btn-primary" onClick=${() => navigate('/closet?add=1')}><${Icon} name="plus" />${t('Add a piece')}</button>
+      <button class="btn btn-outline" onClick=${starter} disabled=${busy}>${busy ? html`<${Spinner} />` : null}${t('Start with a starter wardrobe')}</button>
     </div>
   </${Empty}>`;
 }
@@ -102,7 +103,7 @@ export function TodayView() {
     try {
       await api.post('/outfits/wear', { date, itemIds: outfit.itemIds, occasion, key: outfit.key });
       setWorn((w) => ({ ...w, [outfit.key]: true }));
-      toast('Logged. Enjoy the day.');
+      toast(t('Logged. Enjoy the day.'));
     } catch (e) {
       fail(e);
     } finally {
@@ -123,7 +124,7 @@ export function TodayView() {
     setLoved((l) => ({ ...l, [outfit.key]: true }));
     try {
       await api.post('/outfits/feedback', { itemIds: outfit.itemIds, signal: 'love', key: outfit.key });
-      toast('Noted. More like this.');
+      toast(t('Noted. More like this.'));
     } catch (e) {
       fail(e);
     }
@@ -134,7 +135,7 @@ export function TodayView() {
     setIndex(0);
     try {
       await api.post('/outfits/feedback', { itemIds: outfit.itemIds, signal: 'dislike', key });
-      toast('Got it. We’ll steer away from that.');
+      toast(t('Got it. We’ll steer away from that.'));
     } catch (e) {
       fail(e);
     }
@@ -145,7 +146,7 @@ export function TodayView() {
     setIndex(0);
     // the swap is also a signal: this piece, in this combination, was not wanted
     api.post('/outfits/feedback', { itemIds: [item.id], signal: 'dislike' }).catch(() => {});
-    toast(`Swapped out ${item.name}.`);
+    toast(t('Swapped out {name}.', { name: item.name }));
   };
   const go = (delta) => {
     setDir(delta > 0 ? 'l' : 'r');
@@ -164,9 +165,9 @@ export function TodayView() {
 
   const pager = outfits.length > 1
     ? html`<div class="pager" style=${{ position: 'absolute', bottom: '14px', left: 0, right: 0, justifyContent: 'center' }}>
-        <button class="icon-btn" style=${{ background: 'var(--surface)' }} aria-label="Previous outfit" onClick=${() => go(-1)}><${Icon} name="left" /></button>
+        <button class="icon-btn" style=${{ background: 'var(--surface)' }} aria-label=${t('Previous outfit')} onClick=${() => go(-1)}><${Icon} name="left" /></button>
         <div class="dots" aria-hidden="true">${outfits.map((_, i) => html`<i key=${i} class=${i === index ? 'on' : ''}></i>`)}</div>
-        <button class="icon-btn" style=${{ background: 'var(--surface)' }} aria-label="Next outfit" onClick=${() => go(1)}><${Icon} name="right" /></button>
+        <button class="icon-btn" style=${{ background: 'var(--surface)' }} aria-label=${t('Next outfit')} onClick=${() => go(1)}><${Icon} name="right" /></button>
       </div>`
     : null;
 
@@ -179,24 +180,24 @@ export function TodayView() {
       ? html`<${WeatherHero} weather=${data.weather} date=${data.date}><${Tips} tips=${data.tips} /></${WeatherHero}>`
       : s.loading ? null : null}
 
-    <div class="chips-scroll enter enter-2" role="group" aria-label="Occasion">
-      ${OCC.map((o) => html`<button key=${o.id} class="chip" aria-pressed=${occasion === o.id ? 'true' : 'false'} onClick=${() => setOccasion(o.id)}>${o.label}</button>`)}
+    <div class="chips-scroll enter enter-2" role="group" aria-label=${t('Occasion')}>
+      ${occasionOptions().map((o) => html`<button key=${o.id} class="chip" aria-pressed=${occasion === o.id ? 'true' : 'false'} onClick=${() => setOccasion(o.id)}>${o.label}</button>`)}
     </div>
 
     ${s.loading && !data ? html`<${Skeleton} />` : null}
     ${s.error
       ? s.error.code === 'location_required'
         ? html`<${NoLocation} />`
-        : html`<div class="card card-pad stack center"><p>${s.error.message}</p><div><button class="btn btn-outline" onClick=${() => setSeed((x) => x + 1)}>Try again</button></div></div>`
+        : html`<div class="card card-pad stack center"><p>${s.error.message}</p><div><button class="btn btn-outline" onClick=${() => setSeed((x) => x + 1)}>${t('Try again')}</button></div></div>`
       : null}
     ${data && !outfit && skipped.length
-      ? html`<div class="card card-pad stack center"><p>There are no other outfits without ${skipped.map((p) => p.name).join(', ')}.</p><div><button class="btn btn-outline" onClick=${() => setSkipped([])}>Bring them back</button></div></div>`
+      ? html`<div class="card card-pad stack center"><p>${t('There are no other outfits without {names}.', { names: skipped.map((p) => p.name).join(', ') })}</p><div><button class="btn btn-outline" onClick=${() => setSkipped([])}>${t('Bring them back')}</button></div></div>`
       : data && !outfit ? html`<${EmptyCloset} missing=${data.missing} onDone=${() => setSeed((x) => x + 1)} />` : null}
     ${outfit
       ? html`<div key=${outfit.key} class=${dir === 'l' ? 'slide-l' : 'slide-r'} onTouchStart=${onTouchStart} onTouchEnd=${onTouchEnd} style=${{ opacity: s.loading ? 0.55 : 1, transition: 'opacity .2s' }}>
           <${OutfitCard}
             outfit=${outfit}
-            occasionLabel=${OCCASIONS[occasion].label}
+            occasionLabel=${t(OCCASIONS[occasion].label)}
             pager=${pager}
             worn=${worn}
             busy=${busy}
@@ -211,10 +212,10 @@ export function TodayView() {
         </div>`
       : null}
     ${skipped.length && outfit
-      ? html`<div class="row-wrap small muted" style=${{ alignItems: 'center' }}><span>Not using today:</span>${skipped.map((p) => html`<button key=${p.id} class="chip chip-s" title="Use it again" onClick=${() => setSkipped((l) => l.filter((x) => x.id !== p.id))}>${p.name}<${Icon} name="x" size="12" /></button>`)}</div>`
+      ? html`<div class="row-wrap small muted" style=${{ alignItems: 'center' }}><span>${t('Not using today:')}</span>${skipped.map((p) => html`<button key=${p.id} class="chip chip-s" title=${t('Use it again')} onClick=${() => setSkipped((l) => l.filter((x) => x.id !== p.id))}>${p.name}<${Icon} name="x" size="12" /></button>`)}</div>`
       : null}
     ${data?.stylistNote == null && state.entitlements?.plan === 'free' && outfit
-      ? html`<div class="upsell enter"><div class="grow"><b>Plan the whole week</b><p>Free plans see 3 days. Pro plans every day, with a stylist’s notes.</p></div><button class="btn btn-s" onClick=${() => openUpgrade('plan')}>See Pro</button></div>`
+      ? html`<div class="upsell enter"><div class="grow"><b>${t('Plan the whole week')}</b><p>${t('Free plans see 3 days. Pro plans every day, with a stylist’s notes.')}</p></div><button class="btn btn-s" onClick=${() => openUpgrade('plan')}>${t('See Pro')}</button></div>`
       : null}
   </div>`;
 }

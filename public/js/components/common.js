@@ -1,6 +1,8 @@
 import { html, useEffect, useRef, useState } from '/js/ui.js';
+import { t, getLocale, LOCALES, ENABLED_LOCALES } from '/js/i18n.js';
+import { L } from '/shared/i18n.js';
 import { Icon, Logo } from '/js/icons.js';
-import { useStore, dismissToast, closeUpgrade, toast, fail, state } from '/js/store.js';
+import { useStore, dismissToast, closeUpgrade, toast, fail, state, setLocale } from '/js/store.js';
 import { api } from '/js/api.js';
 import { navigate } from '/js/router.js';
 
@@ -34,7 +36,7 @@ export function Sheet({ title, onClose, children, footer, wide = false, label })
       <div class="grab"></div>
       <div class="sheet-head">
         <h2 class="display h-s">${title}</h2>
-        <button class="icon-btn" onClick=${onClose} aria-label="Close"><${Icon} name="x" /></button>
+        <button class="icon-btn" onClick=${onClose} aria-label=${t('Close')}><${Icon} name="x" /></button>
       </div>
       <div class="sheet-body">${children}</div>
       ${footer ? html`<div class="sheet-foot">${footer}</div>` : null}
@@ -45,15 +47,15 @@ export function Sheet({ title, onClose, children, footer, wide = false, label })
 export function Toasts() {
   const { toasts } = useStore();
   return html`<div class="toasts" role="status" aria-live="polite">
-    ${toasts.map((t) => html`<div class=${`toast ${t.kind === 'err' ? 'err' : ''}`} key=${t.id}>
-      <${Icon} name=${t.kind === 'err' ? 'info' : 'check'} />
-      <span>${t.message}</span>
-      ${t.action ? html`<button onClick=${() => { t.action.run(); dismissToast(t.id); }}>${t.action.label}</button>` : null}
+    ${toasts.map((n) => html`<div class=${`toast ${n.kind === 'err' ? 'err' : ''}`} key=${n.id}>
+      <${Icon} name=${n.kind === 'err' ? 'info' : 'check'} />
+      <span>${n.message}</span>
+      ${n.action ? html`<button onClick=${() => { n.action.run(); dismissToast(n.id); }}>${n.action.label}</button>` : null}
     </div>`)}
   </div>`;
 }
 
-export const Spinner = ({ class: cls = '' }) => html`<span class=${`spinner ${cls}`} role="progressbar" aria-label="Loading"></span>`;
+export const Spinner = ({ class: cls = '' }) => html`<span class=${`spinner ${cls}`} role="progressbar" aria-label=${t('Loading')}></span>`;
 
 export function Switch({ checked, onChange, label }) {
   return html`<button type="button" class="switch" role="switch" aria-checked=${checked ? 'true' : 'false'} aria-label=${label} onClick=${() => onChange(!checked)}></button>`;
@@ -71,18 +73,18 @@ export function Empty({ title, text, children, art }) {
 }
 
 const PRO_COPY = {
-  closet: ['An unlimited closet', 'Add every piece you own and get outfits built from all of it.'],
-  plan: ['Plan the whole week', 'See outfits for all seven days ahead, matched to each day’s forecast.'],
-  saved: ['Save every look', 'Keep as many looks as you like and come back to them any time.'],
-  pro: ['ModaWard Pro', 'The full stylist experience.']
+  closet: [L('An unlimited closet'), L('Add every piece you own and get outfits built from all of it.')],
+  plan: [L('Plan the whole week'), L('See outfits for all seven days ahead, matched to each day’s forecast.')],
+  saved: [L('Save every look'), L('Keep as many looks as you like and come back to them any time.')],
+  pro: [L('ModaWard Pro'), L('The full stylist experience.')]
 };
 
 export const PRO_FEATURES = [
-  'Unlimited closet and saved looks',
-  'Outfits planned for every day of the week',
-  'The full shopping feed: dozens of looks, mixed across brands',
-  'AI stylist notes and photo auto-tagging',
-  'Early access to new features'
+  L('Unlimited closet and saved looks'),
+  L('Outfits planned for every day of the week'),
+  L('The full shopping feed: dozens of looks, mixed across brands'),
+  L('AI stylist notes and photo auto-tagging'),
+  L('Early access to new features')
 ];
 
 export async function startCheckout(interval) {
@@ -99,7 +101,7 @@ export function UpgradeSheet() {
   const { upgrade, capabilities } = useStore();
   const [busy, setBusy] = useState('');
   if (!upgrade) return null;
-  const [title, text] = PRO_COPY[upgrade.reason] || PRO_COPY.pro;
+  const [title, text] = (PRO_COPY[upgrade.reason] || PRO_COPY.pro).map((x) => t(x));
   const go = async (interval) => {
     setBusy(interval);
     try {
@@ -108,18 +110,18 @@ export function UpgradeSheet() {
       setBusy('');
     }
   };
-  return html`<${Sheet} title=${title} onClose=${closeUpgrade} label="Upgrade to Pro">
+  return html`<${Sheet} title=${title} onClose=${closeUpgrade} label=${t('Upgrade to Pro')}>
     <p class="muted" style=${{ marginTop: '-8px' }}>${upgrade.message || text}</p>
     <ul class="stack" style=${{ gap: '10px' }}>
-      ${PRO_FEATURES.map((f) => html`<li class="row" style=${{ alignItems: 'flex-start' }}><${Icon} name="check" class="" size="18" /><span>${f}</span></li>`)}
+      ${PRO_FEATURES.map((f) => html`<li class="row" style=${{ alignItems: 'flex-start' }}><${Icon} name="check" class="" size="18" /><span>${t(f)}</span></li>`)}
     </ul>
     ${capabilities.billing
       ? html`<div class="stack">
-          <button class="btn btn-primary btn-l btn-block" disabled=${!!busy} onClick=${() => go('year')}>${busy === 'year' ? html`<${Spinner} />` : 'Yearly · $59 (save 38%)'}</button>
-          <button class="btn btn-outline btn-block" disabled=${!!busy} onClick=${() => go('month')}>${busy === 'month' ? html`<${Spinner} />` : 'Monthly · $7.99'}</button>
-          <p class="footnote center">Cancel any time from your profile. Billed securely by Stripe.</p>
+          <button class="btn btn-primary btn-l btn-block" disabled=${!!busy} onClick=${() => go('year')}>${busy === 'year' ? html`<${Spinner} />` : t('Yearly · $59 (save 38%)')}</button>
+          <button class="btn btn-outline btn-block" disabled=${!!busy} onClick=${() => go('month')}>${busy === 'month' ? html`<${Spinner} />` : t('Monthly · $7.99')}</button>
+          <p class="footnote center">${t('Cancel any time from your profile. Billed securely by Stripe.')}</p>
         </div>`
-      : html`<div class="banner"><${Icon} name="info" />Online payments are not switched on for this site yet.</div>`}
+      : html`<div class="banner"><${Icon} name="info" />${t('Online payments are not switched on for this site yet.')}</div>`}
   </${Sheet}>`;
 }
 
@@ -144,16 +146,16 @@ export function LocationPicker({ onPick, compact = false }) {
   }, [q]);
 
   const locate = () => {
-    if (!navigator.geolocation) return toast('Your browser cannot share its location. Search for your city instead.', { kind: 'err' });
+    if (!navigator.geolocation) return toast(t('Your browser cannot share its location. Search for your city instead.'), { kind: 'err' });
     setBusy(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setBusy(false);
-        onPick({ name: 'Current location', lat: Number(pos.coords.latitude.toFixed(4)), lon: Number(pos.coords.longitude.toFixed(4)), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' });
+        onPick({ name: t('Current location'), lat: Number(pos.coords.latitude.toFixed(4)), lon: Number(pos.coords.longitude.toFixed(4)), timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC' });
       },
       () => {
         setBusy(false);
-        toast('We could not get your location. Search for your city instead.', { kind: 'err' });
+        toast(t('We could not get your location. Search for your city instead.'), { kind: 'err' });
       },
       { timeout: 10000, maximumAge: 600000 }
     );
@@ -161,15 +163,24 @@ export function LocationPicker({ onPick, compact = false }) {
 
   return html`<div class="stack">
     <div class="field">
-      ${compact ? null : html`<label for="city">City</label>`}
+      ${compact ? null : html`<label for="city">${t('City')}</label>`}
       <div style=${{ position: 'relative' }}>
-        <input id="city" class="input" placeholder="Search for your city" autocomplete="off" value=${q} onInput=${(e) => setQ(e.target.value)} data-autofocus style=${{ paddingLeft: '42px' }} />
+        <input id="city" class="input" placeholder=${t('Search for your city')} autocomplete="off" value=${q} onInput=${(e) => setQ(e.target.value)} data-autofocus style=${{ paddingLeft: '42px' }} />
         <${Icon} name="search" size="18" class="faint" style=${{ position: 'absolute', left: '14px', top: '14px' }} />
       </div>
     </div>
     ${results.length ? html`<ul class="card" style=${{ overflow: 'hidden' }}>${results.map((r) => html`<li key=${r.name}><button class="row" style=${{ width: '100%', padding: '13px 16px', textAlign: 'left', borderBottom: '1px solid var(--line)' }} onClick=${() => onPick(r)}><${Icon} name="pin" size="18" class="faint" /><span>${r.name}</span></button></li>`)}</ul>` : null}
-    <button class="btn btn-outline" onClick=${locate} disabled=${busy}>${busy ? html`<${Spinner} />` : html`<${Icon} name="pin" />`} Use my current location</button>
+    <button class="btn btn-outline" onClick=${locate} disabled=${busy}>${busy ? html`<${Spinner} />` : html`<${Icon} name="pin" />`} ${t('Use my current location')}</button>
   </div>`;
+}
+
+/** Language switcher: native names, so people can always find their own. */
+export function LanguagePicker({ class: cls = '' }) {
+  const { locale } = useStore();
+  if (ENABLED_LOCALES.length < 2) return null; // nothing to choose between yet
+  return html`<label class=${`lang-picker ${cls}`}><${Icon} name="globe" size="16" /><span class="sr-only">${t('Language')}</span>
+    <select class="input" aria-label=${t('Language')} value=${locale || getLocale()} onChange=${(e) => setLocale(e.target.value)}>${Object.entries(LOCALES).filter(([code]) => ENABLED_LOCALES.includes(code)).map(([code, name]) => html`<option key=${code} value=${code}>${name}</option>`)}</select>
+  </label>`;
 }
 
 export function Wordmark() {
@@ -177,7 +188,7 @@ export function Wordmark() {
 }
 
 export function ProBadge() {
-  return html`<span class="badge badge-pro"><${Icon} name="crown" size="12" />Pro</span>`;
+  return html`<span class="badge badge-pro"><${Icon} name="crown" size="12" />${t('Pro')}</span>`;
 }
 
 export function go(path) {

@@ -1,9 +1,11 @@
 import { html, useState, useEffect } from '/js/ui.js';
+import { t, tx } from '/js/i18n.js';
+import { L } from '/shared/i18n.js';
 import { api } from '/js/api.js';
 import { authenticate, fail, toast } from '/js/store.js';
 import { Icon, Logo } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
-import { Spinner } from '/js/components/common.js';
+import { Spinner, LanguagePicker } from '/js/components/common.js';
 import { Link, navigate, useQuery } from '/js/router.js';
 
 const BOARD_A = [
@@ -23,8 +25,8 @@ function Side() {
       <div><${OutfitArt} items=${BOARD_B} /></div>
     </div>
     <div class="stack" style=${{ gap: '14px' }}>
-      <h1 class="display h-xl">Dress for the day <span class="italic">ahead.</span></h1>
-      <p>Your closet, the hour-by-hour forecast and a stylist’s eye, in one calm place.</p>
+      <h1 class="display h-xl">${t('Dress for the day')} <span class="italic">${t('ahead.')}</span></h1>
+      <p>${t('Your closet, the hour-by-hour forecast and a stylist’s eye, in one calm place.')}</p>
     </div>
   </aside>`;
 }
@@ -62,7 +64,7 @@ export function AuthView({ mode }) {
         setSent(true);
       } else if (mode === 'reset') {
         await api.post('/auth/reset', { token: q.get('token') || '', password: form.password });
-        toast('Password updated. Sign in with your new password.');
+        toast(t('Password updated. Sign in with your new password.'));
         navigate('/login', { replace: true });
       }
     } catch (err) {
@@ -73,8 +75,8 @@ export function AuthView({ mode }) {
     }
   };
 
-  const titles = { login: ['Welcome back', 'Sign in to see what to wear today.'], register: ['Create your account', 'Free to start. No card needed.'], forgot: ['Reset your password', 'We’ll email you a link to choose a new one.'], reset: ['Choose a new password', 'Use at least 10 characters.'] };
-  const [title, sub] = titles[mode];
+  const titles = { login: [L('Welcome back'), L('Sign in to see what to wear today.')], register: [L('Create your account'), L('Free to start. No card needed.')], forgot: [L('Reset your password'), L('We’ll email you a link to choose a new one.')], reset: [L('Choose a new password'), L('Use at least 10 characters.')] };
+  const [title, sub] = titles[mode].map((x) => t(x));
 
   return html`<div class="auth">
     <${Side} />
@@ -82,17 +84,18 @@ export function AuthView({ mode }) {
       <div class="auth-card enter">
         <div class="brand" style=${{ fontSize: '26px' }}><${Logo} size=${26} />ModaWard</div>
         <div class="stack" style=${{ gap: '8px' }}><h1 class="display h-l">${title}</h1><p class="muted">${sub}</p></div>
+        <${LanguagePicker} />
         ${sent
-          ? html`<div class="banner" role="status"><${Icon} name="mail" />If that email has an account, a reset link is on its way. It works for one hour.</div>`
+          ? html`<div class="banner" role="status"><${Icon} name="mail" />${t('If that email has an account, a reset link is on its way. It works for one hour.')}</div>`
           : html`<form class="stack" onSubmit=${submit} noValidate>
-              ${mode === 'register' ? html`<${Field} id="name" label="Your name" value=${form.name} onInput=${set('name')} autocomplete="name" maxlength="60" />` : null}
-              ${mode !== 'reset' ? html`<${Field} id="email" label="Email" type="email" value=${form.email} onInput=${set('email')} autocomplete="email" required autofocus />` : null}
-              ${mode !== 'forgot' ? html`<${Field} id="password" label=${mode === 'reset' ? 'New password' : 'Password'} type="password" value=${form.password} onInput=${set('password')} autocomplete=${mode === 'login' ? 'current-password' : 'new-password'} required hint=${mode === 'login' ? undefined : 'At least 10 characters. A short phrase works well.'} />` : null}
+              ${mode === 'register' ? html`<${Field} id="name" label=${t('Your name')} value=${form.name} onInput=${set('name')} autocomplete="name" maxlength="60" />` : null}
+              ${mode !== 'reset' ? html`<${Field} id="email" label=${t('Email')} type="email" value=${form.email} onInput=${set('email')} autocomplete="email" required autofocus />` : null}
+              ${mode !== 'forgot' ? html`<${Field} id="password" label=${mode === 'reset' ? t('New password') : t('Password')} type="password" value=${form.password} onInput=${set('password')} autocomplete=${mode === 'login' ? 'current-password' : 'new-password'} required hint=${mode === 'login' ? undefined : t('At least 10 characters. A short phrase works well.')} />` : null}
               ${error ? html`<div class="banner" role="alert"><${Icon} name="info" />${error}</div>` : null}
-              <button class="btn btn-primary btn-l btn-block" disabled=${busy}>${busy ? html`<${Spinner} />` : null}${{ login: 'Sign in', register: 'Create account', forgot: 'Send reset link', reset: 'Save new password' }[mode]}</button>
-              ${mode === 'login' ? html`<div class="spread small"><${Link} href="/forgot" class="muted">Forgot password?</${Link}><${Link} href="/register" style=${{ fontWeight: 600 }}>Create an account</${Link}></div>` : null}
-              ${mode === 'register' ? html`<p class="footnote">By creating an account you agree to our <${Link} href="/terms">Terms</${Link}> and <${Link} href="/privacy">Privacy Policy</${Link}>.</p><div class="small center">Already have an account? <${Link} href="/login" style=${{ fontWeight: 600 }}>Sign in</${Link}></div>` : null}
-              ${mode === 'forgot' || mode === 'reset' ? html`<div class="small center"><${Link} href="/login" style=${{ fontWeight: 600 }}>Back to sign in</${Link}></div>` : null}
+              <button class="btn btn-primary btn-l btn-block" disabled=${busy}>${busy ? html`<${Spinner} />` : null}${{ login: t('Sign in'), register: t('Create account'), forgot: t('Send reset link'), reset: t('Save new password') }[mode]}</button>
+              ${mode === 'login' ? html`<div class="spread small"><${Link} href="/forgot" class="muted">${t('Forgot password?')}</${Link}><${Link} href="/register" style=${{ fontWeight: 600 }}>${t('Create an account')}</${Link}></div>` : null}
+              ${mode === 'register' ? html`<p class="footnote">${tx(t('By creating an account you agree to our {terms} and {privacy}.'), { terms: html`<${Link} href="/terms">${t('Terms')}</${Link}>`, privacy: html`<${Link} href="/privacy">${t('Privacy Policy')}</${Link}>` })}</p><div class="small center">${t('Already have an account?')} <${Link} href="/login" style=${{ fontWeight: 600 }}>${t('Sign in')}</${Link}></div>` : null}
+              ${mode === 'forgot' || mode === 'reset' ? html`<div class="small center"><${Link} href="/login" style=${{ fontWeight: 600 }}>${t('Back to sign in')}</${Link}></div>` : null}
             </form>`}
       </div>
     </main>

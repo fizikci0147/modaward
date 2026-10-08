@@ -1,4 +1,5 @@
 import { segment, renderCutout } from '/shared/cutout.js';
+import { t } from '/js/i18n.js';
 import { dominantColor } from '/shared/color.js';
 
 let worker;
@@ -67,9 +68,9 @@ const toPngDataUrl = (data, width, height, maxBytes = 2_600_000) => {
  * @returns {Promise<{original: string, cutout: string|null, cutoutReason: string|null, color: string|null}>}
  */
 export async function readPhoto(file, { removeBackground = true } = {}) {
-  if (!/^image\//i.test(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) throw new Error('Choose a photo (JPEG, PNG or WebP).');
+  if (!/^image\//i.test(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) throw new Error(t('Choose a photo (JPEG, PNG or WebP).'));
   const bmp = await createImageBitmap(file).catch(() => null);
-  if (!bmp) throw new Error('That photo could not be read. Try a JPEG or PNG.');
+  if (!bmp) throw new Error(t('That photo could not be read. Try a JPEG or PNG.'));
   const scale = Math.min(1, 1100 / Math.max(bmp.width, bmp.height));
   const w = Math.max(1, Math.round(bmp.width * scale));
   const h = Math.max(1, Math.round(bmp.height * scale));

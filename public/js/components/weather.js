@@ -1,4 +1,5 @@
 import { html } from '/js/ui.js';
+import { t } from '/js/i18n.js';
 import { Icon, weatherIcon } from '/js/icons.js';
 import { describeCode } from '/shared/weather-codes.js';
 import { temp, tempStr, hour12, longDate, wind } from '/js/format.js';
@@ -38,7 +39,7 @@ export function DayChart({ hours, units, nowHour }) {
   const minH = data[vals.indexOf(lo)];
   const maxH = data[vals.indexOf(hi)];
   const now = nowHour != null ? data.find((h) => h.hour === Math.min(22, Math.max(6, nowHour))) : null;
-  return html`<svg class="chart" viewBox=${`0 0 ${W} ${H}`} role="img" aria-label=${`Feels-like temperature from ${tempStr(lo, units)} to ${tempStr(hi, units)} today`} preserveAspectRatio="none" style=${{ overflow: 'visible' }}>
+  return html`<svg class="chart" viewBox=${`0 0 ${W} ${H}`} role="img" aria-label=${t('Feels-like temperature from {low} to {high} today', { low: tempStr(lo, units), high: tempStr(hi, units) })} preserveAspectRatio="none" style=${{ overflow: 'visible' }}>
     <defs><linearGradient id="chartfill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".22"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs>
     ${data.map((h) => (h.precipProb >= 30 ? html`<rect key=${h.hour} x=${x(h.hour) - 7} y=${H - pad.b - 3 - (h.precipProb / 100) * 24} width="14" height=${(h.precipProb / 100) * 24 + 3} rx="3" fill="var(--sky)" opacity=${0.25 + (h.precipProb / 100) * 0.5} />` : null))}
     <path d=${area} fill="url(#chartfill)" />
@@ -59,21 +60,21 @@ export function WeatherHero({ weather, date, today, children }) {
   const big = isToday ? current.tempC : day.tMaxC;
   const feels = isToday ? current.feelsC : day.feelsMaxC;
   const nowHour = isToday && current.time ? Number(current.time.slice(11, 13)) : null;
-  return html`<section class=${`hero ${heroClass(cond.condition, isToday ? current.isDay : true)} enter`} aria-label="Weather">
+  return html`<section class=${`hero ${heroClass(cond.condition, isToday ? current.isDay : true)} enter`} aria-label=${t('Weather')}>
     <div class="hero-grid">
       <div class="stack" style=${{ gap: '14px' }}>
         <div class="row" style=${{ gap: '8px' }}>
           <${Icon} name="pin" size="16" class="faint" />
-          <span class="small muted">${location?.name || 'Your location'}${weather.stale ? ' · offline copy' : ''}</span>
+          <span class="small muted">${location?.name || t('Your location')}${weather.stale ? ` · ${t('offline copy')}` : ''}</span>
         </div>
         <div class="row" style=${{ alignItems: 'flex-end', gap: '16px' }}>
-          <div class="hero-temp num" aria-label=${`${temp(big, units)} degrees`}>${temp(big, units)}<sup>°</sup></div>
+          <div class="hero-temp num" aria-label=${t('{n} degrees', { n: temp(big, units) })}>${temp(big, units)}<sup>°</sup></div>
           <div class="stack" style=${{ gap: '2px', paddingBottom: '8px' }}>
             <${Icon} name=${weatherIcon(cond.condition, isToday ? current.isDay : true)} size="30" />
-            <div class="hero-cond">${cond.label}</div>
+            <div class="hero-cond">${t(cond.label)}</div>
           </div>
         </div>
-        <div class="small muted num">${isToday ? `Feels like ${tempStr(feels, units)} · ` : ''}H ${tempStr(day.tMaxC, units)} · L ${tempStr(day.tMinC, units)} · ${wind(day.windKphMax, units)} wind · ${Math.round(day.precipProb)}% rain</div>
+        <div class="small muted num">${isToday ? `${t('Feels like {temp}', { temp: tempStr(feels, units) })} · ` : ''}${t('H {temp}', { temp: tempStr(day.tMaxC, units) })} · ${t('L {temp}', { temp: tempStr(day.tMinC, units) })} · ${t('{speed} wind', { speed: wind(day.windKphMax, units) })} · ${t('{n}% rain', { n: Math.round(day.precipProb) })}</div>
         <div class="eyebrow">${longDate(date || day.date)}</div>
       </div>
       <${DayChart} hours=${day.hours} units=${units} nowHour=${nowHour} />
@@ -85,6 +86,6 @@ export function WeatherHero({ weather, date, today, children }) {
 export function Tips({ tips }) {
   if (!tips?.length) return null;
   return html`<div class="stack" style=${{ gap: '8px' }}>
-    ${tips.map((t) => html`<div key=${t.kind} class=${`tip ${t.kind === 'rain' || t.kind === 'snow' ? 'rain' : ''}`}><${Icon} name=${t.icon} /><span>${t.text}</span></div>`)}
+    ${tips.map((tip) => html`<div key=${tip.kind} class=${`tip ${tip.kind === 'rain' || tip.kind === 'snow' ? 'rain' : ''}`}><${Icon} name=${tip.icon} /><span>${tip.text}</span></div>`)}
   </div>`;
 }

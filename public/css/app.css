@@ -333,6 +333,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 .col i { display: block; width: 100%; background: var(--accent); border-radius: 3px 3px 0 0; min-height: 2px; }
 .heat-h { font-size: 10px; color: var(--ink-3); white-space: nowrap; }
 .heat-d { font-size: 11px; color: var(--ink-3); }
+.lang-picker { display: inline-flex; align-items: center; gap: 8px; color: var(--ink-3); }
+.lang-picker select { height: 36px; padding: 0 28px 0 10px; width: auto; font-size: 14px; }
 .rate svg { width: 16px; height: 16px; }
 .rate.on { background: var(--clay); border-color: var(--clay); color: #fff; }
 .chip-x { width: 20px; height: 20px; margin-left: 2px; border-radius: 50%; display: inline-grid; place-items: center; color: var(--ink-3); }

@@ -1,4 +1,6 @@
 import { html, useEffect } from '/js/ui.js';
+import { t } from '/js/i18n.js';
+import { L } from '/shared/i18n.js';
 import { useStore, boot, set, toast, state } from '/js/store.js';
 import { usePath, navigate, Link } from '/js/router.js';
 import { Icon, Logo } from '/js/icons.js';
@@ -16,14 +18,14 @@ import { PrivacyView, TermsView } from '/js/views/legal.js';
 import { AdminView } from '/js/views/admin.js';
 
 const NAV = [
-  ['/', 'Today', 'sun-cloud'],
-  ['/week', 'Week', 'calendar'],
-  ['/closet', 'Closet', 'hanger'],
-  ['/shop', 'Shop', 'bag'],
-  ['/style', 'You', 'user']
+  ['/', L('Today'), 'sun-cloud'],
+  ['/week', L('Week'), 'calendar'],
+  ['/closet', L('Closet'), 'hanger'],
+  ['/shop', L('Shop'), 'bag'],
+  ['/style', L('You'), 'user']
 ];
 const PUBLIC = new Set(['/login', '/register', '/forgot', '/reset', '/privacy', '/terms', '/pro']);
-const TITLES = { '/': 'Today', '/week': 'The week ahead', '/closet': 'Your closet', '/shop': 'Shop', '/style': 'You', '/pro': 'Pro', '/privacy': 'Privacy', '/terms': 'Terms', '/login': 'Sign in', '/register': 'Create account', '/welcome': 'Welcome', '/admin': 'Business' };
+const TITLES = { '/': L('Today'), '/week': L('The week ahead'), '/closet': L('Your closet'), '/shop': L('Shop'), '/style': L('You'), '/pro': L('Pro'), '/privacy': L('Privacy'), '/terms': L('Terms'), '/login': L('Sign in'), '/register': L('Create account'), '/welcome': L('Welcome'), '/admin': L('Business') };
 
 function Splash() {
   return html`<div style=${{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}><div class="brand" style=${{ fontSize: '30px', opacity: 0.9 }}><${Logo} size=${30} />ModaWard</div></div>`;
@@ -41,23 +43,23 @@ function Shell({ path, children }) {
   };
   const isCurrent = (href) => (href === '/' ? path === '/' : path.startsWith(href));
   return html`<div class="app">
-    <nav class="rail" aria-label="Main">
+    <nav class="rail" aria-label=${t('Main')}>
       <${Link} href="/" class="brand"><${Logo} size=${28} />ModaWard</${Link}>
-      ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="rail-link" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${label}</${Link}>`)}
-      ${user?.isAdmin ? html`<${Link} href="/admin" class="rail-link" aria-current=${isCurrent('/admin') ? 'page' : undefined}><${Icon} name="shield" />Business</${Link}>` : null}
+      ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="rail-link" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${t(label)}</${Link}>`)}
+      ${user?.isAdmin ? html`<${Link} href="/admin" class="rail-link" aria-current=${isCurrent('/admin') ? 'page' : undefined}><${Icon} name="shield" />${t('Business')}</${Link}>` : null}
       <div class="rail-foot">
-        ${!pro ? html`<${Link} href="/pro" class="btn btn-primary"><${Icon} name="crown" />Go Pro</${Link}>` : html`<div class="row" style=${{ padding: '0 12px' }}><${ProBadge} /><span class="small muted">Thank you</span></div>`}
-        ${installPrompt ? html`<button class="btn btn-outline btn-s" onClick=${install}><${Icon} name="download" />Install app</button>` : null}
+        ${!pro ? html`<${Link} href="/pro" class="btn btn-primary"><${Icon} name="crown" />${t('Go Pro')}</${Link}>` : html`<div class="row" style=${{ padding: '0 12px' }}><${ProBadge} /><span class="small muted">${t('Thank you')}</span></div>`}
+        ${installPrompt ? html`<button class="btn btn-outline btn-s" onClick=${install}><${Icon} name="download" />${t('Install app')}</button>` : null}
         <${Link} href="/style?section=account" class="row small muted" style=${{ padding: '8px 12px' }}><span class="badge" style=${{ width: '30px', height: '30px', justifyContent: 'center' }}>${initials(user?.name || user?.email)}</span><span class="grow" style=${{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>${user?.name || user?.email}</span></${Link}>
       </div>
     </nav>
     <header class="topbar">
       <${Link} href="/" class="brand"><${Logo} size=${24} />ModaWard</${Link}>
-      <div class="row">${!pro ? html`<${Link} href="/pro" class="chip chip-s" aria-label="Upgrade to Pro"><${Icon} name="crown" />Pro</${Link}>` : html`<${ProBadge} />`}</div>
+      <div class="row">${!pro ? html`<${Link} href="/pro" class="chip chip-s" aria-label=${t('Upgrade to Pro')}><${Icon} name="crown" />${t('Pro')}</${Link}>` : html`<${ProBadge} />`}</div>
     </header>
     <main class="main" id="main">${children}</main>
-    <nav class="tabbar" aria-label="Main">
-      ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="tab" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${label}</${Link}>`)}
+    <nav class="tabbar" aria-label=${t('Main')}>
+      ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="tab" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${t(label)}</${Link}>`)}
     </nav>
   </div>`;
 }
@@ -65,13 +67,13 @@ function Shell({ path, children }) {
 function PublicPage({ children }) {
   const { user } = useStore();
   return html`<div style=${{ minHeight: '100dvh' }}>
-    <header class="topbar" style=${{ position: 'static' }}><${Link} href=${user ? '/' : '/login'} class="brand"><${Logo} size=${24} />ModaWard</${Link}><${Link} href=${user ? '/' : '/login'} class="btn btn-ghost btn-s">${user ? 'Open app' : 'Sign in'}</${Link}></header>
+    <header class="topbar" style=${{ position: 'static' }}><${Link} href=${user ? '/' : '/login'} class="brand"><${Logo} size=${24} />ModaWard</${Link}><${Link} href=${user ? '/' : '/login'} class="btn btn-ghost btn-s">${user ? t('Open app') : t('Sign in')}</${Link}></header>
     <main class="main" style=${{ paddingBottom: '80px' }}>${children}</main>
   </div>`;
 }
 
 export function App() {
-  const { ready, user } = useStore();
+  const { ready, user, locale } = useStore();
   const path = usePath();
 
   useEffect(() => {
@@ -81,12 +83,12 @@ export function App() {
       set({ installPrompt: e });
     });
     addEventListener('appinstalled', () => set({ installPrompt: null }));
-    addEventListener('offline', () => toast('You are offline. Some things may not load.', { kind: 'err' }));
+    addEventListener('offline', () => toast(t('You are offline. Some things may not load.'), { kind: 'err' }));
   }, []);
 
   useEffect(() => {
-    document.title = `${TITLES[path] || 'ModaWard'} · ModaWard`;
-  }, [path]);
+    document.title = `${TITLES[path] ? t(TITLES[path]) : 'ModaWard'} · ModaWard`;
+  }, [path, locale]);
 
   // route guards
   useEffect(() => {
@@ -110,13 +112,13 @@ export function App() {
   else if (path === '/welcome') page = html`<${WelcomeView} />`;
   else if (path === '/pro') page = html`<${Shell} path=${path}><${ProView} /></${Shell}>`;
   else if (path === '/admin' && user.isAdmin) page = html`<${Shell} path=${path}><${AdminView} /></${Shell}>`;
-  else if (path === '/admin') page = html`<${Shell} path=${path}><div class="empty"><h1 class="display h-l">Not an admin account</h1><p class="muted">You are signed in as <b>${user.email}</b>. The admin tools open for the addresses listed in the server setting ADMIN_EMAILS. Add this address there, restart the app, then sign out and back in.</p><${Link} href="/" class="btn btn-primary">Back to today</${Link}></div></${Shell}>`;
+  else if (path === '/admin') page = html`<${Shell} path=${path}><div class="empty"><h1 class="display h-l">${t('Not an admin account')}</h1><p class="muted">${t('You are signed in as {email}. The admin tools open for the addresses listed in the server setting ADMIN_EMAILS. Add this address there, restart the app, then sign out and back in.', { email: user.email })}</p><${Link} href="/" class="btn btn-primary">${t('Back to today')}</${Link}></div></${Shell}>`;
   else {
     const view = { '/': TodayView, '/week': WeekView, '/closet': ClosetView, '/shop': ShopView, '/style': ProfileView }[path];
     page = view
       ? html`<${Shell} path=${path}><${view} /></${Shell}>`
-      : html`<${Shell} path=${path}><div class="empty"><h1 class="display h-l">Nothing here</h1><${Link} href="/" class="btn btn-primary">Back to today</${Link}></div></${Shell}>`;
+      : html`<${Shell} path=${path}><div class="empty"><h1 class="display h-l">${t('Nothing here')}</h1><${Link} href="/" class="btn btn-primary">${t('Back to today')}</${Link}></div></${Shell}>`;
   }
 
-  return html`<a class="sr-only" href="#main">Skip to content</a>${page}<${UpgradeSheet} /><${Toasts} />`;
+  return html`<a class="sr-only" href="#main">${t('Skip to content')}</a>${page}<${UpgradeSheet} /><${Toasts} />`;
 }

@@ -1,7 +1,11 @@
 import { html, render } from '/js/ui.js';
 import { App } from '/js/app.js';
-import { toast } from '/js/store.js';
+import { toast, set } from '/js/store.js';
+import { loadLocale, detectLocale, getLocale, t } from '/js/i18n.js';
 
+// load the language first so the very first paint is already translated
+await loadLocale(detectLocale());
+set({ locale: getLocale() });
 render(html`<${App} />`, document.getElementById('root'));
 
 // Offline support and updates
@@ -13,7 +17,7 @@ if ('serviceWorker' in navigator) {
         const sw = reg.installing;
         sw?.addEventListener('statechange', () => {
           if (sw.state === 'installed' && navigator.serviceWorker.controller) {
-            toast('A new version is ready.', { ms: 12000, action: { label: 'Refresh', run: () => location.reload() } });
+            toast(t('A new version is ready.'), { ms: 12000, action: { label: t('Refresh'), run: () => location.reload() } });
           }
         });
       });

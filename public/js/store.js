@@ -2,6 +2,7 @@ import { useEffect, useReducer } from '/js/ui.js';
 import { api, onApiEvent } from '/js/api.js';
 import { navigate } from '/js/router.js';
 import { completeness } from '/shared/profile.js';
+import { loadLocale, getLocale, t } from '/js/i18n.js';
 
 /**
  * Tiny global store. State is one plain object; any change re-renders subscribed components.
@@ -16,7 +17,8 @@ export const state = {
   garments: null, // null = not loaded yet
   toasts: [],
   upgrade: null, // { reason, message } while the upgrade sheet is open
-  installPrompt: null
+  installPrompt: null,
+  locale: 'en' // bumps re-renders when the language changes
 };
 
 const subs = new Set();
@@ -46,7 +48,7 @@ export const dismissToast = (id) => set({ toasts: state.toasts.filter((t) => t.i
 export function fail(err) {
   if (err?.code === 'upgrade_required') return; // the global handler opens the sheet
   if (err?.name === 'AbortError') return;
-  toast(err?.message || 'Something went wrong.', { kind: 'err', ms: 5000 });
+  toast(err?.message || t('Something went wrong.'), { kind: 'err', ms: 5000 });
 }
 
 export const openUpgrade = (reason = 'pro', message = '') => set({ upgrade: { reason, message } });
@@ -60,13 +62,26 @@ onApiEvent((type, err) => {
   if (type === 'upgrade') openUpgrade(err.details?.feature || 'pro', err.message);
 });
 
-function applyMe(me) {
-  set({ user: me.user, profile: me.profile, entitlements: me.entitlements, capabilities: me.capabilities || {} });
+async function applyMe(me) {
+  // a saved language on the account wins over this browser's guess
+  const saved = me.profile?.locale;
+  if (saved && saved !== getLocale()) await loadLocale(saved);
+  set({ user: me.user, profile: me.profile, entitlements: me.entitlements, capabilities: me.capabilities || {}, locale: getLocale() });
+}
+
+/** Switch language now, remember it in this browser and, when signed in, on the account. */
+export async function setLocale(code) {
+  const used = await loadLocale(code);
+  set({ locale: used });
+  if (state.user && state.profile?.locale !== used) {
+    set({ profile: { ...state.profile, locale: used } });
+    api.patch('/profile', { locale: used }).catch(() => {});
+  }
 }
 
 export async function boot() {
   try {
-    applyMe(await api.get('/auth/me'));
+    await applyMe(await api.get('/auth/me'));
   } catch {
     /* offline or server hiccup: stay signed out, the UI shows the login screen */
   }
@@ -75,7 +90,7 @@ export async function boot() {
 
 export async function authenticate(kind, body) {
   const me = await api.post(`/auth/${kind}`, body);
-  applyMe(me);
+  await applyMe(me);
   set({ garments: null });
   return me;
 }
@@ -87,7 +102,7 @@ export async function logout() {
 }
 
 export async function refreshMe() {
-  applyMe(await api.get('/auth/me'));
+  await applyMe(await api.get('/auth/me'));
 }
 
 export async function loadCloset(force = false) {
@@ -124,7 +139,7 @@ export function updateProfile(patch, { immediate = false, quiet = false } = {}) 
       try {
         const res = await api.patch('/profile', body);
         set({ profile: res.profile });
-        if (!quiet) toast('Saved');
+        if (!quiet) toast(t('Saved'));
         resolve(res);
       } catch (e) {
         fail(e);

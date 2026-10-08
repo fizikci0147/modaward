@@ -2,6 +2,8 @@
  * Colour science for outfit harmony. Pure functions, no I/O, works in Node and the browser.
  */
 
+import { L } from './i18n.js';
+
 const HEX_RE = /^#[0-9a-f]{6}$/i;
 
 export const isHex = (v) => typeof v === 'string' && HEX_RE.test(v);
@@ -44,35 +46,35 @@ export function hueDistance(a, b) {
  * `role` says how the colour behaves in an outfit.
  */
 export const PALETTE = Object.freeze([
-  { name: 'black', hex: '#1c1c1e', role: 'neutral' },
-  { name: 'charcoal', hex: '#3d3f44', role: 'neutral' },
-  { name: 'grey', hex: '#8e9096', role: 'neutral' },
-  { name: 'light grey', hex: '#cfd1d5', role: 'neutral' },
-  { name: 'white', hex: '#f7f6f2', role: 'neutral' },
-  { name: 'cream', hex: '#efe6d2', role: 'neutral' },
-  { name: 'beige', hex: '#cdb89a', role: 'neutral' },
-  { name: 'camel', hex: '#b58750', role: 'neutral' },
-  { name: 'brown', hex: '#6b4a32', role: 'neutral' },
-  { name: 'olive', hex: '#6b6f3a', role: 'earth' },
-  { name: 'khaki', hex: '#a39a6a', role: 'neutral' },
-  { name: 'navy', hex: '#1f2f54', role: 'neutral' },
-  { name: 'denim', hex: '#4b6a93', role: 'neutral' },
-  { name: 'light denim', hex: '#8fa9c8', role: 'neutral' },
-  { name: 'forest green', hex: '#2f5a3e', role: 'accent' },
-  { name: 'sage', hex: '#a1b49a', role: 'accent' },
-  { name: 'teal', hex: '#2a7b83', role: 'accent' },
-  { name: 'sky blue', hex: '#7fb4e0', role: 'accent' },
-  { name: 'royal blue', hex: '#2d56c4', role: 'accent' },
-  { name: 'lavender', hex: '#b2a4d4', role: 'accent' },
-  { name: 'purple', hex: '#6a3f94', role: 'accent' },
-  { name: 'burgundy', hex: '#6d1f35', role: 'accent' },
-  { name: 'red', hex: '#c0302f', role: 'accent' },
-  { name: 'rust', hex: '#b5532c', role: 'earth' },
-  { name: 'orange', hex: '#e3772b', role: 'accent' },
-  { name: 'mustard', hex: '#d4a017', role: 'earth' },
-  { name: 'yellow', hex: '#f0cf4a', role: 'accent' },
-  { name: 'blush', hex: '#e8b4b8', role: 'accent' },
-  { name: 'pink', hex: '#e0709a', role: 'accent' }
+  { name: L('black'), hex: '#1c1c1e', role: 'neutral' },
+  { name: L('charcoal'), hex: '#3d3f44', role: 'neutral' },
+  { name: L('grey'), hex: '#8e9096', role: 'neutral' },
+  { name: L('light grey'), hex: '#cfd1d5', role: 'neutral' },
+  { name: L('white'), hex: '#f7f6f2', role: 'neutral' },
+  { name: L('cream'), hex: '#efe6d2', role: 'neutral' },
+  { name: L('beige'), hex: '#cdb89a', role: 'neutral' },
+  { name: L('camel'), hex: '#b58750', role: 'neutral' },
+  { name: L('brown'), hex: '#6b4a32', role: 'neutral' },
+  { name: L('olive'), hex: '#6b6f3a', role: 'earth' },
+  { name: L('khaki'), hex: '#a39a6a', role: 'neutral' },
+  { name: L('navy'), hex: '#1f2f54', role: 'neutral' },
+  { name: L('denim'), hex: '#4b6a93', role: 'neutral' },
+  { name: L('light denim'), hex: '#8fa9c8', role: 'neutral' },
+  { name: L('forest green'), hex: '#2f5a3e', role: 'accent' },
+  { name: L('sage'), hex: '#a1b49a', role: 'accent' },
+  { name: L('teal'), hex: '#2a7b83', role: 'accent' },
+  { name: L('sky blue'), hex: '#7fb4e0', role: 'accent' },
+  { name: L('royal blue'), hex: '#2d56c4', role: 'accent' },
+  { name: L('lavender'), hex: '#b2a4d4', role: 'accent' },
+  { name: L('purple'), hex: '#6a3f94', role: 'accent' },
+  { name: L('burgundy'), hex: '#6d1f35', role: 'accent' },
+  { name: L('red'), hex: '#c0302f', role: 'accent' },
+  { name: L('rust'), hex: '#b5532c', role: 'earth' },
+  { name: L('orange'), hex: '#e3772b', role: 'accent' },
+  { name: L('mustard'), hex: '#d4a017', role: 'earth' },
+  { name: L('yellow'), hex: '#f0cf4a', role: 'accent' },
+  { name: L('blush'), hex: '#e8b4b8', role: 'accent' },
+  { name: L('pink'), hex: '#e0709a', role: 'accent' }
 ]);
 
 const SWATCH_BY_NAME = new Map(PALETTE.map((p) => [p.name, p]));

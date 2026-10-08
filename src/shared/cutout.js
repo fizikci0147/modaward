@@ -14,6 +14,8 @@
  *  5. Drop specks, fill pin-holes, keep the main garment(s), feather the edge.
  *  6. Self-check: refuse (rather than guess) when the result is implausible.
  */
+import { L } from './i18n.js';
+
 
 // ── colour ────────────────────────────────────────────────────────────────
 const srgb = (v) => {
@@ -418,10 +420,10 @@ export function renderCutout(img, seg, { pad = 0.05, maxSide = 900 } = {}) {
 }
 
 export const CUTOUT_MESSAGES = {
-  'low-contrast': 'The garment is too close in colour to what it’s lying on, so we kept your original photo. A contrasting surface works best.',
-  'no-clear-backdrop': 'We couldn’t find a clear backdrop in that photo, so we kept it as is.',
-  cluttered: 'The background is too busy to separate cleanly, so we kept your original photo.',
-  'too-small': 'That photo is too small to cut out.',
-  'nothing-found': 'We couldn’t find the garment in that photo, so we kept it as is.',
-  empty: 'We couldn’t find the garment in that photo, so we kept it as is.'
+  'low-contrast': L('The garment is too close in colour to what it’s lying on, so we kept your original photo. A contrasting surface works best.'),
+  'no-clear-backdrop': L('We couldn’t find a clear backdrop in that photo, so we kept it as is.'),
+  cluttered: L('The background is too busy to separate cleanly, so we kept your original photo.'),
+  'too-small': L('That photo is too small to cut out.'),
+  'nothing-found': L('We couldn’t find the garment in that photo, so we kept it as is.'),
+  empty: L('We couldn’t find the garment in that photo, so we kept it as is.')
 };

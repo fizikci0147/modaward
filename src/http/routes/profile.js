@@ -8,6 +8,7 @@ import {
 } from '../../shared/profile.js';
 import { RETAILER_IDS } from '../../shop/retailers.js';
 import { badRequest } from '../../util/errors.js';
+import { LOCALES } from '../../shared/i18n.js';
 
 const colorNames = PALETTE.map((p) => p.name);
 const size = () => string({ max: 12 });
@@ -17,6 +18,7 @@ const brand = () => string({ min: 1, max: 30 });
 export const profilePatchSchema = partial({
   department: oneOf(DEPARTMENTS),
   units: oneOf(UNITS),
+  locale: nullable(oneOf(Object.keys(LOCALES))),
   location: nullable(object({ name: string({ min: 1, max: 80 }), lat: number({ min: -90, max: 90 }), lon: number({ min: -180, max: 180 }), timezone: string({ max: 60 }) })),
   workDays: arrayOf(integer({ min: 0, max: 6 }), { max: 7, unique: true }),
   ageRange: nullable(oneOf(AGE_RANGES)),
