@@ -1,4 +1,4 @@
-import { html, useEffect, useErrorBoundary } from '/js/ui.js';
+import { html, useEffect, useErrorBoundary, useRef } from '/js/ui.js';
 import { t } from '/js/i18n.js';
 import { L } from '/shared/i18n.js';
 import { useStore, boot, set, toast, state } from '/js/store.js';
@@ -78,7 +78,7 @@ function PublicPage({ children }) {
 export function App() {
   // a screen that breaks shows a way out instead of a blank page, and is reported
   const [crash, clearCrash] = useErrorBoundary(reportError);
-  const { ready, user, locale } = useStore();
+  const { ready, user, locale, bootError } = useStore();
   const path = usePath();
 
   useEffect(() => {
@@ -89,11 +89,21 @@ export function App() {
     });
     addEventListener('appinstalled', () => set({ installPrompt: null }));
     addEventListener('offline', () => toast(t('You are offline. Some things may not load.'), { kind: 'err' }));
+    // back online after a failed start: try again by itself
+    addEventListener('online', () => state.bootError && boot());
   }, []);
 
   useEffect(() => {
     document.title = `${TITLES[path] ? t(TITLES[path]) : 'ModaWard'} · ModaWard`;
   }, [path, locale]);
+
+  // a new screen starts at its top for keyboard and screen-reader users, as a page load would
+  const firstPath = useRef(path);
+  useEffect(() => {
+    if (firstPath.current === path) return;
+    firstPath.current = path;
+    document.getElementById('main')?.focus({ preventScroll: true });
+  }, [path]);
 
   // route guards
   useEffect(() => {
@@ -106,6 +116,9 @@ export function App() {
 
   if (crash) return html`<main class="main" style=${{ display: 'grid', placeItems: 'center', minHeight: '100dvh' }}><div class="card card-pad stack center enter" role="alert" style=${{ maxWidth: '440px' }}><h1 class="display h-m">${t('Something went wrong. Please try again.')}</h1><div><button class="btn btn-primary" onClick=${() => { clearCrash(); navigate('/'); }}>${t('Try again')}</button></div></div></main>`;
   if (!ready) return html`<${Splash} />`;
+  if (bootError && !user && !['/privacy', '/terms', '/unsubscribe'].includes(path)) {
+    return html`<main class="main" style=${{ display: 'grid', placeItems: 'center', minHeight: '100dvh' }}><div class="card card-pad stack center enter" role="alert" style=${{ maxWidth: '440px' }}><h1 class="display h-m">${t('You appear to be offline. Check your connection and try again.')}</h1><div><button class="btn btn-primary" onClick=${() => { set({ ready: false }); boot(); }}>${t('Try again')}</button></div></div></main>`;
+  }
 
   let page;
   if (path === '/login') page = html`<${AuthView} mode="login" />`;

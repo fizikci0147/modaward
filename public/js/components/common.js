@@ -6,33 +6,50 @@ import { useStore, dismissToast, closeUpgrade, toast, fail, state, setLocale } f
 import { api } from '/js/api.js';
 import { navigate } from '/js/router.js';
 
+// Sheets can open on top of each other (a confirmation over a form): only the top one answers
+// Esc and Tab, and the page behind stays locked until the last one closes.
+const openSheets = [];
+
 /** Bottom sheet on phones, centred dialog on desktop. Closes on Esc, scrim click and swipe-free. */
 export function Sheet({ title, onClose, children, footer, wide = false, label }) {
   const ref = useRef(null);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose; // the latest handler, not the one from the first render
   useEffect(() => {
     const prev = document.activeElement;
+    const me = {};
+    openSheets.push(me);
+    const isTop = () => openSheets[openSheets.length - 1] === me;
+    const focusables = () => [...(ref.current?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])') || [])].filter((el) => !el.disabled && el.offsetParent !== null);
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose();
+      if (!isTop()) return;
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        closeRef.current();
+      }
       if (e.key === 'Tab' && ref.current) {
-        const f = [...ref.current.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')].filter((el) => !el.disabled && el.offsetParent !== null);
-        if (!f.length) return;
+        const f = focusables();
+        if (!f.length) return e.preventDefault();
         const first = f[0];
         const last = f[f.length - 1];
-        if (e.shiftKey && document.activeElement === first) (e.preventDefault(), last.focus());
+        if (!ref.current.contains(document.activeElement)) (e.preventDefault(), first.focus());
+        else if (e.shiftKey && document.activeElement === first) (e.preventDefault(), last.focus());
         else if (!e.shiftKey && document.activeElement === last) (e.preventDefault(), first.focus());
       }
     };
     document.addEventListener('keydown', onKey);
     document.body.style.overflow = 'hidden';
-    ref.current?.querySelector('[data-autofocus]')?.focus();
+    // start inside the dialog: the marked field, else the first control, else the dialog itself
+    (ref.current?.querySelector('[data-autofocus]') || focusables()[0] || ref.current)?.focus?.();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
-      prev?.focus?.();
+      openSheets.splice(openSheets.indexOf(me), 1);
+      if (!openSheets.length) document.body.style.overflow = '';
+      if (prev?.isConnected) prev.focus?.();
     };
   }, []);
   return html`<div class="scrim" onMouseDown=${(e) => e.target === e.currentTarget && onClose()}>
-    <div class=${`sheet ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label=${label || title} ref=${ref}>
+    <div class=${`sheet ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-label=${label || title} tabindex="-1" ref=${ref}>
       <div class="grab"></div>
       <div class="sheet-head">
         <h2 class="display h-s">${title}</h2>

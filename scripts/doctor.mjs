@@ -20,8 +20,8 @@ const show = (ok, label, detail = '', fix = '') => {
 
 // Node
 const [major, minor] = process.versions.node.split('.').map(Number);
-const nodeOk = major > 20 || (major === 20 && minor >= 12);
-show(nodeOk, 'Node.js version', process.version, 'Choose Node.js 22.x or 24.x in your host panel (20.12+ works, 18 does not).');
+const nodeOk = major > 20 || (major === 20 && minor >= 19);
+show(nodeOk, 'Node.js version', process.version, 'Choose Node.js 22.x or 24.x in your host panel (20.19+ works, 18 does not).');
 
 // files
 for (const f of ['server.js', 'src/main.js', 'public/index.html', 'package.json']) show(fs.existsSync(path.join(root, f)), `file ${f}`, '', 'Upload the whole project folder; some files are missing.');

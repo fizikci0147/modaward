@@ -18,18 +18,31 @@ const listeners = new Set();
 export const onApiEvent = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 const emit = (type, payload) => listeners.forEach((fn) => fn(type, payload));
 
+const TIMEOUT_MS = 60_000;
+
+/** The caller's signal and a time limit, whichever comes first (a request must never hang forever). */
+function withTimeout(signal) {
+  try {
+    const limit = AbortSignal.timeout(TIMEOUT_MS);
+    return signal ? AbortSignal.any([signal, limit]) : limit;
+  } catch {
+    return signal; // older browsers: no combined signal, the caller's still works
+  }
+}
+
 async function request(method, url, body, { signal } = {}) {
   let res;
   try {
     res = await fetch(`/api${url}`, {
       method,
       credentials: 'same-origin',
-      signal,
+      signal: withTimeout(signal),
       headers: { 'X-Requested-With': 'modaward', 'X-Locale': getLocale(), ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
       body: body !== undefined ? JSON.stringify(body) : undefined
     });
   } catch (e) {
-    if (e.name === 'AbortError') throw e;
+    if (e.name === 'AbortError' && signal?.aborted) throw e; // the caller cancelled it on purpose
+    if (e.name === 'TimeoutError' || e.name === 'AbortError') throw new ApiError(0, 'timeout', t('Something went wrong. Please try again.'));
     throw new ApiError(0, 'offline', t('You appear to be offline. Check your connection and try again.'));
   }
   const type = res.headers.get('content-type') || '';
@@ -41,6 +54,8 @@ async function request(method, url, body, { signal } = {}) {
     if (res.status === 402) emit('upgrade', e);
     throw e;
   }
+  // a success that is not JSON is a captive portal or a broken proxy, not our server
+  if (data === null && res.status !== 204) throw new ApiError(res.status, 'bad_response', t('Something went wrong. Please try again.'));
   return data;
 }
 

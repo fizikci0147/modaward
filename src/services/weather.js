@@ -118,7 +118,9 @@ export function openMeteoProvider({ fetch: doFetch = globalThis.fetch, apiKey = 
         const res = await doFetch(url, { signal: AbortSignal.timeout(10_000), headers: { accept: 'application/json' } });
         if (res.status >= 500) throw new Error(`upstream ${res.status}`);
         if (!res.ok) {
-          throw new HttpError(502, 'weather_failed', 'The weather service rejected the request.', { status: res.status });
+          const body = await res.text().catch(() => '');
+          // the provider's explanation is for the admin's system check only, never for the person's screen
+          throw Object.assign(new HttpError(502, 'weather_failed', 'The weather service rejected the request.', { status: res.status }), { upstreamReason: body.slice(0, 200) });
         }
         return await res.json();
       } catch (e) {
@@ -151,7 +153,7 @@ export function openMeteoProvider({ fetch: doFetch = globalThis.fetch, apiKey = 
         await this.forecast({ lat: 40.7128, lon: -74.006 });
         return { ok: true, ms: Date.now() - started };
       } catch (e) {
-        return { ok: false, ms: Date.now() - started, error: describeError(e), status: e?.details?.status, reason: e?.details?.reason };
+        return { ok: false, ms: Date.now() - started, error: describeError(e), status: e?.details?.status, reason: e?.upstreamReason };
       }
     },
     async geocode(query, language = 'en') {

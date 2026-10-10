@@ -36,12 +36,16 @@ TRUST_PROXY=1
 APP_URL=https://yourdomain.com
 DATA_DIR=/home/<your-hostinger-user>/modaward-data
 ADMIN_EMAILS=you@yourdomain.com
+OPERATOR_NAME=Your name or company
+CONTACT_EMAIL=privacy@yourdomain.com
 SMTP_HOST=smtp.hostinger.com
 SMTP_PORT=465
 SMTP_USER=no-reply@yourdomain.com
 SMTP_PASS=<mailbox password>
 SMTP_FROM=ModaWard <no-reply@yourdomain.com>
 ```
+
+**Do this straight after the first start: register your own account with the `ADMIN_EMAILS` address.** The app does not verify email addresses, so until that account exists anyone who signs up with that address first becomes an admin (the *Business → System check* page warns you while it is unclaimed). `OPERATOR_NAME` and `CONTACT_EMAIL` appear in the Privacy Policy as who is responsible and how to reach them; many countries require that. `APP_URL` is the plain address (`https://yourdomain.com`, no path); the app stops with a clear message if it cannot read it.
 
 **Two settings people get wrong**
 
@@ -54,7 +58,7 @@ Do **not** set `PORT` unless Hostinger tells you to: the platform provides it.
 
 Press **Start / Restart**, then open:
 
-- `https://yourdomain.com/health` → `{"ok":true,"version":"5.4.0","build":"5.4.0+abc1234",...}`. The version and build must match the name of the zip you uploaded (`modaward-5.4.0-abc1234.zip`); if they don't, the old code is still running
+- `https://yourdomain.com/health` → `{"ok":true,"version":"5.7.0","build":"5.7.0+abc1234",...}`. The version and build must match the name of the zip you uploaded (`modaward-5.7.0-abc1234.zip`); if they don't, the old code is still running
 - `https://yourdomain.com/` → the sign-in page. Create your account.
 
 On the server's SSH terminal you can also run the integration check once your keys are in place:
@@ -75,7 +79,7 @@ npm run live:check
 
 ## 6. Updating
 
-- Git deploy: push; hPanel redeploys. Zip deploy: upload the new zip over the old one. Migrations run automatically at startup.
+- Git deploy: push; hPanel redeploys (the Git checkout has no `BUILD.json`, so the build shows as "development" and browsers re-check files every visit; a zip from `npm run package` gets per-release URLs and long caching). Zip deploy: upload the new zip over the old one. Migrations run automatically at startup.
 - Run `npm run backup` before big updates. Back up `DATA_DIR/uploads` (photos) as well; Hostinger's own backups can cover both.
 
 ## 7. Backups (do this on day one)
@@ -86,7 +90,11 @@ Schedule a daily cron job in hPanel (**Advanced → Cron jobs**):
 cd ~/domains/yourdomain.com/nodejs && /usr/bin/env node scripts/backup.mjs
 ```
 
-This writes consistent snapshots to `DATA_DIR/backups` and keeps the newest 14.
+Cron jobs do **not** receive the app's environment variables, so put the data folder on the command line: `cd ~/domains/yourdomain.com/nodejs && DATA_DIR=/home/<user>/modaward-data node scripts/backup.mjs`. The script refuses to run (and says why) if it cannot find a database or the database has no users, so a wrong path can never replace your good backups with an empty one.
+
+Each run writes a checked, private (mode 600) snapshot of the database **and a copy of the generated secrets** (push keys, link-signing keys) to `DATA_DIR/backups` and keeps the newest 14. **That folder sits on the same disk as the live data, so copy it somewhere else regularly** (download it, or have Hostinger's backup include it). Back up `DATA_DIR/uploads` (the photos) the same way. After you delete an account, copies made earlier still contain it until they rotate out, which the Privacy Policy tells people (14 days).
+
+When a database from an older version is found, it is never deleted: it is renamed `modaward.previous-<date>.db` beside the new one. Remove those files yourself when you no longer need them.
 
 ## Troubleshooting
 
@@ -107,7 +115,7 @@ A 503 from Hostinger means the platform could not reach a running Node process. 
 | "table users already exists" (older versions) | An older ModaWard database was sitting in `DATA_DIR`. Current versions set it aside as `modaward.previous-<date>.db` and start a new one automatically. |
 | "No writable data directory" | `DATA_DIR` points somewhere the app user can't write. Use a folder under your home directory. |
 | Sign-in works but you are logged out on refresh | The panel is terminating HTTPS in front of Node: set `TRUST_PROXY=1`. |
-| Password-reset emails never arrive | Check `SMTP_*` and `APP_URL`; run `npm run live:check`. Without SMTP the link is only written to the server log. |
+| Password-reset emails never arrive | Check `SMTP_*` and `APP_URL`; run `npm run live:check`. Without SMTP, reset links are not delivered anywhere in production (they are only written to the log when `LOG_MAIL_BODIES=1`). |
 | Pro purchase succeeds but the account stays Free | The webhook is missing or its secret is wrong. In Stripe → Developers → Webhooks look for failed deliveries. |
 | Weather shows "temporarily unavailable" | The server cannot reach api.open-meteo.com. Check outbound access; recent data is served from cache up to 6 hours. |
 | A new version is uploaded and `/health` shows it, but the screens look the same | Since 5.5.1 each release uses its own file addresses, so a cache cannot hold old screens. If you still see old ones, open the site in a private window; if that is fine, clear the site data in your browser. The version in *You → Account* tells you which build the page is running. |

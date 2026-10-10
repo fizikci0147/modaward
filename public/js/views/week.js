@@ -22,7 +22,11 @@ function DayPlan({ day, onChanged }) {
     setBusy(true);
     try {
       await api.put(`/plans/${day.date}`, { occasion: occ, note: note.trim() });
-      sessionStorage.removeItem('mw.occasion'); // so Today follows the plan
+      try {
+        sessionStorage.removeItem('mw.occasion'); // so Today follows the plan
+      } catch {
+        /* storage blocked */
+      }
       setOpen(false);
       onChanged();
     } catch (e) {

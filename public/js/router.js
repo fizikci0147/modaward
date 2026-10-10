@@ -23,6 +23,17 @@ export function usePath() {
   return path;
 }
 
+/** The query string, kept current as the person navigates (so a link to ?section=… on the same page works). */
+export function useSearch() {
+  const [search, setSearch] = useState(location.search);
+  useEffect(() => {
+    const fn = () => setSearch(location.search);
+    subs.add(fn);
+    return () => subs.delete(fn);
+  }, []);
+  return search;
+}
+
 export const useQuery = () => new URLSearchParams(location.search);
 
 export function Link({ href, children, class: cls, onClick, ...rest }) {

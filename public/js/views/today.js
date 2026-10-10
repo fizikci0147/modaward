@@ -69,7 +69,13 @@ export function EmptyCloset({ missing, onDone }) {
 export function TodayView() {
   const { user, profile } = useStore();
   // null until the person picks one: then what the day is for (an event they added) decides
-  const [occasion, setOccasion] = useState(() => sessionStorage.getItem('mw.occasion') || null);
+  const [occasion, setOccasion] = useState(() => {
+    try {
+      return sessionStorage.getItem('mw.occasion') || null;
+    } catch {
+      return null; // storage blocked (private mode): the choice just is not remembered
+    }
+  });
   const [seed, setSeed] = useState(1);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -90,7 +96,11 @@ export function TodayView() {
   }, [featureId]);
 
   useEffect(() => {
-    if (occasion) sessionStorage.setItem('mw.occasion', occasion);
+    try {
+      if (occasion) sessionStorage.setItem('mw.occasion', occasion);
+    } catch {
+      /* not remembered */
+    }
     setIndex(0);
     setDropped([]);
     setSkipped([]);
@@ -113,7 +123,9 @@ export function TodayView() {
     setBusy(true);
     try {
       await api.post('/outfits/wear', { date, itemIds: outfit.itemIds, occasion: activeOccasion, key: outfit.key });
-      setWorn((w) => ({ ...w, [outfit.key]: true }));
+      // one outfit per day: wearing this one replaces any other that was logged
+      setWorn({ [outfit.key]: true });
+      setS((p) => ({ ...p, data: p.data && { ...p.data, worn: { key: outfit.key } } }));
       toast(t('Logged. Enjoy the day.'));
     } catch (e) {
       fail(e);
@@ -137,6 +149,7 @@ export function TodayView() {
       await api.post('/outfits/feedback', { itemIds: outfit.itemIds, signal: 'love', key: outfit.key });
       toast(t('Noted. More like this.'));
     } catch (e) {
+      setLoved((l) => ({ ...l, [outfit.key]: false }));
       fail(e);
     }
   };

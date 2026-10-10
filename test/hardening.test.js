@@ -172,3 +172,52 @@ describe('wear logging, trips, shop and reminders through the API', () => {
     assert.equal(t.deps.db.get("SELECT delivered FROM reminder_log WHERE user_id = ? AND kind = 'daily'", id).delivered, 1);
   });
 });
+
+describe('operations scripts and database start-up', () => {
+  test('the backup script refuses to back up nothing, and keeps the generated secrets with a real backup', async () => {
+    const { execFileSync, spawnSync } = await import('node:child_process');
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { openDb } = await import('../src/db/index.js');
+    const root = path.resolve(import.meta.dirname, '..');
+    const run = (dataDir, ...args) => spawnSync(process.execPath, [path.join(root, 'scripts/backup.mjs'), ...args], { env: { ...process.env, DATA_DIR: dataDir, NODE_ENV: 'test' }, encoding: 'utf8' });
+
+    const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'mw-bk-'));
+    const refused = run(empty);
+    assert.equal(refused.status, 1);
+    assert.match(refused.stderr, /no database/);
+    assert.equal(fs.existsSync(path.join(empty, 'modaward.db')), false, 'and it did not create one');
+
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mw-bk-'));
+    const db = await openDb(path.join(dir, 'modaward.db'));
+    db.close();
+    assert.equal(run(dir).status, 1, 'a database with no users is the wrong database');
+
+    const db2 = await openDb(path.join(dir, 'modaward.db'));
+    db2.run("INSERT INTO users (id,email,password_hash,created_at) VALUES ('u1','a@b.co','x',1)");
+    db2.close();
+    fs.mkdirSync(path.join(dir, 'secrets'));
+    fs.writeFileSync(path.join(dir, 'secrets', 'vapid.json'), '{"k":1}');
+    const ok = run(dir);
+    assert.equal(ok.status, 0, ok.stderr);
+    const stamp = new Date().toISOString().slice(0, 10);
+    const file = path.join(dir, 'backups', `modaward-${stamp}.db`);
+    assert.equal((fs.statSync(file).mode & 0o777).toString(8), '600');
+    assert.ok(fs.existsSync(path.join(dir, 'backups', `secrets-${stamp}`, 'vapid.json')));
+    assert.equal(fs.readdirSync(path.join(dir, 'backups')).some((f) => f.endsWith('.partial')), false);
+    execFileSync(process.execPath, ['-e', '0']);
+  });
+
+  test('two processes starting together do not collide on the same migration', async () => {
+    const fs = await import('node:fs');
+    const os = await import('node:os');
+    const path = await import('node:path');
+    const { openDb } = await import('../src/db/index.js');
+    const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'mw-mig-')), 'm.db');
+    const [a, b] = await Promise.all([openDb(file), openDb(file)]);
+    assert.equal(a.get('SELECT COUNT(*) AS n FROM schema_migrations').n, b.get('SELECT COUNT(*) AS n FROM schema_migrations').n);
+    a.close();
+    b.close();
+  });
+});

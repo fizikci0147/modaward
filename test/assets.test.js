@@ -76,6 +76,9 @@ describe('versioned front-end files', () => {
     assert.match(headers['Cache-Control'], /immutable/);
     createAssets({ ...base, build: { id: 'development' } }).versioned({ path: '/v/development/js/ui.js' }, res, next);
     assert.equal(headers['Cache-Control'], 'no-cache');
+    // an address from an older build is answered with current files, so it must not be cached as permanent
+    createAssets({ ...base, build: { id: '5.5.0+abc1234' } }).versioned({ path: '/v/5.4.0-old/js/ui.js' }, res, next);
+    assert.equal(headers['Cache-Control'], 'no-cache');
     assert.equal(buildSegment('5.5.0+097345b'), '5.5.0-097345b');
   });
 });

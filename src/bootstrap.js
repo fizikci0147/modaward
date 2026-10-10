@@ -57,7 +57,9 @@ export async function createDeps(config, overrides = {}) {
     ai: Boolean(stylist),
     vision: Boolean(stylist),
     cutoutService: Boolean(cutoutService),
-    billing: Boolean(billing && (config.stripe.priceMonthly || config.stripe.priceYearly))
+    billing: Boolean(billing && (config.stripe.priceMonthly || config.stripe.priceYearly)),
+    // who runs this site, shown in the privacy policy (set OPERATOR_NAME and CONTACT_EMAIL)
+    operator: config.operator
   };
 
   const codes = createCodes({ db, repos });

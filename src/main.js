@@ -34,20 +34,36 @@ for (const adminEmail of config.adminEmails) {
 
 deps.reminders.start();
 
-// housekeeping: expired sessions and AI cache
-const sweep = setInterval(() => {
-  try {
-    deps.repos.sessions.purgeExpired();
-    deps.codes.sweep();
-    deps.repos.users.purgeActivity();
-    deps.db.run('DELETE FROM click_events WHERE created_at < ?', Math.floor(Date.now() / 1000) - 400 * 86400);
-    deps.db.run('DELETE FROM client_errors WHERE created_at < ?', Math.floor(Date.now() / 1000) - 30 * 86400);
-    deps.repos.plans.purgeBefore(new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10));
-    deps.db.run('DELETE FROM ai_cache WHERE expires_at < ?', Math.floor(Date.now() / 1000));
-  } catch (e) {
-    log.warn('sweep.failed', { message: e.message });
+// housekeeping: expired sessions, old logs and caches (see docs/PRIVACY-OPS.md for the retention schedule)
+function housekeeping() {
+  const nowS = Math.floor(Date.now() / 1000);
+  const dayAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const steps = {
+    sessions: () => deps.repos.sessions.purgeExpired(),
+    codes: () => deps.codes.sweep(),
+    activity: () => deps.repos.users.purgeActivity(),
+    clicks: () => deps.db.run('DELETE FROM click_events WHERE created_at < ?', nowS - 400 * 86400),
+    clientErrors: () => deps.db.run('DELETE FROM client_errors WHERE created_at < ?', nowS - 30 * 86400),
+    plans: () => deps.repos.plans.purgeBefore(dayAgo(7)),
+    aiCache: () => deps.db.run('DELETE FROM ai_cache WHERE expires_at < ?', nowS),
+    aiUsage: () => deps.db.run('DELETE FROM ai_usage WHERE day < ?', dayAgo(400)),
+    resets: () => deps.db.run('DELETE FROM password_resets WHERE expires_at < ? OR used_at IS NOT NULL', nowS - 86400),
+    stripeEvents: () => deps.db.run('DELETE FROM stripe_events WHERE received_at < ?', nowS - 90 * 86400),
+    // shop looks only need to outlive the screen that shows them; people who stopped visiting never trigger the per-user trim
+    looks: () => deps.db.run('DELETE FROM looks WHERE created_at < ?', nowS - 14 * 86400)
+  };
+  // one failing step must not stop the others
+  for (const [name, run] of Object.entries(steps)) {
+    try {
+      run();
+    } catch (e) {
+      log.warn('sweep.failed', { step: name, message: e.message });
+    }
   }
-}, 3_600_000);
+}
+// the first pass runs soon after start-up (frequent restarts would otherwise never reach the hourly one)
+setTimeout(housekeeping, 120_000).unref();
+const sweep = setInterval(housekeeping, 3_600_000);
 sweep.unref();
 
 function shutdown(signal) {

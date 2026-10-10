@@ -87,9 +87,11 @@ export function createAssets(config) {
     version,
     /** /v/<any build>/<root>/<file>: always the current files, imports pointing at the current build. */
     versioned(req, res, next) {
-      const m = /^\/v\/[^/]+\/(js|css|vendor|shared)\/(.+)$/.exec(req.path);
-      const file = m && locate(m[1], decode(m[2]));
-      return file ? send(res, file, true) : next();
+      const m = /^\/v\/([^/]+)\/(js|css|vendor|shared)\/(.+)$/.exec(req.path);
+      const file = m && locate(m[2], decode(m[3]));
+      // a page still holding an older build's address gets today's files, but must not cache them
+      // for a year under that address (a later visit would then mix old and new code)
+      return file ? send(res, file, m[1] === seg) : next();
     },
     /** The plain /js/… and /shared/… addresses, served with versioned imports but never cached for long. */
     plain(req, res, next) {

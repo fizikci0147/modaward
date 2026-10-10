@@ -46,7 +46,8 @@ export function createApp(deps) {
   app.get('/health', (_req, res) => res.json({ ok: true, version: config.version, build: config.build.id, uptime: Math.round(process.uptime()) }));
   app.get('/ready', (_req, res) => {
     try {
-      repos.db.get('SELECT 1 AS ok');
+      // a write as well as a read: a full disk still answers SELECT, yet nothing can be saved
+      repos.db.run('INSERT OR REPLACE INTO health_probe (id, at) VALUES (1, ?)', Math.floor(Date.now() / 1000));
       res.json({ ok: true, db: repos.db.driver });
     } catch {
       res.status(503).json({ ok: false });

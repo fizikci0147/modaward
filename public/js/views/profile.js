@@ -2,7 +2,7 @@ import { html, useState, useEffect, useRef } from '/js/ui.js';
 import { t, tn, getLocale } from '/js/i18n.js';
 import { L } from '/shared/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, updateProfile, toast, fail, logout, refreshMe, profileCompleteness, state, set } from '/js/store.js';
+import { useStore, updateProfile, toast, fail, logout, refreshMe, profileCompleteness, state, set, forgetThisDevice } from '/js/store.js';
 import { Icon } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
 import { Sheet, Spinner, LocationPicker, Switch, ProBadge, LanguagePicker } from '/js/components/common.js';
@@ -10,7 +10,7 @@ import { ARCHETYPES, PATTERNS, TYPES } from '/shared/taxonomy.js';
 import { PALETTE } from '/shared/color.js';
 import { AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, BUDGET_CATEGORIES, CURRENCIES } from '/shared/profile.js';
 import { cap, weekdayShort } from '/js/format.js';
-import { navigate } from '/js/router.js';
+import { navigate, useSearch } from '/js/router.js';
 import { RemindersSection } from '/js/views/reminders.js';
 
 /** Sample board for each style archetype: drawn, not photographed. */
@@ -237,18 +237,21 @@ function AccountSection({ user, entitlements, capabilities }) {
   const exportData = async () => {
     try {
       const res = await fetch('/api/account/export', { credentials: 'same-origin', headers: { 'X-Requested-With': 'modaward' } });
+      if (!res.ok) throw new Error(t('Something went wrong. Please try again.'));
       const blob = await res.blob();
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
       a.download = 'modaward-export.json';
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(a.href);
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
     } catch (e) { fail(e); }
   };
   const del = async () => {
     const password = prompt(t('This permanently deletes your account, closet and photos. Enter your password to confirm.'));
     if (!password) return;
-    try { await api.del('/account', { password }); set({ user: null, profile: null, garments: null }); toast(t('Your account has been deleted.')); navigate('/login'); } catch (e) { fail(e); }
+    try { await api.del('/account', { password }); await forgetThisDevice(); set({ user: null, profile: null, garments: null }); toast(t('Your account has been deleted.')); navigate('/login'); } catch (e) { fail(e); }
   };
 
   return html`<div class="stack-l">
@@ -309,7 +312,12 @@ export function ProfileView() {
     }, 1500);
     return () => clearInterval(timer);
   }, []);
+  const search = useSearch();
   const [section, setSection] = useState(() => new URLSearchParams(location.search).get('section') || 'style');
+  useEffect(() => {
+    const wanted = new URLSearchParams(search).get('section');
+    if (wanted) setSection(wanted);
+  }, [search]);
   const c = profileCompleteness();
   const nextItem = c.next[0];
   const jump = (id) => { setSection(id); window.scrollTo({ top: 0 }); };

@@ -127,6 +127,8 @@ function migrate(db) {
     if (applied.has(version)) continue;
     const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
     db.transaction(() => {
+      // another process starting at the same moment may have applied it since we looked
+      if (db.get('SELECT 1 AS x FROM schema_migrations WHERE version = ?', version)) return;
       db.exec(sql);
       db.run('INSERT INTO schema_migrations (version, applied_at) VALUES (?, ?)', version, Math.floor(Date.now() / 1000));
     });
@@ -148,8 +150,10 @@ export async function openDb(file, { driver } = {}) {
     for (const suffix of ['', '-wal', '-shm', '-journal']) {
       try {
         fs.renameSync(file + suffix, aside + suffix);
-      } catch {
-        /* that sidecar file does not exist */
+      } catch (e) {
+        // a sidecar that does not exist is fine; failing to move the database itself must stop
+        // the start-up, otherwise this would retry for ever
+        if (e.code !== 'ENOENT' || suffix === '') throw new Error(`Cannot set aside the older database at ${file}: ${e.message}`);
       }
     }
     console.warn(`ModaWard: found an older database at ${file}; kept as ${aside} and started a new one.`);
@@ -160,9 +164,11 @@ export async function openDb(file, { driver } = {}) {
   if (file !== ':memory:') {
     // WAL is faster, but needs shared-memory support that some hosting filesystems lack:
     // fall back to the classic journal instead of failing to start.
+    let wal = false;
     try {
       const mode = db.get('PRAGMA journal_mode = WAL');
-      if (String(mode?.journal_mode).toLowerCase() !== 'wal') db.exec('PRAGMA journal_mode = DELETE');
+      wal = String(mode?.journal_mode).toLowerCase() === 'wal';
+      if (!wal) db.exec('PRAGMA journal_mode = DELETE');
     } catch {
       try {
         db.exec('PRAGMA journal_mode = DELETE');
@@ -171,7 +177,8 @@ export async function openDb(file, { driver } = {}) {
       }
     }
     try {
-      db.exec('PRAGMA synchronous = NORMAL');
+      // NORMAL is safe with a write-ahead log; the classic journal needs FULL to survive power loss
+      db.exec(`PRAGMA synchronous = ${wal ? 'NORMAL' : 'FULL'}`);
     } catch {
       /* keep the default */
     }

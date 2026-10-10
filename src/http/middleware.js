@@ -150,13 +150,18 @@ export function sessionAuth(repos) {
       if (row) {
         req.user = row;
         req.sessionToken = token;
-        // "last seen" feeds the activity numbers; refresh at most every 10 minutes
-        if (!row.last_seen_at || Date.now() / 1000 - row.last_seen_at > 600) repos.users.touch(row.id);
-        const hour = Math.floor(Date.now() / 3_600_000);
-        if (lastHour.get(row.id) !== hour) {
-          repos.users.recordActivity(row.id);
-          lastHour.set(row.id, hour);
-          if (lastHour.size > 20_000) lastHour.clear();
+        // "last seen" and activity are bookkeeping: if the disk is full or the database is busy
+        // they must not take every signed-in request down with them
+        try {
+          if (!row.last_seen_at || Date.now() / 1000 - row.last_seen_at > 600) repos.users.touch(row.id);
+          const hour = Math.floor(Date.now() / 3_600_000);
+          if (lastHour.get(row.id) !== hour) {
+            repos.users.recordActivity(row.id);
+            lastHour.set(row.id, hour);
+            if (lastHour.size > 20_000) lastHour.clear();
+          }
+        } catch {
+          /* skip this time */
         }
       }
     }

@@ -41,6 +41,8 @@ function resolveDataDir(explicit) {
     try {
       fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
       fs.accessSync(dir, fs.constants.W_OK);
+      // inside the app folder, a redeploy from a zip replaces the data with the new release
+      if (!explicit && dir.startsWith(ROOT)) console.warn(`ModaWard: DATA_DIR is not set and ${path.join(os.homedir(), 'modaward-data')} is not usable, so data is being kept inside the app folder (${dir}). A redeploy can wipe it: set DATA_DIR to a folder outside the app.`);
       return path.resolve(dir);
     } catch {
       /* try the next location */
@@ -49,12 +51,26 @@ function resolveDataDir(explicit) {
   throw new Error(`No writable data directory. Set DATA_DIR to a folder the app may write to (tried: ${candidates.join(', ')}).`);
 }
 
+/** "yourdomain.com" is a common way to fill this in: assume https. Anything unusable stops the start with a clear message. */
+function normalizeAppUrl(raw) {
+  if (!raw) return '';
+  const withScheme = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  let url;
+  try {
+    url = new URL(withScheme);
+  } catch {
+    throw new Error(`APP_URL is not a web address: "${raw}". Use the full address of your site, for example https://modaward.example.com`);
+  }
+  if (url.pathname.replace(/\/+$/, '') || url.search || url.hash) throw new Error(`APP_URL must be just the site address (no path), for example https://modaward.example.com, not "${raw}".`);
+  return url.origin;
+}
+
 /** @param {NodeJS.ProcessEnv} [env] */
 export function loadConfig(env = process.env, { dotenv = env === process.env } = {}) {
   if (dotenv) loadDotEnv();
   const production = str(env.NODE_ENV) === 'production';
   const trust = str(env.TRUST_PROXY, production ? '1' : '');
-  const appUrl = str(env.APP_URL).replace(/\/+$/, '');
+  const appUrl = normalizeAppUrl(str(env.APP_URL));
 
   return Object.freeze({
     root: ROOT,
@@ -74,6 +90,7 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
     sharedDir: path.join(ROOT, 'src', 'shared'),
 
     limits: { auth: int(env.AUTH_RATE_MAX, 20), api: int(env.API_RATE_MAX, 400) },
+    operator: { name: str(env.OPERATOR_NAME), email: str(env.CONTACT_EMAIL) },
     adminEmails: str(env.ADMIN_EMAILS).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
     registrationOpen: bool(env.ALLOW_REGISTRATION, true),
     sessionDays: int(env.SESSION_DAYS, 30),

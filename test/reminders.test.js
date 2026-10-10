@@ -38,7 +38,7 @@ describe('reminders', () => {
     if (closet) await c.post('/api/garments/starter', { department: 'men' });
     if (dormantDays) {
       const old = new Date(Date.now() - dormantDays * 86400000).toISOString().slice(0, 10);
-      for (const g of (await c.get('/api/garments')).json.garments) t.deps.repos.wear.log(reg.user.id, { garmentIds: [g.id], date: old, outfitKey: `k${g.id}` });
+      t.deps.repos.wear.log(reg.user.id, { garmentIds: (await c.get('/api/garments')).json.garments.map((g) => g.id), date: old, outfitKey: 'everything' });
     }
     return { c, id: reg.user.id, email: reg.email };
   }

@@ -19,6 +19,7 @@ export const state = {
   upgrade: null, // { reason, message } while the upgrade sheet is open
   installPrompt: null,
   locale: 'en', // bumps re-renders when the language changes
+  bootError: false, // the server could not be reached when the app opened (not the same as signed out)
   app: null // { version, build } of the server this page is talking to
 };
 
@@ -94,9 +95,12 @@ function syncTimeZone() {
 export async function boot() {
   try {
     await applyMe(await api.get('/auth/me'));
+    set({ bootError: false });
     syncTimeZone();
-  } catch {
-    /* offline or server hiccup: stay signed out, the UI shows the login screen */
+  } catch (e) {
+    // Signed out answers normally, so a failure here means the server was unreachable: say so and
+    // offer a retry instead of sending a signed-in person to the login screen.
+    set({ bootError: e?.name !== 'AbortError' });
   }
   set({ ready: true });
 }
@@ -108,7 +112,23 @@ export async function authenticate(kind, body) {
   return me;
 }
 
+/** Stop this device receiving the account's reminders (it may be handed to someone else). */
+export async function forgetThisDevice() {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const reg = await Promise.race([navigator.serviceWorker.ready, new Promise((resolve) => setTimeout(resolve, 1500))]);
+    const sub = await reg?.pushManager?.getSubscription();
+    if (!sub) return;
+    const endpoint = sub.endpoint;
+    await api.post('/reminders/push/unsubscribe', { endpoint }).catch(() => {});
+    await sub.unsubscribe().catch(() => {});
+  } catch {
+    /* best effort: the server also drops subscriptions that stop working */
+  }
+}
+
 export async function logout() {
+  await forgetThisDevice();
   await api.post('/auth/logout').catch(() => {});
   set({ user: null, profile: null, garments: null, entitlements: null });
   navigate('/login', { replace: true });
@@ -134,6 +154,7 @@ export const removeGarment = (id) => set({ garments: (state.garments || []).filt
 
 let patchTimer;
 let pending = {};
+let inflight = 0;
 const mergeDeep = (a, b) => {
   const out = { ...a };
   for (const [k, v] of Object.entries(b)) out[k] = v && typeof v === 'object' && !Array.isArray(v) && a?.[k] && typeof a[k] === 'object' ? mergeDeep(a[k], v) : v;
@@ -141,27 +162,36 @@ const mergeDeep = (a, b) => {
 };
 
 /** Optimistic, debounced profile update. Resolves once the server has stored it. */
+let waiters = [];
 export function updateProfile(patch, { immediate = false, quiet = false } = {}) {
   set({ profile: mergeDeep(state.profile, patch) });
   pending = mergeDeep(pending, patch);
   clearTimeout(patchTimer);
   return new Promise((resolve, reject) => {
+    // every caller whose change is folded into this request hears how it went, not just the last one
+    waiters.push({ resolve, reject });
     const send = async () => {
       const body = pending;
+      const mine = waiters;
       pending = {};
+      waiters = [];
+      inflight += 1;
       try {
         const res = await api.patch('/profile', body);
-        set({ profile: res.profile });
+        inflight -= 1;
+        // edits made while this request was out are newer than its answer: keep them on top
+        set({ profile: inflight > 0 || Object.keys(pending).length ? mergeDeep(res.profile, pending) : res.profile });
         if (!quiet) toast(t('Saved'));
-        resolve(res);
+        mine.forEach((w) => w.resolve(res));
       } catch (e) {
+        if (inflight > 0) inflight -= 1;
         fail(e);
         try {
           set({ profile: (await api.get('/profile')).profile });
         } catch {
           /* keep optimistic state */
         }
-        reject(e);
+        mine.forEach((w) => w.reject(e));
       }
     };
     if (immediate) send();

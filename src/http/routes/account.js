@@ -41,7 +41,15 @@ export function accountRoutes({ repos, images, billing, log, reminders }) {
       wearHistory: repos.wear.recent(id, 3650),
       savedLooks: repos.saved.list(id),
       plannedDays: repos.plans.list(id, '0000-01-01', '9999-12-31'),
-      reminders: reminders?.get(id) ?? null
+      reminders: reminders?.get(id) ?? null,
+      // the rest of what is stored against the account, so the download is complete
+      feedback: repos.db.all('SELECT kind, target_key AS target, signal, created_at AS createdAt FROM feedback WHERE user_id = ?', id),
+      shopClicks: repos.db.all('SELECT * FROM click_events WHERE user_id = ?', id).map(({ user_id, ...rest }) => rest),
+      aiUsage: repos.db.all('SELECT day, kind, calls, input_tokens AS inputTokens, output_tokens AS outputTokens FROM ai_usage WHERE user_id = ?', id),
+      proCodesUsed: repos.db.all('SELECT code, redeemed_at AS redeemedAt FROM pro_redemptions WHERE user_id = ?', id),
+      notificationDevices: repos.db.get('SELECT COUNT(*) AS n FROM push_subscriptions WHERE user_id = ?', id).n,
+      signedInDevices: repos.db.get('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?', id).n,
+      photos: 'Your photos are not in this file. Each piece in your closet has its photo in the app; ask us if you need the original files.'
     };
     res.setHeader('Content-Disposition', 'attachment; filename="modaward-export.json"');
     res.json(data);
@@ -59,7 +67,14 @@ export function accountRoutes({ repos, images, billing, log, reminders }) {
       throw new HttpError(502, 'cancel_failed', 'We could not cancel your subscription, so your account was not deleted. Please try again in a few minutes.');
     }
     repos.users.remove(req.user.id); // cascades to every table
-    for (const f of files) images.remove(f);
+    for (const f of files) {
+      try {
+        images.remove(f);
+      } catch (e) {
+        // the account is already gone: one file that will not delete must not hide that or strand the rest
+        log.warn('account.photo_delete_failed', { message: String(e?.message || '').slice(0, 120) });
+      }
+    }
     clearSessionCookie(req, res);
     log.info('account.deleted', { user: req.user.id });
     res.json({ ok: true });

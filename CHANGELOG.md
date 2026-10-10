@@ -4,6 +4,53 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.7.0] · 2026-10-12
+
+A second, deeper review by four independent reviewers (security, correctness, front-end, data and operations), with every confirmed finding fixed and covered by a test.
+
+### Fixed: outfit quality
+- **Layering, open shoes and accessory rules were silently switched off** because the engine never saw those facts about each garment type. Cold-weather outfits now layer a base and a mid layer, open sandals are marked down in the wet, and belts and scarves are suggested.
+- A downpour without any waterproof piece can no longer score like a good outfit, and a suggestion far worse than the best one is no longer padded in to reach three.
+- Packing lists keep shoes and outer layers to two each whenever the closet allows; very large closets are shortlisted so styling stays fast.
+
+### Fixed: reminders
+- A reminder that failed to send (mail server down, a crash mid-send) was lost for the day; it is now retried within the catch-up window and sent once.
+- The "forgotten pieces" cadence counts only reminders that were delivered.
+- Reminders follow the phone's time zone automatically, including after travel.
+
+### Fixed: data you enter
+- Logging an outfit checks the date, replaces the day's earlier outfit, teaches your taste once (not on a double tap), and "undo" no longer erases pieces you logged one by one.
+- Shop feeds with prices like `29,99 EUR` are no longer read as 2,999 and stock words like "no" inside other words no longer hide in-stock products.
+- An email address must name a single mailbox (no commas, quotes or brackets).
+
+### Fixed: security and abuse limits
+- Checkout is blocked for trial and past-due subscribers too; an old subscription ending cannot cancel a live one; code redemption is also limited per address.
+- Rate limits count a whole IPv6 /64 as one client. The forgot-password cap now answers like a normal request, so it cannot be used to block someone else's reset or to probe addresses.
+- Shop-look variations are limited to a fixed set, so a made-up value cannot force endless rebuilds; trip planning has its own tighter limit and free accounts cannot plan trips beyond their forecast days; upstream error text is no longer shown to people.
+- A web address taken from the request's Host header is only trusted for localhost; `APP_URL` without `https://` is accepted and anything unusable stops start-up with a clear message.
+- The payment webhook body is limited to 256 KB.
+
+### Fixed: operations
+- **Backups**: the script refuses to back up a missing or empty database (a wrong path used to produce an empty "successful" backup that could push out every good one), checks the copy, keeps the generated keys, and writes private files via a temporary name.
+- **A full disk** no longer turns every signed-in request into an error, and `/ready` now fails when the database cannot be written.
+- Two processes starting together no longer collide on a migration; an older database that cannot be set aside stops with a message instead of looping.
+- Admin pages that scan large tables are cached for a minute, user lists page without counting everything first, and new indexes keep them fast.
+- Old reset tokens, payment event ids, AI counters and shop looks are now purged, and the first clean-up runs two minutes after start-up.
+- *Business → System check* now shows disk space, backup age, the payment webhook secret, the reminder scheduler and unclaimed admin addresses.
+
+### Fixed: front-end
+- The piece editor is a single column on phones; text fields no longer make iPhones zoom in.
+- Stacked dialogs: Esc and Tab act on the top one only, focus starts inside and returns afterwards.
+- The app tells you when the server cannot be reached instead of showing the sign-in screen, and retries when you are back online.
+- Signing out or deleting an account stops notifications on that device; slow requests time out instead of hanging; a profile change made while another is saving is no longer overwritten; the You page follows `?section=` links; the export download reports failures; long names wrap; reduced-motion no longer freezes spinners; the app checks for a new version when reopened; screens start at the top for keyboard and screen-reader users; session storage being blocked no longer breaks Today.
+- Old build addresses are no longer cached for a year.
+
+### Changed
+- **Privacy Policy rewritten** to match what the app actually does: who is responsible (set `OPERATOR_NAME` and `CONTACT_EMAIL`), legal bases, every recipient (including remove.bg, push services and retailer image servers), retention, backups after deletion, your rights, cookies and children. The data download now includes feedback, clicks, AI usage and redeemed codes.
+
+### Needs your action
+- Set `OPERATOR_NAME` and `CONTACT_EMAIL`. Register your own `ADMIN_EMAILS` account if you have not. Point the backup job at `DATA_DIR`, and copy the backup folder off the server (see the deploy guide).
+
 ## [5.6.0] · 2026-10-11
 
 A quality and security pass: automated accessibility checks on every screen, an independent security review, failure testing and a load test.

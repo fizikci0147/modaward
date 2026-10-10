@@ -3,6 +3,8 @@ import { requireUser } from '../middleware.js';
 import { forbidden } from '../../util/errors.js';
 import { object, string, integer, optional, email, oneOf, boolean } from '../../util/validate.js';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { RETAILER_IDS } from '../../shop/retailers.js';
 import { TYPE_IDS, TYPES } from '../../shared/taxonomy.js';
 import { PALETTE, isHex, nearestSwatch } from '../../shared/color.js';
@@ -52,7 +54,19 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
   const r = Router();
   r.use('/admin', requireUser, (req, _res, next) => (config.adminEmails.includes(req.user.email.toLowerCase()) ? next() : next(forbidden('Not found.'))));
 
-  r.get('/admin/metrics', (_req, res) => {
+  // these scan large tables, so the dashboard reuses a result for a minute instead of recomputing on every refresh
+  const cached = new Map();
+  const cachedJson = (key, ms, build) => (req, res) => {
+    const k = `${key}|${req.query.tz ?? ''}`;
+    const hit = cached.get(k);
+    if (hit && Date.now() - hit.at < ms) return res.json(hit.value);
+    const value = build(req);
+    cached.set(k, { at: Date.now(), value });
+    if (cached.size > 50) cached.delete(cached.keys().next().value);
+    res.json(value);
+  };
+
+  r.get('/admin/metrics', cachedJson('metrics', 60_000, (_req) => {
     const nowS = Math.floor(Date.now() / 1000);
     const n = (sql, ...p) => db.get(sql, ...p).n;
     const day = 86400;
@@ -80,7 +94,7 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
     const clicksByDay = db.all("SELECT date(created_at, 'unixepoch') AS day, COUNT(*) AS clicks FROM click_events WHERE created_at > ? GROUP BY day ORDER BY day", nowS - 14 * day);
     const signups = db.all("SELECT date(created_at, 'unixepoch') AS day, COUNT(*) AS n FROM users WHERE created_at > ? GROUP BY day ORDER BY day", nowS - 14 * day);
     const insight = audienceInsight(db, nowS);
-    res.json({
+    return {
       ...insight,
       generatedAt: new Date().toISOString(),
       users,
@@ -91,8 +105,27 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
       signups,
       catalogue: { products: catalog.count(), byRetailer: catalog.byRetailer() },
       ai: { today: usage.totals() }
-    });
-  });
+    };
+  }));
+
+  /** Facts about the server that explain most outages: disk, backups, the webhook secret, unclaimed admin addresses. */
+  function operations() {
+    const out = { dbMb: null, freeDiskMb: null, lastBackupDaysAgo: null, webhookSecret: Boolean(config.stripe?.webhookSecret), billingOn: Boolean(capabilities?.billing), remindersOn: Boolean(config.reminders?.enabled), unclaimedAdmins: [], dataDir: config.dataDir };
+    try {
+      out.dbMb = Math.round(fs.statSync(path.join(config.dataDir, 'modaward.db')).size / 1048576);
+    } catch { /* not a file database */ }
+    try {
+      const st = fs.statfsSync(config.dataDir);
+      out.freeDiskMb = Math.round((st.bavail * st.bsize) / 1048576);
+    } catch { /* not available on this platform */ }
+    try {
+      const dir = path.join(config.dataDir, 'backups');
+      const newest = fs.readdirSync(dir).filter((f) => /^modaward-\d{4}-\d{2}-\d{2}\.db$/.test(f)).sort().pop();
+      if (newest) out.lastBackupDaysAgo = Math.floor((Date.now() - fs.statSync(path.join(dir, newest)).mtimeMs) / 86_400_000);
+    } catch { /* no backups folder */ }
+    out.unclaimedAdmins = config.adminEmails.filter((e) => !db.get('SELECT 1 AS x FROM users WHERE email = ?', e));
+    return out;
+  }
 
   /** One-click health check of everything the live site depends on, with the exact failure reasons. */
   r.get('/admin/system', async (req, res) => {
@@ -108,6 +141,7 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
       trustProxy: config.trustProxy ?? null,
       network: { clientIp: req.ip, forwardedFor: req.get('x-forwarded-for') || null, protocol: req.protocol },
       weather: { provider: weather.provider, probe, lastError: weather.lastError },
+      ops: operations(),
       integrations: { ai: Boolean(capabilities?.ai), stripe: Boolean(capabilities?.billing), email: Boolean(mailer?.configured), push: Boolean(capabilities?.push), backgroundRemovalService: Boolean(capabilities?.cutoutService) }
     });
   });
@@ -127,7 +161,7 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
     });
   });
 
-  r.get('/admin/activity', (req, res) => {
+  r.get('/admin/activity', cachedJson('activity', 60_000, (req) => {
     const off = Math.max(-840, Math.min(840, Number.parseInt(req.query.tz, 10) || 0)); // viewer's minutes ahead of UTC
     const shift = off * 60;
     const nowHour = Math.floor(Date.now() / 3_600_000);
@@ -147,7 +181,7 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
     const perUser = db.get('SELECT AVG(d) AS avg FROM (SELECT COUNT(DISTINCT (hour * 3600 + ?) / 86400) AS d FROM user_activity WHERE hour >= ? GROUP BY user_id)', shift, since30).avg;
     const last7 = days.slice(-7);
     const avgDau = last7.length ? last7.reduce((s, d) => s + d.n, 0) / last7.length : 0;
-    res.json({
+    return {
       tracking: db.get('SELECT MIN(hour) AS h FROM user_activity').h ? new Date(db.get('SELECT MIN(hour) AS h FROM user_activity').h * 3_600_000).toISOString().slice(0, 10) : null,
       heat,
       byHour: Array.from({ length: 24 }, (_, h) => heat.reduce((s, row) => s + row[h], 0)),
@@ -157,14 +191,14 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
       avgDau: Math.round(avgDau * 10) / 10,
       stickiness: mau ? Math.round((avgDau / mau) * 1000) / 10 : 0,
       activeDaysPerUser: Math.round((perUser || 0) * 10) / 10
-    });
-  });
+    };
+  }));
 
   r.get('/admin/users', (req, res) => {
     const q = String(req.query.q || '').trim().toLowerCase().slice(0, 80);
     const plan = ['free', 'pro'].includes(req.query.plan) ? req.query.plan : null;
     const sort = { joined: 'u.created_at DESC', active: 'COALESCE(u.last_seen_at, 0) DESC', closet: 'pieces DESC' }[req.query.sort] || 'u.created_at DESC';
-    const page = Math.max(0, Math.min(10_000, Number.parseInt(req.query.page, 10) || 0));
+    const page = Math.max(0, Math.min(2_000, Number.parseInt(req.query.page, 10) || 0));
     const where = [];
     const args = [];
     if (q) {
@@ -175,17 +209,18 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
     if (plan) (where.push('u.plan = ?'), args.push(plan));
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     const total = db.get(`SELECT COUNT(*) AS n FROM users u ${clause}`, ...args).n;
-    const rows = db.all(
-      `SELECT u.id, u.email, u.name, u.plan, u.plan_status, u.plan_renews_at, u.created_at, u.last_seen_at,
-         (SELECT COUNT(*) FROM garments g WHERE g.user_id = u.id AND g.archived = 0) AS pieces,
+    // choose the page of people first, then count each one's pieces and wears: the counts are costly
+    // and only the 25 rows shown need them (sorting by closet size is the one case that needs them for all)
+    const columns = `u.id, u.email, u.name, u.plan, u.plan_status, u.plan_renews_at, u.created_at, u.last_seen_at`;
+    const counts = `(SELECT COUNT(*) FROM garments g WHERE g.user_id = u.id AND g.archived = 0) AS pieces,
          (SELECT COUNT(*) FROM wear_log w WHERE w.user_id = u.id) AS wears,
          (SELECT COUNT(*) FROM saved_looks s WHERE s.user_id = u.id) AS saved,
          (SELECT COUNT(*) FROM click_events c WHERE c.user_id = u.id) AS clicks,
-         (SELECT p.data FROM profiles p WHERE p.user_id = u.id) AS profile
-       FROM users u ${clause} ORDER BY ${sort} LIMIT 25 OFFSET ?`,
-      ...args,
-      page * 25
-    );
+         (SELECT p.data FROM profiles p WHERE p.user_id = u.id) AS profile`;
+    const rows =
+      sort === 'pieces DESC'
+        ? db.all(`SELECT ${columns}, ${counts} FROM users u ${clause} ORDER BY ${sort} LIMIT 25 OFFSET ?`, ...args, page * 25)
+        : db.all(`SELECT u.*, ${counts} FROM (SELECT ${columns} FROM users u ${clause} ORDER BY ${sort} LIMIT 25 OFFSET ?) u`, ...args, page * 25);
     res.json({
       total,
       page,

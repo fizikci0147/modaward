@@ -234,7 +234,7 @@ export function GarmentSheet({ garment, onClose, caps }) {
   const cname = colorName(form.color);
   return html`<${Sheet} title=${editing ? t('Edit piece') : t('Add a piece')} onClose=${onClose} wide
     footer=${html`${editing ? html`<button class="btn btn-danger" onClick=${del} disabled=${busy} aria-label=${t('Delete')}><${Icon} name="trash" /></button>` : null}<button class="btn btn-primary grow" onClick=${save} disabled=${busy}>${busy ? html`<${Spinner} />` : null}${editing ? t('Save changes') : t('Add to closet')}</button>`}>
-    <div class="size-row" style=${{ gridTemplateColumns: 'minmax(0, 220px) 1fr', alignItems: 'start' }}>
+    <div class="piece-form">
       <div class="stack">
         <div class=${`drop ${over ? 'over' : ''}`} role="button" tabindex="0" aria-label=${t('Add a photo')}
           onClick=${() => fileRef.current?.click()}

@@ -231,6 +231,11 @@ function System() {
         <${Row} label="Notifications (push)" ok=${s.integrations.push} detail=${s.integrations.push ? 'on: reminders reach installed apps' : 'Off: the web-push package is missing (run npm install) or PUSH_ENABLED=false.'} />
         <${Row} label="Payments (Stripe)" ok=${s.integrations.stripe} detail=${s.integrations.stripe ? 'configured' : 'Not switched on yet.'} />
         <${Row} label="AI stylist" ok=${s.integrations.ai} detail=${s.integrations.ai ? 'configured' : 'Not switched on (no ANTHROPIC_API_KEY).'} />
+        <${Row} label="Disk space" ok=${s.ops.freeDiskMb === null ? null : s.ops.freeDiskMb > 200} detail=${s.ops.freeDiskMb === null ? 'unknown on this host' : `${s.ops.freeDiskMb} MB free · database ${s.ops.dbMb ?? '?'} MB. When the disk fills, nothing can be saved.`} />
+        <${Row} label="Backups" ok=${s.ops.lastBackupDaysAgo === null ? false : s.ops.lastBackupDaysAgo <= 2} detail=${s.ops.lastBackupDaysAgo === null ? 'No backup found in the data folder. Schedule "npm run backup" daily (see docs/DEPLOY-HOSTINGER.md) and copy the backups off the server.' : `newest backup is ${s.ops.lastBackupDaysAgo} day(s) old. Keep a copy somewhere other than this server.`} />
+        <${Row} label="Payment webhook secret" ok=${s.ops.billingOn ? s.ops.webhookSecret : null} detail=${s.ops.billingOn ? (s.ops.webhookSecret ? 'set' : 'STRIPE_WEBHOOK_SECRET is missing: customers who pay will stay on the free plan.') : 'payments are off'} />
+        <${Row} label="Reminders" ok=${s.ops.remindersOn} detail=${s.ops.remindersOn ? 'the scheduler is on' : 'REMINDERS_ENABLED is off: no reminders are sent.'} />
+        <${Row} label="Admin accounts" ok=${s.ops.unclaimedAdmins.length === 0} detail=${s.ops.unclaimedAdmins.length ? `Nobody has registered ${s.ops.unclaimedAdmins.join(', ')} yet. Register it yourself now: whoever signs up with an admin address first becomes an admin.` : 'every ADMIN_EMAILS address has an account'} />
         <${Row} label="Version running" ok=${true} detail=${`${s.build?.id || 'unknown'}${s.build?.builtAt ? ` · built ${new Date(s.build.builtAt).toLocaleString()}` : ''}`} />
         <${Row} label="Server" ok=${true} detail=${`Node ${s.node} · database ${s.database} · up ${s.uptimeMinutes} min · ${s.production ? 'production' : 'development'}`} />
       </tbody></table>

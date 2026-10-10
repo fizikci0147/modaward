@@ -209,6 +209,8 @@ ul { margin: 0; padding: 0; list-style: none; }
   width: 100%; height: 46px; padding: 0 14px; border-radius: var(--radius-s); background: var(--surface); border: 1px solid var(--line-2);
   transition: border-color 0.15s, box-shadow 0.15s; outline: none;
 }
+/* 16px keeps iOS Safari from zooming the page when a field gets focus */
+.input, .select, .textarea { font-size: 16px; }
 .textarea { height: auto; min-height: 96px; padding: 12px 14px; resize: vertical; line-height: 1.45; }
 .input::placeholder, .textarea::placeholder { color: var(--ink-3); }
 .input:hover, .select:hover, .textarea:hover { border-color: var(--ink-3); }
@@ -438,6 +440,10 @@ ul { margin: 0; padding: 0; list-style: none; }
 .opt span { font-size: 12.5px; color: var(--ink-3); }
 .opt:hover { border-color: var(--ink-3); }
 .opt[aria-pressed='true'] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); background: var(--board); }
+/* a long unbroken name must wrap inside its card, not push the page sideways */
+.tile-name, .ins-name, .forgotten-name, .chip, .opt b { overflow-wrap: anywhere; }
+.piece-form { display: grid; gap: 18px; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); align-items: start; }
+@media (max-width: 559px) { .piece-form { grid-template-columns: minmax(0, 1fr); } .piece-form .drop { max-width: 260px; margin-inline: auto; width: 100%; } }
 .size-row { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: var(--surface-2); font-size: 13px; }
@@ -448,6 +454,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 
 /* ── overlays ─────────────────────────────────────── */
 .scrim { position: fixed; inset: 0; z-index: 60; background: rgba(16, 15, 13, 0.5); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); display: flex; align-items: flex-end; justify-content: center; animation: fade 0.2s ease; }
+.sheet:focus { outline: none; }
 .sheet { width: 100%; max-height: 92dvh; overflow: auto; background: var(--bg); border-radius: 26px 26px 0 0; box-shadow: var(--shadow-l); animation: rise 0.34s var(--ease); overscroll-behavior: contain; padding-bottom: env(safe-area-inset-bottom); }
 .sheet-head { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; justify-content: space-between; padding: 16px 20px 12px; background: color-mix(in srgb, var(--bg) 92%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
 .sheet-body { padding: 20px; display: grid; gap: 22px; }
@@ -524,7 +531,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .slide-r { animation: slide-r 0.35s var(--ease) both; }
 @keyframes slide-l { from { opacity: 0; transform: translateX(28px); } }
 @keyframes slide-r { from { opacity: 0; transform: translateX(-28px); } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 1.6s !important; animation-iteration-count: infinite !important; } *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
 
 .legal { max-width: 720px; margin: 0 auto; display: grid; gap: 14px; line-height: 1.65; }
 .legal h2 { font-family: var(--font-display); font-size: 28px; font-weight: 400; margin-top: 18px; }
