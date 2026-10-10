@@ -1,7 +1,7 @@
 import { html, useState, useEffect, useRef } from '/js/ui.js';
 import { t } from '/js/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, loadCloset, updateProfile, toast, fail, state, openUpgrade } from '/js/store.js';
+import { useStore, loadCloset, updateProfile, toast, fail, state, openUpgrade, upsertGarment } from '/js/store.js';
 import { Icon } from '/js/icons.js';
 import { WeatherHero, Tips } from '/js/components/weather.js';
 import { OutfitCard } from '/js/components/outfit.js';
@@ -165,6 +165,34 @@ export function TodayView() {
     }
     if (outfits.length <= 1) setSeed((x) => x + 1);
   };
+  // "never suggest this piece": it stays in the closet but leaves every recommendation until the person undoes it
+  const setExcluded = async (item, excluded) => {
+    await api.patch(`/garments/${item.id}`, { excluded });
+    const known = (state.garments || []).find((g) => g.id === item.id);
+    if (known) upsertGarment({ ...known, excluded });
+  };
+  const exclude = async (item) => {
+    setSkipped((list) => (list.some((p) => p.id === item.id) ? list : [...list, { id: item.id, name: item.name }]));
+    setIndex(0);
+    try {
+      await setExcluded(item, true);
+      toast(t('{name} won’t be suggested again.', { name: item.name }), {
+        ms: 7000,
+        action: {
+          label: t('Undo'),
+          run: async () => {
+            try {
+              await setExcluded(item, false);
+              setSkipped((l) => l.filter((x) => x.id !== item.id));
+            } catch (e) { fail(e); }
+          }
+        }
+      });
+    } catch (e) {
+      setSkipped((l) => l.filter((x) => x.id !== item.id));
+      fail(e);
+    }
+  };
   const share = async () => {
     try {
       const how = await shareOutfit({ outfit, weather: data.weather.day, date, units: data.weather.units });
@@ -248,6 +276,7 @@ export function TodayView() {
             onLove=${love}
             onDislike=${dislike}
             onSwap=${swap}
+            onExclude=${exclude}
             onShare=${share}
             onShuffle=${() => setSeed((x) => x + 1)} />
         </div>`

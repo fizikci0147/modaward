@@ -698,3 +698,10 @@ main:focus { outline: none; }
 }
 /* snapping must respect the row's own padding, or the first card sits flush against the screen edge */
 .days, .chips-scroll, .forgotten-row { scroll-padding-inline: 18px; }
+
+/* the small menu on a piece chip: "Not today" / "Never suggest this piece" */
+.chip-menu-wrap { position: relative; display: inline-flex; }
+.chip-menu { position: absolute; z-index: 5; top: calc(100% + 6px); left: -8px; min-width: 200px; display: grid; padding: 6px; background: var(--surface); border: 1px solid var(--line-2); border-radius: var(--radius-s); box-shadow: var(--shadow-l); }
+.chip-menu button { text-align: left; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
+.chip-menu button:hover, .chip-menu button:focus-visible { background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.not-suggested { position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--surface); color: var(--ink-2); box-shadow: var(--shadow-s); }

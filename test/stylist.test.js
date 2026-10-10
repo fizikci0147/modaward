@@ -2,7 +2,8 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { recommend, prepareGarments } from '../src/engine/outfit.js';
 import { starterWardrobe } from '../src/services/starter.js';
-import { occasionSpec, ownedAllowed, stylePenalty } from '../src/engine/stylist.js';
+import { occasionSpec, ownedAllowed, stylePenalty, layerOk, trendBonus, selectionPenalty } from '../src/engine/stylist.js';
+import { seasonOf, configureTrends } from '../src/shared/trends.js';
 import { normalizePrefs, garmentAffinity } from '../src/engine/scoring.js';
 import { OCCASION_IDS } from '../src/shared/taxonomy.js';
 import { day } from './fixtures.js';
@@ -22,16 +23,49 @@ const describeOutfit = (garments, o) => {
 };
 
 describe('the stylist', () => {
-  test('an outfit never has two tops, whatever the weather, occasion or closet', () => {
+  test('two tops only as a real layered look: a base with the layer that belongs over it, on a cool day', () => {
     for (const dept of ['men', 'women', 'unisex']) {
       const garments = wardrobe(dept);
       for (const d of WEATHER) for (const occasion of OCCASION_IDS) {
-        for (const o of recommend({ garments, day: d, occasion, seed: 's', count: 3 }).outfits) {
-          const items = describeOutfit(garments, o);
-          assert.ok(items.filter((i) => i.category === 'top').length <= 1, `${dept}/${occasion}: ${items.map((i) => i.name)}`);
+        const outfits = recommend({ garments, day: d, occasion, seed: 's', count: 3 }).outfits;
+        for (const o of outfits) {
+          const tops = describeOutfit(garments, o).filter((i) => i.category === 'top');
+          assert.ok(tops.length <= 2, `${dept}/${occasion}: three tops`);
+          if (tops.length === 2) {
+            assert.ok(d.tMaxC < 18, `layered on a warm day (${d.tMaxC}°)`);
+            assert.ok(tops.some((t) => layerOk(t, tops.find((x) => x !== t)) ), `${tops.map((t) => t.type)} is not a layered look`);
+          }
+        }
+        // a list of looks is never made only of layered ones when a single-top look exists
+        if (outfits.length >= 3 && outfits.some((o) => describeOutfit(garments, o).filter((i) => i.category === 'top').length === 1) === false) {
+          const single = recommend({ garments, day: d, occasion, seed: 's', count: 12 }).outfits.some((o) => describeOutfit(garments, o).filter((i) => i.category === 'top').length === 1);
+          assert.equal(single, false, 'all three were layered although single-top looks exist');
         }
       }
     }
+  });
+
+  test('layering pairs: shirt under a sweater yes, polo beside a button-up no', () => {
+    const t = (type) => ({ id: type, type });
+    assert.equal(layerOk(t('shirt'), t('sweater')), true);
+    assert.equal(layerOk(t('tee'), t('cardigan')), true);
+    assert.equal(layerOk(t('tee'), t('hoodie')), true);
+    assert.equal(layerOk(t('polo'), t('shirt')), false);
+    assert.equal(layerOk(t('tee'), t('sweater')), false);
+    assert.equal(layerOk(t('hoodie'), t('cardigan')), false);
+  });
+
+  test('a layered look needs contrast and not two prints', () => {
+    const cool = { avgFeels: 8, minFeels: 4, rain: 'none', snow: false };
+    const parts = (a, b) => ({ upper: [a, b], bottom: null, dress: null, outer: null, shoes: null, accessories: [] });
+    const base = { type: 'shirt', category: 'top', color: '#8fa9c8', pattern: 'solid' };
+    const good = { type: 'sweater', category: 'top', color: '#1f2f54', pattern: 'solid', layer: 'either' };
+    const same = { ...good, color: '#8fa9c8' };
+    const loud = { ...good, pattern: 'checked' };
+    const prefs = normalizePrefs({});
+    assert.ok(stylePenalty(parts(base, same), cool, 'casual', prefs) > stylePenalty(parts(base, good), cool, 'casual', prefs));
+    assert.ok(stylePenalty(parts({ ...base, pattern: 'striped' }, loud), cool, 'casual', prefs) >= 0.25);
+    assert.ok(stylePenalty(parts(base, good), { ...cool, avgFeels: 24, minFeels: 20 }, 'casual', prefs) >= 0.4, 'not in the heat');
   });
 
   test('"never suggest" applies to the pieces the person owns', () => {
@@ -99,5 +133,59 @@ describe('the stylist', () => {
     const street = pick({ street: 1, sporty: 0.8, casual: 0.8, classic: 0, polished: 0 }).join(' | ');
     assert.doesNotMatch(classic, /hoodie/);
     assert.match(street, /hoodie|sneakers/);
+  });
+});
+
+describe('trends', () => {
+  const cool = { date: '2026-10-07', avgFeels: 9, minFeels: 5, rain: 'none', snow: false };
+  const burgundySweater = { type: 'sweater', category: 'top', color: '#6d1f35', pattern: 'solid', layer: 'either' };
+  const jeans = { type: 'jeans', category: 'bottom', color: '#2b3a55', pattern: 'solid' };
+  const parts = { upper: [burgundySweater], bottom: jeans, dress: null, outer: null, shoes: null, accessories: [] };
+  const classic = normalizePrefs({ style: { archetypes: { classic: 1, minimal: 0.6 } } });
+
+  test('the season follows where the person lives', () => {
+    assert.equal(seasonOf('2026-10-07', 'north'), 'fw');
+    assert.equal(seasonOf('2026-10-07', 'south'), 'ss');
+    assert.equal(seasonOf('2026-04-20', 'north'), 'ss');
+  });
+
+  test('a trend nudges an outfit the person likes', () => {
+    const t = trendBonus(parts, cool, classic, 0.8);
+    assert.ok(t.bonus > 0.02 && t.matched.some((m) => m.id === 'deep-red'));
+  });
+
+  test('a trend never rescues an outfit they would not enjoy, and can be switched off', () => {
+    assert.equal(trendBonus(parts, cool, classic, 0.4).bonus, 0, 'not liked, so no lift');
+    assert.equal(trendBonus(parts, cool, normalizePrefs({ style: { archetypes: { classic: 1 }, trendiness: 'off' } }), 0.9).bonus, 0);
+    assert.ok(trendBonus(parts, cool, normalizePrefs({ style: { archetypes: { classic: 1 }, trendiness: 'forward' } }), 0.9).bonus > trendBonus(parts, cool, classic, 0.9).bonus);
+  });
+
+  test('a trend that is not their style is ignored', () => {
+    const street = normalizePrefs({ style: { archetypes: { street: 1, classic: 0, minimal: 0, polished: 0 } } });
+    const tonal = { upper: [{ type: 'sweater', category: 'top', color: '#b58750', pattern: 'solid' }], bottom: { type: 'chinos', category: 'bottom', color: '#cdb89a', pattern: 'solid' }, dress: null, outer: null, shoes: null, accessories: [] };
+    assert.equal(trendBonus(tonal, cool, street, 0.9).matched.some((m) => m.id === 'tonal-warm'), false);
+    assert.equal(trendBonus(tonal, cool, classic, 0.9).matched.some((m) => m.id === 'tonal-warm'), true);
+  });
+
+  test('a trend is only ever a tiebreak: the total lift is small', () => {
+    const everything = { upper: [{ type: 'shirt', category: 'top', color: '#6d1f35', pattern: 'checked' }, { type: 'sweater', category: 'top', color: '#b58750', pattern: 'solid' }], bottom: { type: 'jeans', category: 'bottom', color: '#4b6a93', pattern: 'solid' }, dress: null, outer: { type: 'blazer', category: 'outerwear', color: '#b58750' }, shoes: { type: 'loafers', category: 'shoes', color: '#6b4a32' }, accessories: [] };
+    assert.ok(trendBonus(everything, cool, classic, 1).bonus <= 0.06 + 1e-9);
+  });
+
+  test('the owner can replace the lists with their own', () => {
+    configureTrends({ fw: [{ id: 'mine', label: 'my trend', weight: 0.05, match: { types: ['sweater'] } }] });
+    try {
+      assert.deepEqual(trendBonus(parts, cool, classic, 0.9).matched.map((m) => m.id), ['mine']);
+    } finally {
+      configureTrends(null);
+    }
+    assert.ok(trendBonus(parts, cool, classic, 0.9).matched.length >= 1);
+  });
+
+  test('"never suggest" pieces are skipped but a colour they avoid is nearly a veto', () => {
+    const avoid = normalizePrefs({ style: { avoidedColors: ['burgundy'], likedColors: ['navy'] } });
+    const liked = selectionPenalty({ ...parts, upper: [{ ...burgundySweater, color: '#1f2f54' }] }, avoid);
+    const bad = selectionPenalty(parts, avoid);
+    assert.ok(bad >= 0.15 && liked < 0);
   });
 });

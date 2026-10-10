@@ -39,7 +39,8 @@ function Tile({ g, onOpen, onFav, onRemove, today }) {
         <span class=${`tile-sub tile-idle ${dormant ? 'dormant' : ''}`}>${wornLine(g, today)}</span>
       </div>
     </button>
-    ${dormant ? html`<span class="idle-pill" title=${t('Not worn in a while')}><${Icon} name="clock" size="12" />${t('Idle')}</span>` : null}
+    ${g.excluded ? html`<span class="not-suggested" title=${t('Stays in your closet, but never appears in your recommendations')}>${t('Not suggested')}</span>` : null}
+    ${dormant && !g.excluded ? html`<span class="idle-pill" title=${t('Not worn in a while')}><${Icon} name="clock" size="12" />${t('Idle')}</span>` : null}
     <button class=${`fav ${g.favorite ? 'on' : ''}`} onClick=${() => onFav(g)} aria-label=${g.favorite ? t('Remove from favourites') : t('Add to favourites')} aria-pressed=${g.favorite ? 'true' : 'false'}><${Icon} name="heart" /></button>
     <button class="remove" onClick=${() => onRemove(g)} aria-label=${t('Remove {name}', { name: g.name })} title=${t('Remove from closet')}><${Icon} name="trash" /></button>
   </div>`;
@@ -124,6 +125,7 @@ export function GarmentSheet({ garment, onClose, caps }) {
     brand: garment?.brand || '',
     notes: garment?.notes || '',
     favorite: garment?.favorite || false,
+    excluded: garment?.excluded || false,
     price: garment?.priceCents ? String(garment.priceCents / 100) : ''
   }));
   const [photos, setPhotos] = useState(null); // { original, cutout, reason } for a newly chosen photo
@@ -200,6 +202,7 @@ export function GarmentSheet({ garment, onClose, caps }) {
       if (price !== '' && Number.isFinite(paid) && paid >= 0) body.price = paid;
       else if (editing && garment.priceCents) body.price = 0; // the field was cleared
       if (!body.name) delete body.name;
+      if (!editing) delete body.excluded; // only an existing piece can be taken out of recommendations
       let saved;
       if (editing) {
         saved = (await api.patch(`/garments/${garment.id}`, body)).garment;
@@ -282,6 +285,7 @@ export function GarmentSheet({ garment, onClose, caps }) {
         <${Slider} id="g-formal" label=${t('Dressiness')} value=${form.formality} min=${1} max=${5} labels=${FORMALITY_LABELS.map((x) => (x ? t(x) : x))} onChange=${(v) => { setTouched((t) => ({ ...t, formality: true })); set({ formality: v }); }} />
 
         <div class="spread"><div><div class="label">${t('Waterproof')}</div><div class="hint">${t('Keeps you dry in the rain')}</div></div><${Switch} label=${t('Waterproof')} checked=${form.waterproof} onChange=${(v) => { setTouched((t) => ({ ...t, waterproof: true })); set({ waterproof: v }); }} /></div>
+        ${editing ? html`<div class="spread"><div><div class="label">${t('Don’t suggest in outfits')}</div><div class="hint">${t('Stays in your closet, but never appears in your recommendations')}</div></div><${Switch} label=${t('Don’t suggest in outfits')} checked=${form.excluded} onChange=${(v) => set({ excluded: v })} /></div>` : null}
         <div class="spread"><div><div class="label">${t('Favourite')}</div><div class="hint">${t('Favourites are chosen more often')}</div></div><${Switch} label=${t('Favourite')} checked=${form.favorite} onChange=${(v) => set({ favorite: v })} /></div>
 
         <div class="field"><label for="g-price">${t('What you paid')} <span class="faint">${t('(optional)')}</span></label><input id="g-price" class="input" inputmode="decimal" placeholder=${money(4900, currency)} value=${form.price} onInput=${(e) => set({ price: e.target.value.replace(/[^\d.,]/g, '').slice(0, 9) })} /><span class="hint">${t('Used to show what each wear costs you.')}</span></div>

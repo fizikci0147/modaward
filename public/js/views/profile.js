@@ -122,6 +122,11 @@ function StyleSection({ profile }) {
     <${Section} title=${t('Your style')} blurb=${t('Vote on each style. We use it to choose what to show you, and it keeps learning from every outfit you love or skip.')} status=${status}>
       <${ArchetypeGrid} value=${s.archetypes} onChange=${(archetypes) => save({ style: { archetypes, quizDone: true } })} />
     </${Section}>
+    <${Section} title=${t('How current should your outfits be?')} blurb=${t('Trends only ever nudge between looks you already like. Your taste always comes first.')}>
+      <div class="segmented" role="group" aria-label=${t('How current should your outfits be?')}>
+        ${[['off', t('Timeless')], ['light', t('A little current')], ['forward', t('Very current')]].map(([id, label]) => html`<button key=${id} aria-pressed=${(s.trendiness || 'light') === id ? 'true' : 'false'} onClick=${() => save({ style: { trendiness: id } })}>${label}</button>`)}
+      </div>
+    </${Section}>
     <${Section} title=${t('Colours')} blurb=${t('Tap once to love a colour, twice to avoid it, three times to clear it.')}>
       <div class="swatches">${PALETTE.map((p) => html`<button key=${p.name} class=${`swatch ${colorState(p.name) === 'avoid' ? 'avoid' : ''}`} style=${{ background: p.hex }} title=${`${cap(t(p.name))}${colorState(p.name) ? ` (${colorState(p.name) === 'like' ? t('love') : t('avoid')})` : ''}`} aria-label=${`${t(p.name)}: ${colorState(p.name) === 'like' ? t('love') : colorState(p.name) === 'avoid' ? t('avoid') : t('neutral')}`} aria-pressed=${colorState(p.name) ? 'true' : 'false'} onClick=${() => cycle(p.name)}></button>`)}</div>
       <div class="small muted">${s.likedColors.length ? `${t('Love: {colours}.', { colours: s.likedColors.map((c) => cap(t(c))).join(', ') })} ` : ''}${s.avoidedColors.length ? t('Avoid: {colours}.', { colours: s.avoidedColors.map((c) => cap(t(c))).join(', ') }) : s.likedColors.length ? '' : t('No preferences yet.')}</div>

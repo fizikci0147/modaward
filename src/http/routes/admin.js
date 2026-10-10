@@ -50,7 +50,7 @@ const httpsOnly = (u) => {
 const grantSchema = object({ email: email(), days: integer({ min: 1, max: 3660 }) });
 
 /** Operator dashboard data. Access is limited to the emails in ADMIN_EMAILS. */
-export function adminRoutes({ db, config, usage, catalog, codes, weather, capabilities, mailer }) {
+export function adminRoutes({ db, config, usage, catalog, codes, trends, weather, capabilities, mailer }) {
   const r = Router();
   r.use('/admin', requireUser, (req, _res, next) => (config.adminEmails.includes(req.user.email.toLowerCase()) ? next() : next(forbidden('Not found.'))));
 
@@ -142,6 +142,7 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
       network: { clientIp: req.ip, forwardedFor: req.get('x-forwarded-for') || null, protocol: req.protocol },
       weather: { provider: weather.provider, probe, lastError: weather.lastError },
       ops: operations(),
+      trends: trends.status(),
       integrations: { ai: Boolean(capabilities?.ai), stripe: Boolean(capabilities?.billing), email: Boolean(mailer?.configured), push: Boolean(capabilities?.push), backgroundRemovalService: Boolean(capabilities?.cutoutService) }
     });
   });
@@ -237,6 +238,13 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
   });
 
   r.get('/admin/codes', (_req, res) => res.json({ codes: codes.list() }));
+  // fashion trends: refresh them now, or fall back to the built-in lists
+  r.post('/admin/trends/refresh', async (_req, res) => res.json({ result: await trends.refresh(), status: trends.status() }));
+  r.post('/admin/trends/restore', (_req, res) => {
+    trends.restoreBuiltIn();
+    res.json({ status: trends.status() });
+  });
+
   r.post('/admin/codes', (req, res) => res.status(201).json(codes.create(codeSchema(req.body ?? {}))));
   r.delete('/admin/codes/:code', (req, res) => {
     codes.remove(req.params.code);

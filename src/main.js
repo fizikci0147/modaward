@@ -66,6 +66,11 @@ setTimeout(housekeeping, 120_000).unref();
 const sweep = setInterval(housekeeping, 3_600_000);
 sweep.unref();
 
+// fashion moves on: look for fresher trend lists shortly after start-up and then daily (it only acts when the saved lists are a month old)
+setTimeout(() => deps.trends.refreshIfDue(), 90_000).unref();
+const trendTimer = setInterval(() => deps.trends.refreshIfDue(), 86_400_000);
+trendTimer.unref();
+
 function shutdown(signal) {
   log.info('server.stopping', { signal });
   server.close(() => {

@@ -219,6 +219,20 @@ function System() {
     setBusy(false);
   };
   useEffect(() => { run(); }, []);
+  const refreshTrends = async () => {
+    setBusy(true);
+    try {
+      const r = await api.post('/admin/trends/refresh');
+      toast(r.result.ok ? `Trends refreshed (${r.result.fw} autumn/winter, ${r.result.ss} spring/summer).` : `Could not refresh: ${r.result.why}`, { kind: r.result.ok ? 'ok' : 'err', ms: 7000 });
+      setS((x) => ({ ...x, trends: r.status }));
+    } catch (e) { setErr(e); }
+    setBusy(false);
+  };
+  const restoreTrends = async () => {
+    setBusy(true);
+    try { const r = await api.post('/admin/trends/restore'); setS((x) => ({ ...x, trends: r.status })); } catch (e) { setErr(e); }
+    setBusy(false);
+  };
   const Row = ({ label, ok, detail }) => html`<tr><td>${label}</td><td>${ok === null ? html`<span class="faint">–</span>` : ok ? '✓ OK' : '✕ Problem'}</td><td class="small muted">${detail}</td></tr>`;
   return html`<section class="card card-pad stack"><div class="spread"><h2 class="display h-s">System check</h2><button class="btn btn-outline btn-s" onClick=${run} disabled=${busy}>${busy ? 'Checking…' : 'Run again'}</button></div>
     ${err ? html`<${Failed} error=${err} onRetry=${run} />` : !s ? html`<div class="skel" style=${{ height: '160px' }}></div>` : html`
@@ -236,6 +250,7 @@ function System() {
         <${Row} label="Payment webhook secret" ok=${s.ops.billingOn ? s.ops.webhookSecret : null} detail=${s.ops.billingOn ? (s.ops.webhookSecret ? 'set' : 'STRIPE_WEBHOOK_SECRET is missing: customers who pay will stay on the free plan.') : 'payments are off'} />
         <${Row} label="Reminders" ok=${s.ops.remindersOn} detail=${s.ops.remindersOn ? 'the scheduler is on' : 'REMINDERS_ENABLED is off: no reminders are sent.'} />
         <${Row} label="Admin accounts" ok=${s.ops.unclaimedAdmins.length === 0} detail=${s.ops.unclaimedAdmins.length ? `Nobody has registered ${s.ops.unclaimedAdmins.join(', ')} yet. Register it yourself now: whoever signs up with an admin address first becomes an admin.` : 'every ADMIN_EMAILS address has an account'} />
+        <${Row} label="Trend lists" ok=${(() => { const [y, m] = (s.trends?.updated || '2000-01').split('-').map(Number); return (new Date().getFullYear() - y) * 12 + new Date().getMonth() + 1 - m <= 6; })()} detail=${html`<span>${`Compiled ${s.trends?.updated || 'unknown'} · source: ${s.trends?.source || 'built-in'} · ${s.trends?.auto ? 'refreshes itself monthly' : 'no automatic refresh (needs the AI key); the lists fade as they age'}.`}${s.trends?.lastError ? ` Last refresh failed: ${s.trends.lastError.message}.` : ''} <button class="btn btn-outline btn-s" disabled=${busy} onClick=${refreshTrends}>Refresh now</button>${s.trends?.custom ? html` <button class="btn btn-ghost btn-s" disabled=${busy} onClick=${restoreTrends}>Use built-in lists</button>` : null}</span>`} />
         <${Row} label="Version running" ok=${true} detail=${`${s.build?.id || 'unknown'}${s.build?.builtAt ? ` · built ${new Date(s.build.builtAt).toLocaleString()}` : ''}`} />
         <${Row} label="Server" ok=${true} detail=${`Node ${s.node} · database ${s.database} · up ${s.uptimeMinutes} min · ${s.production ? 'production' : 'development'}`} />
       </tbody></table>

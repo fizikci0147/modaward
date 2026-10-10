@@ -89,6 +89,7 @@ export const DEFAULT_PROFILE = Object.freeze({
     stores: [],
     mixStores: true,
     quizDone: false,
+    trendiness: 'light',
     notes: ''
   }
 });

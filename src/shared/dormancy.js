@@ -30,7 +30,7 @@ export function idleInfo(garment, today) {
 
 /** True when the piece has gone unworn long enough to point out. */
 export function isDormant(garment, today) {
-  if (garment.archived) return false;
+  if (garment.archived || garment.excluded) return false; // a piece you asked us not to suggest is not "forgotten"
   const { days, never } = idleInfo(garment, today);
   return days >= (never ? UNWORN_GRACE_DAYS : DORMANT_DAYS);
 }

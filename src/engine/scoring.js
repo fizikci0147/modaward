@@ -4,7 +4,7 @@
  */
 import { L } from '../shared/i18n.js';
 import { DORMANT_DAYS } from '../shared/dormancy.js';
-import { stylePenalty, occasionSpec, patternAdjust } from './stylist.js';
+import { stylePenalty, occasionSpec, patternAdjust, trendBonus } from './stylist.js';
 import { harmony, colorName } from '../shared/color.js';
 import { thermalScore } from './thermal.js';
 
@@ -47,7 +47,13 @@ export function normalizePrefs(profile) {
     hasProfile: Boolean(Object.keys(style.archetypes || {}).length),
     dressCode: profile?.lifestyle?.dressCode || 'smart',
     never: style.never || [],
-    avoidedPatterns: style.avoidedPatterns || []
+    avoidedPatterns: style.avoidedPatterns || [],
+    brandsLove: (style.brands?.love || []).map((b) => String(b).toLowerCase()),
+    brandsAvoid: (style.brands?.avoid || []).map((b) => String(b).toLowerCase()),
+    cover: profile?.bodyAreas?.cover || [],
+    show: profile?.bodyAreas?.show || [],
+    trendiness: style.trendiness || 'light',
+    hemisphere: (profile?.location?.lat ?? 1) < 0 ? 'south' : 'north'
   };
 }
 
@@ -65,6 +71,11 @@ export function garmentAffinity(g, prefs) {
     else if (prefs.liked.has(name)) aff += 0.14;
   }
   if (g.pattern && g.pattern !== 'solid' && prefs.hasProfile) aff += patternAdjust(g, prefs);
+  if (g.brand && (prefs.brandsLove?.length || prefs.brandsAvoid?.length)) {
+    const b = String(g.brand).toLowerCase();
+    if (prefs.brandsAvoid.some((x) => x && b.includes(x))) aff -= 0.3;
+    else if (prefs.brandsLove.some((x) => x && b.includes(x))) aff += 0.1;
+  }
   if (g.favorite) aff += 0.08;
   return clamp01(aff);
 }
@@ -213,6 +224,10 @@ export function scoreParts(parts, env) {
   // what a stylist would never put together
   total -= stylePenalty(parts, env.ctx, env.occasion, env.prefs);
 
+  // what is in style this season, but only as a tiebreak among outfits the person would like
+  const trend = trendBonus(parts, env.ctx, env.prefs, style);
+  total += trend.bonus;
+
   // a rain shell on a dry day is utility wear; prefer a regular jacket of similar warmth
   if (parts.outer?.waterproof && env.ctx.rain === 'none' && !env.ctx.snow && thermal.outer !== 'never') total -= 0.035;
 
@@ -227,6 +242,7 @@ export function scoreParts(parts, env) {
     occasion,
     color,
     style,
+    trend,
     fresh
   };
 }

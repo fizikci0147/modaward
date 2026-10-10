@@ -22,9 +22,10 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
     return weather.forecast({ lat, lon, name });
   }
 
-  function engineInputs(user, profile, today) {
-    // idleDays lets the engine bring back pieces that have sat unworn for a long time
-    const garments = repos.garments.list(user.id).map((g) => ({ ...g, idleDays: idleInfo(g, today).days }));
+  function engineInputs(user, profile, today, keepId = null) {
+    // idleDays lets the engine bring back pieces that have sat unworn for a long time;
+    // pieces the person said "don't suggest" stay in the closet but never reach the engine
+    const garments = repos.garments.list(user.id).filter((g) => !g.excluded || g.id === keepId).map((g) => ({ ...g, idleDays: idleInfo(g, today).days }));
     const taste = new TasteModel(repos.profiles.getTaste(user.id));
     const prefs = withTaste(normalizePrefs(profile), taste);
     return {
@@ -61,7 +62,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       if (index >= ent.planDays) throw paymentRequired('Planning beyond three days is a Pro feature.', { feature: 'plan' });
 
       const day = w.days[index];
-      const input = engineInputs(user, profile, w.today);
+      const input = engineInputs(user, profile, w.today, featureId);
       // pieces the person asked to leave out of today's suggestions
       if (excludeIds?.length) input.garments = input.garments.filter((g) => !excludeIds.includes(g.id));
       const result = recommend({

@@ -96,11 +96,32 @@ async function run(label, contextOptions) {
   const swapBtn = page.getByRole('button', { name: /^Swap out / }).first();
   const swapName = ((await swapBtn.getAttribute('aria-label')) || '').replace('Swap out ', '');
   await swapBtn.click();
+  await page.getByRole('menuitem', { name: 'Not today' }).click();
   await page.getByText('Not using today:').waitFor();
   await page.locator('.piece-chip', { hasText: swapName }).waitFor({ state: 'detached', timeout: 5000 }).catch(() => fail(`${label}: swapped piece "${swapName}" is still in the outfit`));
   await page.getByRole('button', { name: swapName }).click(); // chip under the card brings it back
   await page.getByRole('button', { name: 'Dislike this outfit' }).waitFor();
   ok(`${label}: a single piece can be swapped out and brought back; Dislike is a labelled control`);
+
+  // ── "never suggest this piece": lasting, shown in the closet, undoable ──
+  await page.waitForTimeout(1200); // let the outfit settle after bringing the piece back
+  const victim = ((await page.getByRole('button', { name: /^Swap out / }).first().getAttribute('aria-label')) || '').replace('Swap out ', '');
+  await page.getByRole('button', { name: `Swap out ${victim}`, exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Never suggest this piece' }).click();
+  await page.getByText(/won’t be suggested again/).waitFor();
+  await page.goto('/closet');
+  await page.locator('.tile', { hasText: victim }).locator('.not-suggested').waitFor();
+  await page.goto('/');
+  await page.getByText(/% match|match$/).first().waitFor();
+  if ((await page.locator('.piece-chip', { hasText: victim }).count()) > 0) fail(`${label}: "${victim}" came back after "never suggest"`);
+  await page.goto('/closet');
+  await page.locator('.tile', { hasText: victim }).locator('.tile-btn').click();
+  await page.getByRole('switch', { name: 'Don’t suggest in outfits' }).click();
+  await page.getByRole('button', { name: 'Save changes' }).click();
+  await page.getByText('Saved', { exact: true }).waitFor();
+  await page.goto('/');
+  await page.getByText(/% match|match$/).first().waitFor();
+  ok(`${label}: "never suggest this piece" keeps it out of every recommendation, marks it in the closet, and can be undone`);
 
   // ── share the outfit as a picture ──
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 20000 }), page.getByRole('button', { name: 'Share this outfit as a picture' }).click()]);

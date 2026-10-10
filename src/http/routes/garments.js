@@ -28,7 +28,7 @@ const createSchema = object({
   ...Object.fromEntries(Object.entries(fields).map(([k, v]) => [k, k === 'type' || k === 'color' ? v : optional(v, undefined)])),
   image: optional(string({ max: 5_000_000, trim: false }), undefined)
 });
-const patchSchema = partial({ ...fields, archived: boolean() });
+const patchSchema = partial({ ...fields, archived: boolean(), excluded: boolean() });
 const photoSchema = object({ image: string({ min: 20, max: 5_000_000, trim: false }) });
 const starterSchema = object({ department: optional(oneOf(['men', 'women', 'unisex']), undefined) });
 

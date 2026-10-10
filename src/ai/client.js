@@ -23,6 +23,8 @@ export async function createAiClient(config, usage, log, injectedClient) {
 
   return {
     model: config.ai.model,
+    /** the SDK client itself, for the few callers that need a server tool (the trend refresh) */
+    raw: client,
 
     /**
      * Ask for a JSON document matching `schema`.

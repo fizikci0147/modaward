@@ -1,12 +1,45 @@
-import { html } from '/js/ui.js';
+import { html, useState, useEffect, useRef } from '/js/ui.js';
 import { t } from '/js/i18n.js';
 import { Icon } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
 import { Spinner } from '/js/components/common.js';
 
-const REASON_ICON = { weather: 'thermo', protection: 'umbrella', style: 'heart', occasion: 'tag', color: 'sliders', fresh: 'sparkle' };
+const REASON_ICON = { weather: 'thermo', protection: 'umbrella', style: 'heart', occasion: 'tag', color: 'sliders', fresh: 'sparkle', trend: 'sparkle' };
 
-export function OutfitCard({ outfit, occasionLabel, pager, worn, busy, onWear, onUndo, onLove, onDislike, onSwap, onShuffle, onShare, loved, compact = false, stylistNote }) {
+/** One piece of the outfit, with its "not this one" control: just for today, or never again. */
+function PieceChip({ item, onSwap, onExclude, only }) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef(null);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => !menuRef.current?.contains(e.target) && setOpen(false);
+    const esc = (e) => e.key === 'Escape' && (e.stopPropagation(), setOpen(false));
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    menuRef.current?.querySelector('button')?.focus();
+    return () => {
+      document.removeEventListener('mousedown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const both = onSwap && onExclude;
+  const choose = (fn) => () => { setOpen(false); fn(item); };
+  return html`<span class="piece-chip" key=${item.id}><i style=${{ background: item.color }}></i>${item.name}
+    ${only && (onSwap || onExclude)
+      ? null
+      : both
+        ? html`<span class="chip-menu-wrap" ref=${menuRef}>
+            <button class="chip-x" aria-haspopup="menu" aria-expanded=${open ? 'true' : 'false'} aria-label=${t('Swap out {name}', { name: item.name })} title=${t('Not this piece: swap it for something else')} onClick=${() => setOpen(!open)}><${Icon} name="x" size="12" /></button>
+            ${open ? html`<span class="chip-menu" role="menu">
+              <button role="menuitem" onClick=${choose(onSwap)}>${t('Not today')}</button>
+              <button role="menuitem" onClick=${choose(onExclude)}>${t('Never suggest this piece')}</button>
+            </span>` : null}
+          </span>`
+        : html`<button class="chip-x" aria-label=${onSwap ? t('Swap out {name}', { name: item.name }) : t('Never suggest {name}', { name: item.name })} title=${onSwap ? t('Not this piece: swap it for something else') : t('Never suggest this piece')} onClick=${() => (onSwap || onExclude)(item)}><${Icon} name="x" size="12" /></button>`}
+  </span>`;
+}
+
+export function OutfitCard({ outfit, occasionLabel, pager, worn, busy, onWear, onUndo, onLove, onDislike, onSwap, onExclude, onShuffle, onShare, loved, compact = false, stylistNote }) {
   const label = t('Outfit: {items}', { items: outfit.items.map((i) => i.name).join(', ') });
   return html`<article class="card outfit card-lift" aria-label=${label}>
     <div class="outfit-board">
@@ -34,7 +67,7 @@ export function OutfitCard({ outfit, occasionLabel, pager, worn, busy, onWear, o
       ${outfit.warnings?.length ? html`<ul class="reasons warn">${outfit.warnings.map((w) => html`<li key=${w}><${Icon} name="info" /><span>${w}</span></li>`)}</ul>` : null}
 
       <div class="pieces">
-        ${outfit.items.map((i) => html`<span class="piece-chip" key=${i.id}><i style=${{ background: i.color }}></i>${i.name}${onSwap && outfit.items.length > 1 ? html`<button class="chip-x" aria-label=${t('Swap out {name}', { name: i.name })} title=${t('Not this piece: swap it for something else')} onClick=${() => onSwap(i)}><${Icon} name="x" size="12" /></button>` : null}</span>`)}
+        ${outfit.items.map((i) => html`<${PieceChip} key=${i.id} item=${i} onSwap=${onSwap} onExclude=${onExclude} only=${outfit.items.length < 2} />`)}
       </div>
 
       <div class="action-row">

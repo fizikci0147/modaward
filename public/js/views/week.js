@@ -154,6 +154,16 @@ export function WeekView() {
                 } : undefined}
                 onLove=${async () => { try { await api.post('/outfits/feedback', { itemIds: outfit.itemIds, signal: 'love', key: outfit.key }); toast(t('Noted. More like this.')); } catch (e) { fail(e); } }}
                 onDislike=${async () => { try { await api.post('/outfits/feedback', { itemIds: outfit.itemIds, signal: 'dislike', key: outfit.key }); setAlt((a) => ({ ...a, [day.date]: idx + 1 })); toast(t('Got it. Here’s another.')); } catch (e) { fail(e); } }}
+                onExclude=${async (item) => {
+                  try {
+                    await api.patch(`/garments/${item.id}`, { excluded: true });
+                    toast(t('{name} won’t be suggested again.', { name: item.name }), {
+                      ms: 7000,
+                      action: { label: t('Undo'), run: async () => { try { await api.patch(`/garments/${item.id}`, { excluded: false }); setReload((x) => x + 1); } catch (e) { fail(e); } } }
+                    });
+                    setReload((x) => x + 1);
+                  } catch (e) { fail(e); }
+                }}
                 onShuffle=${() => setAlt((a) => ({ ...a, [day.date]: idx + 1 }))}
                 pager=${day.outfits.length > 1 ? html`<div class="dots" style=${{ position: 'absolute', bottom: '16px' }}>${day.outfits.map((_, i) => html`<i key=${i} class=${i === idx % day.outfits.length ? 'on' : ''}></i>`)}</div>` : null} />`
             : html`<${EmptyCloset} missing=${day.missing} onDone=${() => setSeed((x) => x + 1)} />`}

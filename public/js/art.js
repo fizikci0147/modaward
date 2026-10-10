@@ -389,9 +389,12 @@ export function outfitMarkup(items) {
       out += cell(tops[0], 12 + dx, 8, 156, 140) + shadow(92 + dx, 352, 56) + cell(dress, 14 + dx, 150, 156, 202);
     } else out += shadow(92 + dx, 352, 56) + cell(dress, 14 + dx, 14, 156, 338);
   } else {
-    // two tops (a base and a layer over it) sit next to each other: stacked, one would hide the other
+    // a base with its layer: the layer sits in front and a little higher, so the base shows at the
+    // collar and below the hem, the way the pair is actually worn
     if (tops[1]) {
-      out += cell(tops[0], 4 + dx, 14, 82, 136) + cell(tops[1], 86 + dx, 14, 82, 136);
+      const MID = new Set(['sweater', 'cardigan', 'hoodie']);
+      const [base, mid] = MID.has(tops[0].art) && !MID.has(tops[1].art) ? [tops[1], tops[0]] : [tops[0], tops[1]];
+      out += cell(base, 10 + dx, 30, 150, 140) + cell(mid, 22 + dx, 4, 126, 126);
     } else if (tops[0]) out += cell(tops[0], 12 + dx, 8, 156, 156);
     if (bottom) out += cell(bottom, 12 + dx, 156, 156, 196);
   }

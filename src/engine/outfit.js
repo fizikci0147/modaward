@@ -2,13 +2,13 @@
  * Outfit generation.
  *
  * Search strategy (keeps a request to a few thousand evaluations even for 300-item closets):
- *   1. Build "cores": one top with a bottom, or a dress.
+ *   1. Build "cores": one top (or a base with its layer on a cool day) with a bottom, or a dress.
  *   2. Rank cores against the weather, occasion, colour and style, assuming the best outer layer.
  *   3. Take the best cores and add every sensible shoe × outer-layer combination, scoring fully.
  *   4. Choose a diverse top-N, then add weather-driven accessories to each.
  */
 import { OCCASIONS, withDefaults } from '../shared/taxonomy.js';
-import { occasionSpec, ownedAllowed, stylePenalty, beltSuits } from './stylist.js';
+import { occasionSpec, ownedAllowed, stylePenalty, beltSuits, layerOk, layeringWeather } from './stylist.js';
 import { L } from '../shared/i18n.js';
 import { colorName } from '../shared/color.js';
 import { DORMANT_DAYS, agoText } from '../shared/dormancy.js';
@@ -32,6 +32,9 @@ import { rng, hashString } from './rng.js';
 const MAX_CORES = 36;
 const MAX_SHOES = 8;
 const MAX_OUTERS = 7;
+const MAX_BASES = 8;
+const MAX_MIDS = 8;
+const LAYER_BASES = new Set(['tee', 'longsleeve', 'polo', 'shirt', 'blouse', 'sportstop']);
 
 /** Normalise raw garments from storage or the shop catalogue. */
 export function prepareGarments(list) {
@@ -56,13 +59,22 @@ export function outfitKey(parts) {
 const emptyParts = () => ({ upper: [], bottom: null, dress: null, outer: null, shoes: null, accessories: [] });
 
 /**
- * What can be worn as the upper body. One top per outfit: two tops side by side (a polo and a
- * button-up, a blouse and a cardigan) read as indecision, not style, and the board picture
- * cannot show a real layered look. A cardigan can stand alone (a small penalty in scoring keeps
- * sweaters and shirts ahead of it); warmth comes from the sweater, the outer layer and accessories.
+ * What can be worn as the upper body: one top, or on a cool day a base with the layer that belongs
+ * over it (see LAYER_PAIRS in stylist.js). Only the most promising few bases and layers are paired
+ * so the search stays small for big closets.
  */
-function upperSets(tops) {
-  return tops.map((t) => [t]);
+function upperSets(tops, ctx, shortlist = (items) => items) {
+  const sets = [];
+  const layering = layeringWeather(ctx);
+  // a cardigan on its own is only an option on a day too mild for layering (it is marked down in the scoring)
+  for (const t of tops) if (t.layer !== 'mid' || !layering) sets.push([t]);
+  // someone who owns a cardigan but no tops to go under it still gets to wear it
+  if (!sets.length) for (const t of tops) sets.push([t]);
+  if (!layering) return sets;
+  const bases = shortlist(tops.filter((t) => t.layer !== 'mid' && LAYER_BASES.has(t.type)), MAX_BASES);
+  const mids = shortlist(tops.filter((t) => t.layer === 'mid' || t.layer === 'either'), MAX_MIDS);
+  for (const b of bases) for (const m of mids) if (layerOk(b, m)) sets.push([b, m]);
+  return sets;
 }
 
 /** Cheap per-garment relevance used to pick which shoes/outers get a full evaluation. */
@@ -143,7 +155,7 @@ export function generate(args) {
 
   // ── stage 1: cores ──────────────────────────────────────────────────
   const cores = [];
-  const uppers = upperSets(tops);
+  const uppers = upperSets(tops, ctx, (items, limit) => (items.length > limit ? diverseShortlist(items, limit, env, keepAlways) : items));
   const baseParts = (core) => ({ ...emptyParts(), ...core });
 
   const coreList = [];
@@ -226,9 +238,14 @@ export function pickDiverse(results, count, maxOverlap = 0.5) {
   // relaxing the overlap rule must never pull in an outfit far worse than the best one;
   // better to show fewer looks than a bad one (results arrive best-first)
   const floor = results.length ? results[0].total - QUALITY_WINDOW : -Infinity;
+  // layered looks are lovely, but a list made only of them is tiring: keep at least one single-top look when there is one
+  const layered = (r) => r.parts.upper.length > 1;
+  const maxLayered = Math.max(1, count - 1);
+  const hasSingle = results.some((r) => !layered(r));
   for (const limit of [maxOverlap, 0.7, 1.01]) {
     for (const r of results) {
       if (r.total < floor && chosen.length > 0) break;
+      if (hasSingle && layered(r) && chosen.filter(layered).length >= maxLayered) continue;
       if (chosen.length >= count) break;
       if (chosen.includes(r)) continue;
       if (chosen.every((c) => overlap(c.key, r.key) <= limit)) chosen.push(r);
@@ -348,6 +365,10 @@ function explain({ parts, scores, ctx, occasion, prefs, units }) {
       .sort((a, b) => b[1] - a[1])[0];
     if (top && scores.style >= 0.6) reasons.push({ kind: 'style', text: t('Leans {style}, a style you told us you love.', { style: t(STYLE_WORD[top[0]] ?? top[0]) }) });
   }
+
+  // the single strongest current trend this outfit speaks to, in the person's own taste
+  const trend = scores.trend?.matched?.[0];
+  if (trend && scores.trend.bonus >= 0.012) reasons.push({ kind: 'trend', text: t('In step with this season: {trend}.', { trend: trend.labels?.[locale] ?? t(trend.label) }) });
 
   if (scores.occasion.score >= 0.82) {
     reasons.push({ kind: 'occasion', text: t('Right level of dressed-up for {occasion}.', { occasion: t(OCCASION_WORD[occasion] ?? OCCASIONS[occasion].label.toLowerCase()) }) });

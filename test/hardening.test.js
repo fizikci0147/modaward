@@ -145,6 +145,26 @@ describe('wear logging, trips, shop and reminders through the API', () => {
     assert.equal(t.deps.shop.stats.computed, 1, 'seeds 1, 25 and 49 are the same variation');
   });
 
+  test('"never suggest this piece" is lasting, reversible, and keeps the piece in the closet', async () => {
+    const { c } = await person();
+    const first = (await recommendOne(c))[0];
+    const victim = first.itemIds[0];
+    assert.equal((await c.patch(`/api/garments/${victim}`, { excluded: true })).status, 200);
+    for (let i = 0; i < 4; i++) {
+      for (const o of (await c.post('/api/outfits/recommend', { occasion: 'casual', count: 3, seed: `s${i}` })).json.outfits) assert.ok(!o.itemIds.includes(victim), 'excluded piece came back');
+    }
+    const week = (await c.post('/api/plan', {})).json.days.flatMap((d) => d.outfits || []).flatMap((o) => o.itemIds);
+    assert.ok(!week.includes(victim), 'excluded piece in the week plan');
+    const closet = (await c.get('/api/garments')).json.garments;
+    assert.equal(closet.find((g) => g.id === victim)?.excluded, true, 'still in the closet, marked');
+    // asking to style that very piece still works: the person chose it
+    assert.ok((await c.post('/api/outfits/recommend', { occasion: 'casual', featureId: victim })).json.outfits.every((o) => o.itemIds.includes(victim)));
+    assert.equal((await c.patch(`/api/garments/${victim}`, { excluded: false })).status, 200);
+    let back = false;
+    for (let i = 0; i < 12 && !back; i++) back = (await c.post('/api/outfits/recommend', { occasion: 'casual', count: 5, seed: `r${i}` })).json.outfits.some((o) => o.itemIds.includes(victim));
+    assert.ok(back, 'undo should bring it back into rotation');
+  });
+
   test('a shop feed is built in a few seconds, not tens (layering must not multiply the search)', async () => {
     const { c } = await person();
     const started = Date.now();

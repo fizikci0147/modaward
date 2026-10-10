@@ -53,6 +53,7 @@ export function garmentFromRow(r) {
     priceCents: r.price_cents ?? null,
     favorite: Boolean(r.favorite),
     archived: Boolean(r.archived),
+    excluded: Boolean(r.excluded),
     wearCount: r.wear_count ?? 0,
     lastWornOn: r.last_worn ?? null,
     createdAt: r.created_at,
@@ -197,10 +198,10 @@ export function createRepos(db) {
       }
       const next = withDefaults(merged);
       db.run(
-        `UPDATE garments SET name=?, category=?, type=?, color=?, pattern=?, warmth=?, formality=?, waterproof=?, brand=?, styles=?, notes=?, favorite=?, archived=?, price_cents=?, updated_at=?
+        `UPDATE garments SET name=?, category=?, type=?, color=?, pattern=?, warmth=?, formality=?, waterproof=?, brand=?, styles=?, notes=?, favorite=?, archived=?, excluded=?, price_cents=?, updated_at=?
          WHERE id=? AND user_id=?`,
         next.name, next.category, next.type, next.color, next.pattern, next.warmth, next.formality, next.waterproof, next.brand,
-        JSON.stringify(next.styles ?? []), next.notes, next.favorite, next.archived, next.priceCents ?? null, now(), id, userId
+        JSON.stringify(next.styles ?? []), next.notes, next.favorite, next.archived, next.excluded ?? false, next.priceCents ?? null, now(), id, userId
       );
       return garments.get(userId, id);
     },

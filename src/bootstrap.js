@@ -1,5 +1,6 @@
 import { loadLocales } from './i18n/index.js';
 import path from 'node:path';
+import { createTrendService } from './services/trends.js';
 import { openDb } from './db/index.js';
 import { createRepos } from './repo/index.js';
 import { createLogger } from './log.js';
@@ -62,8 +63,12 @@ export async function createDeps(config, overrides = {}) {
     operator: config.operator
   };
 
+  // trend lists: the saved ones (written by the monthly refresh, or by hand: docs/TRENDS.md) override the built-in ones
+  const trends = createTrendService({ config, ai, log });
+  trends.load();
+
   const codes = createCodes({ db, repos });
-  const deps = { config, db, repos, codes, log, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
+  const deps = { config, db, repos, codes, trends, log, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
   deps.outfits = createOutfitService({ repos, weather, config, stylist });
   deps.shop = createShopService({ repos, weather, catalog, linker, config, stylist });
   deps.push = overrides.push === undefined ? await createPush(config, db, log, overrides.pushSender) : overrides.push;

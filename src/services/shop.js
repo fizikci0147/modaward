@@ -44,7 +44,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       const ent = entitlements(user, config);
       const forecast = await days(profile);
       const cap = ent.shopLooks;
-      const wardrobe = repos.garments.list(user.id);
+      const wardrobe = repos.garments.list(user.id).filter((g) => !g.excluded);
       const taste = repos.profiles.getTaste(user.id);
       const blocked = repos.feedback.blockedLooks(user.id);
       const memoKey = hashString(JSON.stringify([user.id, locale, kind, storeMode, occasions, seed, limit, curate, ent.plan, forecast[0].date, profile, wardrobe.map((g) => [g.id, g.updatedAt, g.favorite]), taste.n, blocked.size])).toString(36);
@@ -80,7 +80,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       const total = looks.length;
       const visible = looks.slice(0, Math.min(limit, cap));
       for (const l of visible) repos.looks.remember(user.id, l.id, l);
-      const value = { looks: visible, locked: Math.max(0, total - visible.length), reference: built.reference, occasions: built.occasions, storeMode: built.storeMode, usingProducts: built.usingProducts, stylistNote: note, plan: ent.plan };
+      const value = { looks: visible, locked: Math.max(0, total - cap), reference: built.reference, occasions: built.occasions, storeMode: built.storeMode, usingProducts: built.usingProducts, stylistNote: note, plan: ent.plan };
       memo.set(memoKey, { at: Date.now(), value });
       if (memo.size > 300) memo.delete(memo.keys().next().value);
       return value;
@@ -90,7 +90,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       const tr = translatorFor(locale);
       const profile = repos.profiles.get(user.id);
       const forecast = await days(profile);
-      return { gaps: gapSuggestions({ wardrobe: repos.garments.list(user.id), profile, days: forecast, catalog, linker, storeMode, t: tr.t, tn: tr.tn }) };
+      return { gaps: gapSuggestions({ wardrobe: repos.garments.list(user.id).filter((g) => !g.excluded), profile, days: forecast, catalog, linker, storeMode, t: tr.t, tn: tr.tn }) };
     },
 
     feedback(user, { lookId, signal, pieceIndex }) {

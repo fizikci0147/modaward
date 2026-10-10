@@ -39,6 +39,7 @@ export const profilePatchSchema = partial({
     stores: arrayOf(oneOf(RETAILER_IDS), { max: 14, unique: true }),
     mixStores: boolean(),
     quizDone: boolean(),
+    trendiness: oneOf(['off', 'light', 'forward']),
     notes: string({ max: 600 })
   })
 });

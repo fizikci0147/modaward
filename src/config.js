@@ -116,6 +116,8 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
       subject: str(env.VAPID_SUBJECT)
     },
 
+    trends: { autoRefresh: bool(env.TRENDS_AUTO_REFRESH, true) },
+
     reminders: { enabled: bool(env.REMINDERS_ENABLED, true), intervalSeconds: int(env.REMINDERS_INTERVAL_SECONDS, 300) },
 
     cutout: {

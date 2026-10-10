@@ -4,6 +4,19 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.9.0] · 2026-10-12
+
+Taste first, trends second, and a lasting way to say "not this piece".
+
+### Added
+- **"Never suggest this piece".** The × on a piece in Today now offers *Not today* (as before) or *Never suggest this piece*. The piece stays in your closet (marked "Not suggested", and switchable in its edit sheet) but is left out of Today, Week, trips and the Shop's looks built around your closet until you undo it. A toast offers Undo straight away. Asking to style that very piece still works.
+- **Trends that follow your taste.** The engine knows what is current this season (autumn/winter or spring/summer for where you live), compiled in October 2026 from this season's reporting. A trend is only a tiebreak: it applies only to outfits you would already like, only if it suits one of your styles, and is capped small. **You → Style → How current should your outfits be?** sets it to Timeless, A little current, or Very current. When a trend helped, the outfit says so. **The lists keep up with the calendar**: once a month the app researches the current season with Claude's web search, checks the answer against its own vocabulary before using it, and saves the result (with sources and names in all seven languages); lists nobody refreshes fade out after six months. *Business → System check → Trend lists* shows their age and has Refresh now / Use built-in lists. You can also edit `DATA_DIR/trends.json` by hand (`docs/TRENDS.md`). Set `TRENDS_AUTO_REFRESH=0` to switch the automatic refresh off.
+
+### Changed
+- **Layered looks return, curated.** Two tops are used only as a real layered look on a cool day (a shirt under a sweater, a tee under a cardigan or hoodie, a polo under a sweater …), never a polo beside a button-up. They need contrast and at most one print, and a list of looks always keeps a single-top option. The picture now draws the layer over the base.
+- **Your selections steer harder.** Colours you avoid are nearly a veto and colours you love lift an outfit; brands you love or avoid, areas you asked to cover, loud prints against a quiet style, running shoes at work, cargo or joggers outside casual days, a checked shirt with a skirt and double denim are all handled.
+- Shop feed variety counts the same garments in different colours as different looks.
+
 ## [5.8.0] · 2026-10-12
 
 A stylist pass on the recommendations: fewer mistakes, more of the person's own taste.
