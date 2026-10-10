@@ -53,6 +53,10 @@ Claude is an *editor* on top of the deterministic engine, never the source of tr
 
 Classical, in-browser, private: model the backdrop from the photo's border in CIE Lab (k-means, ≤ 3 clusters), score each pixel against it with shadow discounting, Otsu-threshold, flood-fill from the border so interior details survive, drop specks, fill pin-holes, feather the edge. A self-check *declines* rather than ships a bad cut-out (low contrast, no clear backdrop, cluttered). Runs in a Web Worker. The same pure code is unit-tested in Node on synthetic photos with ground truth. An optional server-side remove.bg path covers hard photos for Pro.
 
+## Static files and caching (`src/http/assets.js`)
+
+Scripts, styles and the UI bundle are served under `/v/<build>/…` and the absolute imports inside them are rewritten to the same prefix, so every release has brand-new addresses and no browser, service worker or host cache can show an old screen. Versioned files are `immutable` for a year (development builds are `no-cache`). The plain `/js/…` and `/shared/…` addresses still work and serve the current code, so a stale page repairs itself. `index.html` and `/sw.js` are generated per build and are never cached.
+
 ## Insights, events and trips
 
 `src/shared/wardrobe-stats.js` is a pure function from the closet and the wear log to the numbers on *Closet → Insights* (it is unit-tested without a server). Planned days live in `day_plans` (`repos.plans`): `forDay` and `week` read them, so a planned occasion decides the outfits unless the person picks one explicitly, and the morning reminder reads the same row. `src/engine/trip.js` packs a trip: for each day and occasion it asks the normal engine for six candidates, then chooses greedily, hardest weather first, preferring outfits that reuse what is already in the bag and capping shoes and outer layers at two each. Free plans may pack up to the same number of days they may plan (3); Pro gets the whole forecast window.

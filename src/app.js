@@ -11,6 +11,7 @@ import { garmentRoutes, uploadsRoute } from './http/routes/garments.js';
 import { outfitRoutes } from './http/routes/outfits.js';
 import { goRoute } from './http/routes/go.js';
 import { notFound } from './util/errors.js';
+import { createAssets } from './http/assets.js';
 
 const LONG_CACHE = 'public, max-age=86400';
 
@@ -57,10 +58,13 @@ export function createApp(deps) {
 
   // ── static assets ──
   const staticOpts = { index: false, etag: true, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };
-  // The service worker's cache name carries the build id, so every release invalidates old caches by itself.
-  const swSource = fs.readFileSync(path.join(config.publicDir, 'sw.js'), 'utf8');
-  const swBody = swSource.replace(/const VERSION = '[^']*';/, `const VERSION = 'mw-${config.build.id}';`);
+  // Scripts and styles live under /v/<build>/ so no cache can serve an old release (see http/assets.js).
+  // The service worker's cache name carries the build id too, so every release invalidates old caches by itself.
+  const assets = createAssets(config);
+  const swBody = assets.serviceWorker();
   app.get('/sw.js', (_req, res) => res.type('application/javascript').set('Cache-Control', 'no-cache').send(swBody));
+  app.use(assets.versioned);
+  app.use(assets.plain);
   app.use('/shared', express.static(config.sharedDir, { ...staticOpts, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') }));
   app.use(
     express.static(config.publicDir, {
@@ -108,7 +112,7 @@ export function createApp(deps) {
     // dotfile probes (/.env, /.git/config) get a plain 404, never the app shell
     if ((req.method !== 'GET' && req.method !== 'HEAD') || path.extname(req.path) || /(^|\/)\./.test(req.path) || !req.accepts('html')) return next();
     res.setHeader('Cache-Control', 'no-cache');
-    res.sendFile(path.join(config.publicDir, 'index.html'));
+    res.type('html').send(assets.indexHtml());
   });
   app.use((_req, res) => res.status(404).type('text/plain').send('Not found'));
 

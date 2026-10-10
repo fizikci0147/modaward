@@ -110,6 +110,7 @@ A 503 from Hostinger means the platform could not reach a running Node process. 
 | Password-reset emails never arrive | Check `SMTP_*` and `APP_URL`; run `npm run live:check`. Without SMTP the link is only written to the server log. |
 | Pro purchase succeeds but the account stays Free | The webhook is missing or its secret is wrong. In Stripe → Developers → Webhooks look for failed deliveries. |
 | Weather shows "temporarily unavailable" | The server cannot reach api.open-meteo.com. Check outbound access; recent data is served from cache up to 6 hours. |
+| A new version is uploaded and `/health` shows it, but the screens look the same | Since 5.5.1 each release uses its own file addresses, so a cache cannot hold old screens. If you still see old ones, open the site in a private window; if that is fine, clear the site data in your browser. The version in *You → Account* tells you which build the page is running. |
 | Photos disappear after a deploy | `DATA_DIR` was inside the app folder. Move it out (see step 3) and restore from backup. |
 
 ## Running on a VPS instead

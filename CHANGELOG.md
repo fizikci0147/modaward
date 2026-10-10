@@ -4,6 +4,11 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.5.1] · 2026-10-11
+
+### Fixed
+- **A new release could look like it had not changed anything.** If a browser, the service worker or the hosting provider's cache kept old copies of the app's script files, people kept seeing the old screens even though the server was updated. Each build now serves its scripts and styles under its own address (`/v/<build>/…`), so no cache can show an old release. Because those addresses never change, they are also cached for a year, which makes repeat visits faster. The old addresses still work and now serve the current code.
+
 ## [5.5.0] · 2026-10-11
 
 ### Added
