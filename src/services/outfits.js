@@ -33,6 +33,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       prefs,
       history: repos.wear.history(user.id, today),
       blockedKeys: repos.feedback.blockedKeys(user.id),
+      pairBlocks: repos.pairs.set(user.id),
       taste
     };
   }
@@ -72,6 +73,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
         prefs: input.prefs,
         history: input.history,
         blockedKeys: input.blockedKeys,
+        pairBlocks: input.pairBlocks,
         seed,
         count,
         featureId,
@@ -120,6 +122,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
         profile,
         prefs: input.prefs,
         blockedKeys: input.blockedKeys,
+        pairBlocks: input.pairBlocks,
         history: input.history,
         workDays: profile.workDays,
         occasions: { ...planned, ...occasions },
@@ -152,7 +155,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       if (!tripDays.length) throw badRequest('That date is outside the forecast window.');
       const start = tripDays[0].date;
       const input = engineInputs(user, profile, w.today);
-      const result = packTrip({ garments: input.garments, days: tripDays, occasions, prefs: input.prefs, history: input.history, blockedKeys: input.blockedKeys, units: profile.units, seed: seed ?? 'trip', t: tr.t, locale });
+      const result = packTrip({ garments: input.garments, days: tripDays, occasions, prefs: input.prefs, history: input.history, blockedKeys: input.blockedKeys, pairBlocks: input.pairBlocks, units: profile.units, seed: seed ?? 'trip', t: tr.t, locale });
       return { ...result, destination: { name: place.name, lat: place.lat, lon: place.lon }, start, requested: days, covered: tripDays.length, units: profile.units, location: w.location };
     },
 

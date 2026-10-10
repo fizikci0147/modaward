@@ -123,6 +123,19 @@ async function run(label, contextOptions) {
   await page.getByText(/% match|match$/).first().waitFor();
   ok(`${label}: "never suggest this piece" keeps it out of every recommendation, marks it in the closet, and can be undone`);
 
+  // ── "doesn't go with this look": only that pairing is remembered; the piece stays in the closet and in use ──
+  await page.waitForTimeout(1200);
+  const apartName = ((await page.getByRole('button', { name: /^Swap out / }).first().getAttribute('aria-label')) || '').replace('Swap out ', '');
+  await page.getByRole('button', { name: `Swap out ${apartName}`, exact: true }).click();
+  await page.getByRole('menuitem', { name: 'Doesn’t go with this look' }).click();
+  await page.getByText(/won’t be paired with that look again/).waitFor();
+  await page.goto('/closet');
+  await page.locator('.tile', { hasText: apartName }).first().waitFor();
+  if ((await page.locator('.tile', { hasText: apartName }).locator('.not-suggested').count()) > 0) fail(`${label}: "${apartName}" was wrongly marked as never suggested`);
+  await page.goto('/');
+  await page.getByText(/% match|match$/).first().waitFor();
+  ok(`${label}: "doesn’t go with this look" separates the pairing without taking the piece out of rotation`);
+
   // ── share the outfit as a picture ──
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 20000 }), page.getByRole('button', { name: 'Share this outfit as a picture' }).click()]);
   const sharedFile = await download.path();

@@ -2,7 +2,7 @@ import { html, useState, useEffect, useRef } from '/js/ui.js';
 import { t, tn, getLocale } from '/js/i18n.js';
 import { L } from '/shared/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, updateProfile, toast, fail, logout, refreshMe, profileCompleteness, state, set, forgetThisDevice } from '/js/store.js';
+import { useStore, updateProfile, toast, fail, logout, refreshMe, loadCloset, profileCompleteness, state, set, forgetThisDevice } from '/js/store.js';
 import { Icon } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
 import { Sheet, Spinner, LocationPicker, Switch, ProBadge, LanguagePicker } from '/js/components/common.js';
@@ -117,6 +117,18 @@ function StyleSection({ profile }) {
     else save({ style: { likedColors: liked, avoidedColors: avoided } });
   };
   const dept = profile.department;
+  const [resetting, setResetting] = useState(false);
+  const reset = async (what, question, done) => {
+    if (question && !confirm(question)) return;
+    setResetting(true);
+    try {
+      await api.post('/profile/reset', { what });
+      await refreshMe();
+      if (what === 'removed') await loadCloset(true).catch(() => {});
+      toast(done);
+    } catch (e) { fail(e); }
+    setResetting(false);
+  };
   return html`<div class="stack-l">
     <${StyleDna} />
     <${Section} title=${t('Your style')} blurb=${t('Vote on each style. We use it to choose what to show you, and it keeps learning from every outfit you love or skip.')} status=${status}>
@@ -125,6 +137,13 @@ function StyleSection({ profile }) {
     <${Section} title=${t('How current should your outfits be?')} blurb=${t('Trends only ever nudge between looks you already like. Your taste always comes first.')}>
       <div class="segmented" role="group" aria-label=${t('How current should your outfits be?')}>
         ${[['off', t('Timeless')], ['light', t('A little current')], ['forward', t('Very current')]].map(([id, label]) => html`<button key=${id} aria-pressed=${(s.trendiness || 'light') === id ? 'true' : 'false'} onClick=${() => save({ style: { trendiness: id } })}>${label}</button>`)}
+      </div>
+    </${Section}>
+    <${Section} title=${t('Start over')} blurb=${t('Changed your mind about your style? Reset it here. Your closet is never touched.')}>
+      <div class="row-wrap">
+        <button class="btn btn-outline" disabled=${resetting} onClick=${() => reset('style', t('Reset your style quiz answers, colours, “never” list, brands and fit choices? Your closet stays as it is.'), t('Your style choices were reset.'))}>${t('Reset my style choices')}</button>
+        <button class="btn btn-outline" disabled=${resetting} onClick=${() => reset('learned', t('Forget what ModaWard learned from your likes and skips? Your closet and style choices stay as they are.'), t('Starting fresh from your style choices.'))}>${t('Forget what you’ve learned')}</button>
+        <button class="btn btn-outline" disabled=${resetting} onClick=${() => reset('removed', null, t('Everything is back in play.'))}>${t('Bring back removed pieces and pairings')}</button>
       </div>
     </${Section}>
     <${Section} title=${t('Colours')} blurb=${t('Tap once to love a colour, twice to avoid it, three times to clear it.')}>

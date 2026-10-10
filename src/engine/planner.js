@@ -56,6 +56,7 @@ export function planWeek(args) {
       profile: args.profile,
       prefs: args.prefs,
       blockedKeys: args.blockedKeys,
+      pairBlocks: args.pairBlocks,
       history: args.history,
       avoid,
       seed: args.seed,

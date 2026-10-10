@@ -47,7 +47,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       const wardrobe = repos.garments.list(user.id).filter((g) => !g.excluded);
       const taste = repos.profiles.getTaste(user.id);
       const blocked = repos.feedback.blockedLooks(user.id);
-      const memoKey = hashString(JSON.stringify([user.id, locale, kind, storeMode, occasions, seed, limit, curate, ent.plan, forecast[0].date, profile, wardrobe.map((g) => [g.id, g.updatedAt, g.favorite]), taste.n, blocked.size])).toString(36);
+      const memoKey = hashString(JSON.stringify([user.id, locale, kind, storeMode, occasions, seed, limit, curate, ent.plan, forecast[0].date, profile, wardrobe.map((g) => [g.id, g.updatedAt, g.favorite]), taste.n, blocked.size, repos.pairs.count(user.id)])).toString(36);
       const hit = memo.get(memoKey);
       if (hit && Date.now() - hit.at < 120_000) return hit.value;
       stats.computed += 1;
@@ -65,6 +65,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
         // build a full feed even for free users so the number locked is honest
         limit: Math.max(limit, cap),
         blocked,
+        pairBlocks: repos.pairs.set(user.id),
         t: tr.t,
         locale
       });

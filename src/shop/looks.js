@@ -228,6 +228,11 @@ export function buildLooks(args) {
       };
       const accept = (parts) => {
         const pieces = [...mainPieces(parts), ...(parts.outer ? [parts.outer] : [])];
+        // pieces of the closet the person said do not go together stay apart in the Shop's looks too
+        if (args.pairBlocks?.size) {
+          const owned = pieces.filter((p) => p.source === 'owned');
+          for (let i = 0; i < owned.length; i++) for (let j = i + 1; j < owned.length; j++) if (args.pairBlocks.has(owned[i].id < owned[j].id ? `${owned[i].id}|${owned[j].id}` : `${owned[j].id}|${owned[i].id}`)) return false;
+        }
         const ownedCount = pieces.filter((p) => p.source === 'owned').length;
         const newCount = pieces.length - ownedCount;
         if (k === 'owned' && (ownedCount < 1 || newCount < 1 || newCount > 2)) return false;

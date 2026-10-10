@@ -165,6 +165,63 @@ describe('wear logging, trips, shop and reminders through the API', () => {
     assert.ok(back, 'undo should bring it back into rotation');
   });
 
+  test('"doesn’t go with this look" separates that pairing for good and leaves the piece free for other mixes', async () => {
+    const { c } = await person();
+    const garments = (await c.get('/api/garments')).json.garments;
+    const first = (await recommendOne(c))[0];
+    const piece = first.itemIds.find((id) => garments.find((g) => g.id === id)?.category === 'top');
+    const others = first.itemIds.filter((id) => id !== piece && ['bottom', 'dress', 'outerwear', 'shoes'].includes(garments.find((g) => g.id === id)?.category));
+    assert.ok(piece && others.length);
+    assert.equal((await c.post('/api/outfits/pair-block', { pieceId: piece, withIds: others })).status, 200);
+    for (let i = 0; i < 6; i++) {
+      for (const o of (await c.post('/api/outfits/recommend', { occasion: 'casual', count: 5, seed: `p${i}` })).json.outfits) {
+        assert.ok(!(o.itemIds.includes(piece) && others.some((x) => o.itemIds.includes(x))), 'the rejected pairing came back');
+      }
+    }
+    // the piece itself is still available: styled around, it finds other clothes to go with
+    const styled = (await c.post('/api/outfits/recommend', { occasion: 'casual', count: 5, featureId: piece })).json.outfits;
+    assert.ok(styled.length > 0, 'the piece is still used with other clothes');
+    for (const o of styled) assert.ok(o.itemIds.includes(piece) && !others.some((x) => o.itemIds.includes(x)));
+    const week = (await c.post('/api/plan', {})).json.days.flatMap((d) => d.outfits || []);
+    for (const o of week) assert.ok(!(o.itemIds.includes(piece) && others.some((x) => o.itemIds.includes(x))), 'week plan');
+    // someone else cannot separate your pieces, and unknown ids do nothing
+    const stranger = t.client();
+    await registerUser(stranger);
+    assert.equal((await stranger.post('/api/outfits/pair-block', { pieceId: piece, withIds: others })).status, 200);
+    assert.equal(t.deps.repos.pairs.count((await stranger.get('/api/auth/me')).json.user.id), 0);
+    // undo
+    assert.equal((await c.post('/api/outfits/pair-unblock', { pieceId: piece, withIds: others })).json.pairs, 0);
+  });
+
+  test('a person can start over: style choices, what was learned, and removed pieces and pairings', async () => {
+    const { c, id } = await person();
+    await c.patch('/api/profile', { style: { archetypes: { classic: 1 }, likedColors: ['navy'], never: ['shorts'], quizDone: true, trendiness: 'forward' }, fit: { tops: 'oversized' } });
+    const garments = (await c.get('/api/garments')).json.garments;
+    t.deps.repos.profiles.saveTaste(id, { n: 5, w: { a: 1 } });
+    t.deps.repos.feedback.add(id, 'outfit', 'k', 'dislike');
+    await c.patch(`/api/garments/${garments[0].id}`, { excluded: true });
+    await c.post('/api/outfits/pair-block', { pieceId: garments[1].id, withIds: [garments[2].id] });
+
+    const style = (await c.post('/api/profile/reset', { what: 'style' })).json.profile;
+    assert.deepEqual(style.style.archetypes, {});
+    assert.equal(style.style.quizDone, false);
+    assert.deepEqual([style.style.likedColors, style.style.never, style.style.trendiness], [[], [], 'light']);
+    assert.equal(style.fit.tops, 'regular');
+    assert.equal((await c.get('/api/garments')).json.garments.length, garments.length, 'the closet is untouched');
+    assert.equal(t.deps.repos.feedback.count(id), 1, 'learning is untouched by a style reset');
+
+    await c.post('/api/profile/reset', { what: 'learned' });
+    assert.equal(t.deps.repos.feedback.count(id), 0);
+    assert.deepEqual(t.deps.repos.profiles.getTaste(id), {});
+    assert.equal(t.deps.repos.pairs.count(id), 1, 'pairings are separate');
+
+    const back = (await c.post('/api/profile/reset', { what: 'removed' })).json;
+    assert.deepEqual([back.pairs, back.pieces], [1, 1]);
+    assert.equal((await c.get('/api/garments')).json.garments.some((g) => g.excluded), false);
+    assert.equal((await c.post('/api/profile/reset', { what: 'everything' })).status, 400);
+    assert.equal((await t.client().post('/api/profile/reset', { what: 'style' })).status, 401);
+  });
+
   test('a shop feed is built in a few seconds, not tens (layering must not multiply the search)', async () => {
     const { c } = await person();
     const started = Date.now();

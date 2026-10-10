@@ -158,11 +158,16 @@ export function generate(args) {
   const uppers = upperSets(tops, ctx, (items, limit) => (items.length > limit ? diverseShortlist(items, limit, env, keepAlways) : items));
   const baseParts = (core) => ({ ...emptyParts(), ...core });
 
+  // pairs the person said do not go together are never put together (each piece stays free for other mixes)
+  const apart = (a, b) => Boolean(args.pairBlocks?.size) && args.pairBlocks.has(a.id < b.id ? `${a.id}|${b.id}` : `${b.id}|${a.id}`);
+  const clash = (list) => list.some((x, i) => list.slice(i + 1).some((y) => apart(x, y)));
+
   const coreList = [];
-  for (const u of uppers) for (const b of bottoms) coreList.push({ upper: u, bottom: b });
+  for (const u of uppers) for (const b of bottoms) if (!clash([...u, b])) coreList.push({ upper: u, bottom: b });
   for (const d of dresses) {
     coreList.push({ upper: [], dress: d });
   }
+  if (!coreList.length) coreList.push(...uppers.flatMap((u) => bottoms.map((b) => ({ upper: u, bottom: b })))); // never leave the person with nothing
 
   for (const core of coreList) {
     const parts = baseParts(core);
@@ -207,6 +212,7 @@ export function generate(args) {
       for (const shoe of shoeChoices) {
         const parts = { ...baseParts(core), outer, shoes: shoe };
         if (args.accept && !args.accept(parts)) continue;
+        if (args.pairBlocks?.size && clash([...core.upper, core.bottom, core.dress, outer, shoe].filter(Boolean))) continue;
         const key = outfitKey(parts);
         env.key = key;
         const scores = scoreParts(parts, env);
@@ -435,6 +441,7 @@ export function missingEssentials(garments) {
  * @param {string} [args.occasion]
  * @param {object|null} [args.profile]
  * @param {Set<string>} [args.blockedKeys]  outfits the person rejected; never returned
+ * @param {Set<string>} [args.pairBlocks]   "a|b" ids of pieces that do not go together; never combined
  * @param {object} [args.prefs]       pre-built prefs (profile + learned taste); overrides profile
  * @param {{lastWorn?:Record<string,number>, recentKeys?:string[]}} [args.history]
  * @param {Map<string,number>} [args.avoid]
@@ -482,6 +489,7 @@ export function recommend(args) {
     avoid: args.avoid || new Map(),
     recentKeys,
     rand,
+    pairBlocks: args.pairBlocks,
     // a very large closet is shortlisted (diversely) so the combinations stay bounded
     caps: { tops: 40, bottoms: 36, dresses: 24 },
     mustKeep: feature ? (g) => g.id === featureId : undefined,

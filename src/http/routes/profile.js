@@ -4,7 +4,7 @@ import { partial, object, string, number, integer, boolean, oneOf, arrayOf, reco
 import { ARCHETYPE_IDS, PATTERNS } from '../../shared/taxonomy.js';
 import { PALETTE } from '../../shared/color.js';
 import {
-  DEPARTMENTS, UNITS, CURRENCIES, AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, mergeProfile, completeness
+  DEPARTMENTS, UNITS, CURRENCIES, AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, DEFAULT_PROFILE, mergeProfile, completeness
 } from '../../shared/profile.js';
 import { RETAILER_IDS } from '../../shop/retailers.js';
 import { badRequest } from '../../util/errors.js';
@@ -62,6 +62,8 @@ export function applyProfilePatch(current, patch) {
   return next;
 }
 
+const resetSchema = object({ what: oneOf(['style', 'learned', 'removed']) });
+
 export function profileRoutes({ repos, weather }) {
   const r = Router();
   r.use(['/profile', '/geo'], requireUser);
@@ -76,6 +78,39 @@ export function profileRoutes({ repos, weather }) {
     const next = applyProfilePatch(repos.profiles.get(req.user.id), patch);
     repos.profiles.save(req.user.id, next);
     res.json({ profile: next, completeness: completeness(next) });
+  });
+
+  // start over: the style answers, what the app learned from likes and skips, or the pieces and pairings the person removed
+  r.post('/profile/reset', (req, res) => {
+    const { what } = resetSchema(req.body);
+    const current = repos.profiles.get(req.user.id);
+    let result = {};
+    if (what === 'style') {
+      const next = {
+        ...current,
+        fit: { ...DEFAULT_PROFILE.fit },
+        bodyAreas: { show: [], cover: [] },
+        style: {
+          ...current.style,
+          archetypes: {},
+          quizDone: false,
+          likedColors: [],
+          avoidedColors: [],
+          avoidedPatterns: [],
+          never: [],
+          brands: { love: [], avoid: [] },
+          trendiness: 'light'
+        }
+      };
+      repos.profiles.save(req.user.id, next);
+    } else if (what === 'learned') {
+      repos.profiles.saveTaste(req.user.id, {});
+      result = { forgotten: repos.feedback.clear(req.user.id) };
+    } else {
+      result = { pairs: repos.pairs.clear(req.user.id), pieces: repos.garments.clearExcluded(req.user.id) };
+    }
+    const profile = repos.profiles.get(req.user.id);
+    res.json({ profile, completeness: completeness(profile), ...result });
   });
 
   const geoLimit = rateLimit({ windowMs: 60_000, max: 40, key: (req) => req.user?.id || clientKey(req.ip), message: 'Too many requests. Please slow down.' });

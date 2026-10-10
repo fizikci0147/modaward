@@ -171,6 +171,29 @@ export function TodayView() {
     const known = (state.garments || []).find((g) => g.id === item.id);
     if (known) upsertGarment({ ...known, excluded });
   };
+  // "doesn't go with this look": remember that this piece and these pieces stay apart, for good. The
+  // piece itself remains free to be mixed with everything else.
+  const separate = async (item) => {
+    const others = outfit.items.filter((i) => i.id !== item.id && i.category !== 'accessory').map((i) => i.id);
+    if (!others.length) return;
+    try {
+      await api.post('/outfits/pair-block', { pieceId: item.id, withIds: others });
+      setIndex(0);
+      setSeed((x) => x + 1);
+      toast(t('Got it. {name} won’t be paired with that look again.', { name: item.name }), {
+        ms: 7000,
+        action: {
+          label: t('Undo'),
+          run: async () => {
+            try {
+              await api.post('/outfits/pair-unblock', { pieceId: item.id, withIds: others });
+              setSeed((x) => x + 1);
+            } catch (e) { fail(e); }
+          }
+        }
+      });
+    } catch (e) { fail(e); }
+  };
   const exclude = async (item) => {
     setSkipped((list) => (list.some((p) => p.id === item.id) ? list : [...list, { id: item.id, name: item.name }]));
     setIndex(0);
@@ -204,8 +227,6 @@ export function TodayView() {
   const swap = (item) => {
     setSkipped((list) => (list.some((p) => p.id === item.id) ? list : [...list, { id: item.id, name: item.name }]));
     setIndex(0);
-    // the swap is also a signal: this piece, in this combination, was not wanted
-    api.post('/outfits/feedback', { itemIds: [item.id], signal: 'dislike' }).catch(() => {});
     toast(t('Swapped out {name}.', { name: item.name }));
   };
   const go = (delta) => {
@@ -276,6 +297,7 @@ export function TodayView() {
             onLove=${love}
             onDislike=${dislike}
             onSwap=${swap}
+            onSeparate=${separate}
             onExclude=${exclude}
             onShare=${share}
             onShuffle=${() => setSeed((x) => x + 1)} />

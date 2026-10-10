@@ -222,6 +222,8 @@ export function createRepos(db) {
       const marks = ids.map(() => '?').join(',');
       return db.all(`SELECT id FROM garments WHERE user_id = ? AND id IN (${marks})`, userId, ...ids).map((r) => r.id);
     },
+    /** Bring back every piece the person marked "never suggest". */
+    clearExcluded: (userId) => db.run('UPDATE garments SET excluded = 0 WHERE user_id = ? AND excluded = 1', userId).changes,
     allImageNames: (userId) => db.all('SELECT image_path FROM garments WHERE user_id = ? AND image_path IS NOT NULL', userId).map((r) => r.image_path),
     ownsImage: (userId, name) => Boolean(db.get('SELECT 1 AS ok FROM garments WHERE user_id = ? AND image_path = ?', userId, name))
   };
@@ -300,7 +302,31 @@ export function createRepos(db) {
     /** Outfits the person explicitly rejected: never show them again. */
     blockedKeys: (userId) => new Set(db.all("SELECT DISTINCT target_key FROM feedback WHERE user_id = ? AND kind = 'outfit' AND signal = 'dislike'", userId).map((r) => r.target_key)),
     blockedLooks: (userId) => new Set(db.all("SELECT DISTINCT target_key FROM feedback WHERE user_id = ? AND kind = 'look' AND signal = 'dislike'", userId).map((r) => r.target_key)),
-    count: (userId) => db.get('SELECT COUNT(*) AS n FROM feedback WHERE user_id = ?', userId).n
+    count: (userId) => db.get('SELECT COUNT(*) AS n FROM feedback WHERE user_id = ?', userId).n,
+    clear: (userId) => db.run('DELETE FROM feedback WHERE user_id = ?', userId).changes
+  };
+
+  /** Pairs of pieces the person said do not go together. Stored once per pair, smaller id first. */
+  const pairs = {
+    add(userId, pieceId, withIds) {
+      db.transaction(() => {
+        for (const other of withIds) {
+          if (other === pieceId) continue;
+          const [a, b] = pieceId < other ? [pieceId, other] : [other, pieceId];
+          db.run('INSERT OR IGNORE INTO pair_blocks (user_id,a,b,created_at) SELECT ?,?,?,? WHERE (SELECT COUNT(*) FROM garments WHERE user_id = ? AND id IN (?,?)) = 2', userId, a, b, now(), userId, a, b);
+        }
+      });
+    },
+    remove(userId, pieceId, withIds) {
+      for (const other of withIds) {
+        const [a, b] = pieceId < other ? [pieceId, other] : [other, pieceId];
+        db.run('DELETE FROM pair_blocks WHERE user_id = ? AND a = ? AND b = ?', userId, a, b);
+      }
+    },
+    /** @returns {Set<string>} "a|b" keys, smaller id first */
+    set: (userId) => new Set(db.all('SELECT a, b FROM pair_blocks WHERE user_id = ?', userId).map((r) => `${r.a}|${r.b}`)),
+    count: (userId) => db.get('SELECT COUNT(*) AS n FROM pair_blocks WHERE user_id = ?', userId).n,
+    clear: (userId) => db.run('DELETE FROM pair_blocks WHERE user_id = ?', userId).changes
   };
 
   const looks = {
@@ -330,5 +356,5 @@ export function createRepos(db) {
     count: (userId) => db.get('SELECT COUNT(*) AS n FROM saved_looks WHERE user_id = ?', userId).n
   };
 
-  return { users, sessions, resets, profiles, garments, wear, plans, feedback, looks, saved, db };
+  return { users, sessions, resets, profiles, garments, wear, plans, feedback, pairs, looks, saved, db };
 }

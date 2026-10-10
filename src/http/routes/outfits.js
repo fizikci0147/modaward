@@ -20,6 +20,7 @@ const recommendSchema = object({
   featureId: optional(string({ min: 36, max: 36 }), undefined)
 });
 const wearSchema = object({ date: date(), itemIds: ids(), occasion: optional(oneOf(OCCASION_IDS), undefined), key: optional(string({ max: 600 }), undefined) });
+const pairSchema = object({ pieceId: string({ min: 36, max: 36 }), withIds: ids() });
 const tripSchema = object({
   location: optional(object({ name: string({ min: 1, max: 80 }), lat: number({ min: -90, max: 90 }), lon: number({ min: -180, max: 180 }) }), undefined),
   startOffset: optional(integer({ min: 0, max: 7 }), 0),
@@ -41,6 +42,18 @@ export function outfitRoutes({ outfits, repos }) {
   // every distinct destination is a forecast request to the weather provider, so keep this tighter
   const tripLimit = rateLimit({ windowMs: 60_000, max: 8, key: (req) => req.user.id, message: 'You are asking for outfits very quickly. Take a breath and try again.' });
   r.post('/trips/plan', tripLimit, async (req, res) => res.json(await outfits.trip(req.user, { ...tripSchema(req.body), locale: req.locale })));
+  // "this piece does not go with the rest of this look": remembered for good, for that combination only
+  r.post('/outfits/pair-block', (req, res) => {
+    const { pieceId, withIds } = pairSchema(req.body);
+    repos.pairs.add(req.user.id, pieceId, withIds);
+    res.json({ ok: true, pairs: repos.pairs.count(req.user.id) });
+  });
+  r.post('/outfits/pair-unblock', (req, res) => {
+    const { pieceId, withIds } = pairSchema(req.body);
+    repos.pairs.remove(req.user.id, pieceId, withIds);
+    res.json({ ok: true, pairs: repos.pairs.count(req.user.id) });
+  });
+
   r.post('/outfits/wear', (req, res) => {
     const input = wearSchema(req.body);
     assertPlausibleDate(input.date);

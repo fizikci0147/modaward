@@ -18,7 +18,7 @@ const hardness = (day) => Math.abs((day.tMaxC + day.tMinC) / 2 - 18) + (day.prec
  * @param {object[]} args.days       forecast days of the trip, in order
  * @param {string[]} args.occasions  one outfit per day for each of these
  */
-export function packTrip({ garments, days, occasions, prefs, history, blockedKeys, units, seed, t, locale }) {
+export function packTrip({ garments, days, occasions, prefs, history, blockedKeys, pairBlocks, units, seed, t, locale }) {
   const prepared = prepareGarments(garments);
   const byId = new Map(prepared.map((g) => [g.id, g]));
   const slots = [];
@@ -31,7 +31,7 @@ export function packTrip({ garments, days, occasions, prefs, history, blockedKey
   const missing = [];
 
   for (const slot of slots) {
-    const result = recommend({ garments, day: slot.day, occasion: slot.occasion, prefs, history, blockedKeys, seed, count: 6, units, nowHour: null, t, locale });
+    const result = recommend({ garments, day: slot.day, occasion: slot.occasion, prefs, history, blockedKeys, pairBlocks, seed, count: 6, units, nowHour: null, t, locale });
     const candidates = result.outfits;
     if (!candidates.length) {
       missing.push({ date: slot.day.date, occasion: slot.occasion, reason: result.missing });

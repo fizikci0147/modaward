@@ -4,6 +4,14 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.10.0] · 2026-10-13
+
+### Changed
+- **Removing a piece from a look now means "it doesn't go with that look", not "never use it".** The × on a piece offers *Doesn’t go with this look* (that piece and the others in the look are never put together again, in Today, Week, trips and the Shop's looks built from your closet), *Not today*, and *Never suggest this piece*. The piece stays free to be mixed with everything else unless you choose the last option. Every choice has Undo. Swapping out a piece for today no longer teaches the taste model that you dislike the piece.
+
+### Added
+- **Start over.** *You → Style → Start over* has three resets, each separate and confirmed: *Reset my style choices* (quiz answers, colours, "never" list, brands, fit and areas; the closet, sizes, budget and stores stay), *Forget what you’ve learned* (what the app learned from your likes and skips), and *Bring back removed pieces and pairings*.
+
 ## [5.9.1] · 2026-10-12
 
 ### Fixed

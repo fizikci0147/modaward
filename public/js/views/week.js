@@ -154,6 +154,17 @@ export function WeekView() {
                 } : undefined}
                 onLove=${async () => { try { await api.post('/outfits/feedback', { itemIds: outfit.itemIds, signal: 'love', key: outfit.key }); toast(t('Noted. More like this.')); } catch (e) { fail(e); } }}
                 onDislike=${async () => { try { await api.post('/outfits/feedback', { itemIds: outfit.itemIds, signal: 'dislike', key: outfit.key }); setAlt((a) => ({ ...a, [day.date]: idx + 1 })); toast(t('Got it. Here’s another.')); } catch (e) { fail(e); } }}
+                onSeparate=${async (item) => {
+                  const others = outfit.items.filter((i) => i.id !== item.id && i.category !== 'accessory').map((i) => i.id);
+                  try {
+                    await api.post('/outfits/pair-block', { pieceId: item.id, withIds: others });
+                    toast(t('Got it. {name} won’t be paired with that look again.', { name: item.name }), {
+                      ms: 7000,
+                      action: { label: t('Undo'), run: async () => { try { await api.post('/outfits/pair-unblock', { pieceId: item.id, withIds: others }); setReload((x) => x + 1); } catch (e) { fail(e); } } }
+                    });
+                    setReload((x) => x + 1);
+                  } catch (e) { fail(e); }
+                }}
                 onExclude=${async (item) => {
                   try {
                     await api.patch(`/garments/${item.id}`, { excluded: true });
