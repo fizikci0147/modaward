@@ -384,10 +384,15 @@ export function outfitMarkup(items) {
   // Without anything for the right-hand column the main pieces are centred instead.
   const dx = hasRight ? 0 : 60;
   if (dress) {
-    out += shadow(92 + dx, 352, 56) + cell(dress, 14 + dx, 14, 156, 338);
+    // a dress with a light layer over it (cardigan, sweater): side by side, never one on top of the other
+    if (tops[0]) {
+      out += cell(tops[0], 12 + dx, 8, 156, 140) + shadow(92 + dx, 352, 56) + cell(dress, 14 + dx, 150, 156, 202);
+    } else out += shadow(92 + dx, 352, 56) + cell(dress, 14 + dx, 14, 156, 338);
   } else {
-    if (tops[1]) out += cell(tops[1], 8 + dx, 8, 160, 160);
-    if (tops[0]) out += cell(tops[0], (tops[1] ? 26 : 12) + dx, tops[1] ? 22 : 8, tops[1] ? 132 : 156, tops[1] ? 132 : 156);
+    // two tops (a base and a layer over it) sit next to each other: stacked, one would hide the other
+    if (tops[1]) {
+      out += cell(tops[0], 4 + dx, 14, 82, 136) + cell(tops[1], 86 + dx, 14, 82, 136);
+    } else if (tops[0]) out += cell(tops[0], 12 + dx, 8, 156, 156);
     if (bottom) out += cell(bottom, 12 + dx, 156, 156, 196);
   }
   if (outer) out += shadow(228, 176, 50) + cell(outer, 152, 6, 144, 170);

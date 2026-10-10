@@ -1,6 +1,6 @@
 {
   "name": "modaward",
-  "version": "5.7.0",
+  "version": "5.7.1",
   "description": "ModaWard — weather-aware outfit planner with a digital closet and multi-retailer style recommendations.",
   "private": true,
   "main": "server.js",

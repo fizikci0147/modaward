@@ -4,6 +4,11 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.7.1] · 2026-10-12
+
+### Fixed
+- **Overlapping clothes on outfit pictures.** Now that cool-weather outfits layer a base and a second layer, the picture drew the two tops on top of each other (and left a dress's cardigan out). Layered tops now sit side by side, and a dress shows its cardigan above it. This applies to the Shop, Today, the closet and the share picture.
+
 ## [5.7.0] · 2026-10-12
 
 A second, deeper review by four independent reviewers (security, correctness, front-end, data and operations), with every confirmed finding fixed and covered by a test.
