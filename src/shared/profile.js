@@ -10,6 +10,7 @@ import { L } from './i18n.js';
 
 export const DEPARTMENTS = Object.freeze(['women', 'men', 'unisex']);
 export const UNITS = Object.freeze(['imperial', 'metric']);
+export const CURRENCIES = Object.freeze(['USD', 'EUR', 'GBP', 'TRY', 'CAD', 'AUD', 'CHF', 'SEK', 'JPY', 'MXN', 'BRL', 'INR']);
 export const AGE_RANGES = Object.freeze(['18-24', '25-34', '35-44', '45-54', '55+']);
 
 export const FIT_TOPS = Object.freeze(['fitted', 'regular', 'relaxed', 'oversized']);
@@ -67,6 +68,7 @@ export const BUDGET_CATEGORIES = Object.freeze(['top', 'bottom', 'dress', 'outer
 export const DEFAULT_PROFILE = Object.freeze({
   department: 'unisex',
   units: 'imperial',
+  currency: 'USD',
   locale: null,
   location: null,
   workDays: [1, 2, 3, 4, 5],

@@ -8,7 +8,52 @@ import { Tips } from '/js/components/weather.js';
 import { describeCode } from '/shared/weather-codes.js';
 import { OCCASIONS } from '/shared/taxonomy.js';
 import { dow, dayNum, tempStr, longDate } from '/js/format.js';
+import { Link } from '/js/router.js';
 import { NoLocation, EmptyCloset } from '/js/views/today.js';
+
+/** What this day is for: pick an occasion (and a few words) and the outfits follow. */
+function DayPlan({ day, onChanged }) {
+  const plan = day.plan;
+  const [open, setOpen] = useState(false);
+  const [occ, setOcc] = useState(plan?.occasion || day.occasion);
+  const [note, setNote] = useState(plan?.note || '');
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    try {
+      await api.put(`/plans/${day.date}`, { occasion: occ, note: note.trim() });
+      sessionStorage.removeItem('mw.occasion'); // so Today follows the plan
+      setOpen(false);
+      onChanged();
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const clear = async () => {
+    try {
+      await api.del(`/plans/${day.date}`);
+      setOpen(false);
+      setNote('');
+      onChanged();
+    } catch (e) {
+      fail(e);
+    }
+  };
+  if (!open) {
+    return plan
+      ? html`<div class="plan-banner"><${Icon} name="calendar" size="16" /><span class="grow">${plan.note ? `${plan.note} · ` : ''}${t(OCCASIONS[plan.occasion].label)}</span><button class="btn btn-ghost btn-s" onClick=${() => setOpen(true)}>${t('Edit')}</button><button class="btn btn-ghost btn-s" onClick=${clear}>${t('Remove')}</button></div>`
+      : html`<button class="btn btn-ghost btn-s" style=${{ justifySelf: 'start' }} onClick=${() => setOpen(true)}><${Icon} name="calendar" size="14" />${t('What’s on this day?')}</button>`;
+  }
+  return html`<div class="stack plan-form">
+    <span class="label">${t('What’s on this day?')}</span>
+    <div class="row-wrap" role="group" aria-label=${t('Occasion')}>${Object.entries(OCCASIONS).map(([id, o]) => html`<button key=${id} class="chip chip-s" aria-pressed=${occ === id ? 'true' : 'false'} onClick=${() => setOcc(id)}>${t(o.label)}</button>`)}</div>
+    <label class="sr-only" for="plan-note">${t('A few words (optional)')}</label>
+    <input id="plan-note" class="input" maxlength="60" placeholder=${t('A few words (optional)')} value=${note} onInput=${(e) => setNote(e.target.value)} />
+    <div class="row-wrap"><button class="btn btn-primary btn-s" onClick=${save} disabled=${busy}>${t('Save')}</button><button class="btn btn-ghost btn-s" onClick=${() => setOpen(false)}>${t('Cancel')}</button></div>
+  </div>`;
+}
 
 function Locked({ day }) {
   return html`<div class="card locked-card enter">
@@ -25,6 +70,7 @@ export function WeekView() {
   const [sel, setSel] = useState(0);
   const [alt, setAlt] = useState({});
   const [seed, setSeed] = useState(1);
+  const [reload, setReload] = useState(0);
   const hasLocation = Boolean(profile?.location);
 
   useEffect(() => {
@@ -35,7 +81,7 @@ export function WeekView() {
       .then((data) => setState({ loading: false, data, error: null }))
       .catch((error) => error.name !== 'AbortError' && setState({ loading: false, data: null, error }));
     return () => ctl.abort();
-  }, [hasLocation, seed]);
+  }, [hasLocation, seed, reload]);
 
   if (!hasLocation) return html`<${NoLocation} />`;
   const { data, loading, error } = state;
@@ -53,10 +99,13 @@ export function WeekView() {
 
   return html`<div class="stack-l">
     <header class="stack enter" style=${{ gap: '8px' }}>
-      <h1 class="display h-xl">${t('The week ahead')}</h1>
+      <div class="spread" style=${{ flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end' }}>
+        <h1 class="display h-xl">${t('The week ahead')}</h1>
+        <${Link} href="/trip" class="btn btn-outline btn-s"><${Icon} name="bag" size="14" />${t('Packing for a trip?')}</${Link}>
+      </div>
       <p class="muted">
         ${wet.length ? (wet.length > 3 ? t('Rain on {days} and more: pack an umbrella.', { days: wet.slice(0, 3).join(', ') }) : t('Rain on {days}: pack an umbrella.', { days: wet.slice(0, 3).join(', ') })) : t('No rain in sight.')}
-        ${t('It ranges from {low} to {high}.', { low: tempStr(digest.coldest.v, units), high: tempStr(digest.hottest.v, units) })}
+        ${' '}${t('It ranges from {low} to {high}.', { low: tempStr(digest.coldest.v, units), high: tempStr(digest.hottest.v, units) })}
       </p>
     </header>
 
@@ -66,6 +115,7 @@ export function WeekView() {
         const wetDay = d.weather.precipProb >= 50;
         return html`<button key=${d.date} class=${`day ${d.locked ? 'locked' : ''}`} aria-pressed=${sel === i ? 'true' : 'false'} onClick=${() => setSel(i)} aria-label=${t('{date}, {condition}, high {temp}', { date: longDate(d.date), condition: t(c.label), temp: tempStr(d.weather.tMaxC, units) })}>
           ${wetDay ? html`<span class="rain-dot" aria-hidden="true"></span>` : null}
+          ${d.plan ? html`<span class="plan-dot" aria-hidden="true"></span>` : null}
           <span class="dow">${i === 0 ? t('Today') : dow(d.date)}</span>
           <span class="dnum">${dayNum(d.date)}</span>
           <${Icon} name=${d.locked ? 'lock' : weatherIcon(c.condition)} />
@@ -86,6 +136,7 @@ export function WeekView() {
               <div class="row"><${Icon} name=${weatherIcon(cond.condition)} size="28" /><div class="small"><b>${t(cond.label)}</b><div class="muted num">${t('{low} to {high}', { low: tempStr(w.tMinC, units), high: tempStr(w.tMaxC, units) })}</div></div></div>
             </div>
             <${Tips} tips=${day.tips} />
+            <${DayPlan} key=${`${day.date}-${day.plan?.occasion}-${day.plan?.note}`} day=${day} onChanged=${() => setReload((x) => x + 1)} />
           </div>
           ${outfit
             ? html`<${OutfitCard}

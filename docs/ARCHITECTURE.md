@@ -53,6 +53,10 @@ Claude is an *editor* on top of the deterministic engine, never the source of tr
 
 Classical, in-browser, private: model the backdrop from the photo's border in CIE Lab (k-means, ≤ 3 clusters), score each pixel against it with shadow discounting, Otsu-threshold, flood-fill from the border so interior details survive, drop specks, fill pin-holes, feather the edge. A self-check *declines* rather than ships a bad cut-out (low contrast, no clear backdrop, cluttered). Runs in a Web Worker. The same pure code is unit-tested in Node on synthetic photos with ground truth. An optional server-side remove.bg path covers hard photos for Pro.
 
+## Insights, events and trips
+
+`src/shared/wardrobe-stats.js` is a pure function from the closet and the wear log to the numbers on *Closet → Insights* (it is unit-tested without a server). Planned days live in `day_plans` (`repos.plans`): `forDay` and `week` read them, so a planned occasion decides the outfits unless the person picks one explicitly, and the morning reminder reads the same row. `src/engine/trip.js` packs a trip: for each day and occasion it asks the normal engine for six candidates, then chooses greedily, hardest weather first, preferring outfits that reuse what is already in the bag and capping shoes and outer layers at two each. Free plans may pack up to the same number of days they may plan (3); Pro gets the whole forecast window.
+
 ## Reminders and push (`src/services/reminders.js`, `push.js`)
 
 A timer in the server process wakes every five minutes. For each person with a reminder on, it works out their local date, hour and weekday from the time zone saved with their preferences, and a reminder is *due* once their local clock reaches its time (and no more than three hours later, so a restart never sends a morning outfit at night). A row in `reminder_log` is claimed **before** anything is built, which makes each reminder go out at most once per local day even if two processes run. Turning a reminder on after its time has passed waits for the next occurrence.

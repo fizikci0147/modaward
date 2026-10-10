@@ -50,6 +50,7 @@ export function garmentFromRow(r) {
     styles: parse(r.styles, []),
     notes: r.notes,
     imageUrl: r.image_path ? `/uploads/${r.image_path}?v=${r.updated_at}` : null,
+    priceCents: r.price_cents ?? null,
     favorite: Boolean(r.favorite),
     archived: Boolean(r.archived),
     wearCount: r.wear_count ?? 0,
@@ -178,10 +179,10 @@ export function createRepos(db) {
       const id = uuid();
       const t = now();
       db.run(
-        `INSERT INTO garments (id,user_id,name,category,type,color,pattern,warmth,formality,waterproof,brand,styles,notes,image_path,favorite,archived,created_at,updated_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO garments (id,user_id,name,category,type,color,pattern,warmth,formality,waterproof,brand,styles,notes,image_path,favorite,archived,price_cents,created_at,updated_at)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         id, userId, full.name, full.category, full.type, full.color, full.pattern ?? 'solid', full.warmth, full.formality,
-        full.waterproof, full.brand ?? '', JSON.stringify(full.styles ?? []), full.notes ?? '', full.imageName ?? null, full.favorite ?? false, false, t, t
+        full.waterproof, full.brand ?? '', JSON.stringify(full.styles ?? []), full.notes ?? '', full.imageName ?? null, full.favorite ?? false, false, full.priceCents ?? null, t, t
       );
       return garments.get(userId, id);
     },
@@ -195,10 +196,10 @@ export function createRepos(db) {
       }
       const next = withDefaults(merged);
       db.run(
-        `UPDATE garments SET name=?, category=?, type=?, color=?, pattern=?, warmth=?, formality=?, waterproof=?, brand=?, styles=?, notes=?, favorite=?, archived=?, updated_at=?
+        `UPDATE garments SET name=?, category=?, type=?, color=?, pattern=?, warmth=?, formality=?, waterproof=?, brand=?, styles=?, notes=?, favorite=?, archived=?, price_cents=?, updated_at=?
          WHERE id=? AND user_id=?`,
         next.name, next.category, next.type, next.color, next.pattern, next.warmth, next.formality, next.waterproof, next.brand,
-        JSON.stringify(next.styles ?? []), next.notes, next.favorite, next.archived, now(), id, userId
+        JSON.stringify(next.styles ?? []), next.notes, next.favorite, next.archived, next.priceCents ?? null, now(), id, userId
       );
       return garments.get(userId, id);
     },
@@ -251,6 +252,11 @@ export function createRepos(db) {
       }
       return { lastWorn, recentKeys: [...recentKeys] };
     },
+    /** How many times each piece was worn in the last `days` days. @returns {Map<string, number>} */
+    countsSince(userId, days, today) {
+      const rows = db.all("SELECT garment_id, COUNT(*) AS n FROM wear_log WHERE user_id = ? AND worn_on > date(?, ?) AND worn_on <= ? GROUP BY garment_id", userId, today, `-${days} day`, today);
+      return new Map(rows.map((r) => [r.garment_id, r.n]));
+    },
     recent(userId, days = 30) {
       const rows = db.all(
         `SELECT worn_on, outfit_key, occasion, GROUP_CONCAT(garment_id) AS ids FROM wear_log
@@ -259,6 +265,20 @@ export function createRepos(db) {
       );
       return rows.map((r) => ({ date: r.worn_on, key: r.outfit_key, occasion: r.occasion, garmentIds: r.ids.split(',') }));
     }
+  };
+
+  const plans = {
+    list: (userId, from, to) => db.all('SELECT date, occasion, note FROM day_plans WHERE user_id = ? AND date >= ? AND date <= ? ORDER BY date', userId, from, to),
+    get: (userId, date) => db.get('SELECT date, occasion, note FROM day_plans WHERE user_id = ? AND date = ?', userId, date) ?? null,
+    set(userId, date, { occasion, note = '' }) {
+      db.run(
+        `INSERT INTO day_plans (user_id, date, occasion, note, updated_at) VALUES (?,?,?,?,?)
+         ON CONFLICT(user_id, date) DO UPDATE SET occasion = excluded.occasion, note = excluded.note, updated_at = excluded.updated_at`,
+        userId, date, occasion, note, now()
+      );
+    },
+    remove: (userId, date) => db.run('DELETE FROM day_plans WHERE user_id = ? AND date = ?', userId, date).changes,
+    purgeBefore: (date) => db.run('DELETE FROM day_plans WHERE date < ?', date).changes
   };
 
   const feedback = {
@@ -296,5 +316,5 @@ export function createRepos(db) {
     count: (userId) => db.get('SELECT COUNT(*) AS n FROM saved_looks WHERE user_id = ?', userId).n
   };
 
-  return { users, sessions, resets, profiles, garments, wear, feedback, looks, saved, db };
+  return { users, sessions, resets, profiles, garments, wear, plans, feedback, looks, saved, db };
 }

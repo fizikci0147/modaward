@@ -16,6 +16,7 @@ import { WelcomeView } from '/js/views/welcome.js';
 import { ProView } from '/js/views/pro.js';
 import { PrivacyView, TermsView } from '/js/views/legal.js';
 import { UnsubscribeView } from '/js/views/unsubscribe.js';
+import { TripView } from '/js/views/trip.js';
 import { AdminView } from '/js/views/admin.js';
 
 const NAV = [
@@ -26,7 +27,7 @@ const NAV = [
   ['/style', L('You'), 'user']
 ];
 const PUBLIC = new Set(['/login', '/register', '/forgot', '/reset', '/privacy', '/terms', '/pro', '/unsubscribe']);
-const TITLES = { '/': L('Today'), '/week': L('The week ahead'), '/closet': L('Your closet'), '/shop': L('Shop'), '/style': L('You'), '/pro': L('Pro'), '/privacy': L('Privacy'), '/terms': L('Terms'), '/login': L('Sign in'), '/register': L('Create account'), '/welcome': L('Welcome'), '/admin': L('Business') };
+const TITLES = { '/': L('Today'), '/week': L('The week ahead'), '/closet': L('Your closet'), '/shop': L('Shop'), '/style': L('You'), '/pro': L('Pro'), '/privacy': L('Privacy'), '/terms': L('Terms'), '/login': L('Sign in'), '/register': L('Create account'), '/welcome': L('Welcome'), '/admin': L('Business'), '/trip': L('Pack for a trip') };
 
 function Splash() {
   return html`<div style=${{ minHeight: '100dvh', display: 'grid', placeItems: 'center' }}><div class="brand" style=${{ fontSize: '30px', opacity: 0.9 }}><${Logo} size=${30} />ModaWard</div></div>`;
@@ -112,6 +113,7 @@ export function App() {
   else if (path === '/unsubscribe') page = html`<${PublicPage}><${UnsubscribeView} /></${PublicPage}>`;
   else if (!user) page = html`<${Splash} />`;
   else if (path === '/welcome') page = html`<${WelcomeView} />`;
+  else if (path === '/trip') page = html`<${Shell} path=${path}><${TripView} /></${Shell}>`;
   else if (path === '/pro') page = html`<${Shell} path=${path}><${ProView} /></${Shell}>`;
   else if (path === '/admin' && user.isAdmin) page = html`<${Shell} path=${path}><${AdminView} /></${Shell}>`;
   else if (path === '/admin') page = html`<${Shell} path=${path}><div class="empty"><h1 class="display h-l">${t('Not an admin account')}</h1><p class="muted">${t('You are signed in as {email}. The admin tools open for the addresses listed in the server setting ADMIN_EMAILS. Add this address there, restart the app, then sign out and back in.', { email: user.email })}</p><${Link} href="/" class="btn btn-primary">${t('Back to today')}</${Link}></div></${Shell}>`;

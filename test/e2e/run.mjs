@@ -119,6 +119,43 @@ async function run(label, contextOptions) {
   await shot('08-week-locked');
   ok(`${label}: week view plans three days and locks the rest`);
 
+  // ── tell the app what a day is for; Today follows ──
+  await page.locator('.day').nth(0).click();
+  await page.getByRole('button', { name: /What’s on this day\?/ }).click();
+  await page.locator('.plan-form').getByRole('button', { name: 'Formal event' }).click();
+  await page.locator('#plan-note').fill('Sam’s wedding');
+  await page.locator('.plan-form').getByRole('button', { name: 'Save' }).click();
+  await page.locator('.plan-banner').filter({ hasText: 'Sam’s wedding' }).waitFor();
+  await page.locator('.plan-dot').first().waitFor();
+  await shot('08b-week-plan');
+  await page.goto('/');
+  await page.locator('.plan-banner').filter({ hasText: 'On your plan: Sam’s wedding' }).waitFor();
+  await page.getByRole('button', { name: 'Formal event' }).and(page.locator('[aria-pressed=true]')).waitFor();
+  await page.goto('/week');
+  await page.waitForSelector('.day');
+  await page.getByRole('button', { name: 'Remove', exact: true }).click();
+  await page.locator('.plan-banner').waitFor({ state: 'detached' });
+  ok(`${label}: a planned day sets the occasion on Today and can be removed`);
+
+  // ── pack for a trip ──
+  await page.getByRole('link', { name: 'Packing for a trip?' }).click();
+  await page.getByRole('heading', { name: 'Pack for a trip' }).waitFor();
+  await page.locator('#trip-days').selectOption('3');
+  await page.getByRole('button', { name: 'Build my packing list' }).click();
+  await page.getByRole('heading', { name: 'Pack this' }).waitFor({ timeout: 20000 });
+  await page.getByRole('heading', { name: 'What to wear each day' }).waitFor();
+  const firstBox = page.locator('.pack-row input[type=checkbox]').first();
+  await firstBox.check();
+  await page.locator('.pack-row .struck').first().waitFor();
+  const pieces = await page.locator('.pack-row').count();
+  if (pieces < 3 || pieces > 14) fail(`${label}: packing list has ${pieces} pieces`);
+  await shot('08c-trip');
+  await page.locator('#trip-days').selectOption('7');
+  await page.getByRole('button', { name: 'Build my packing list' }).click();
+  await page.getByRole('dialog').waitFor();
+  await page.keyboard.press('Escape');
+  ok(`${label}: a packing list is built, can be ticked off, and long trips ask for Pro`);
+
   // ── closet ──
   await page.goto('/closet');
   await page.getByRole('heading', { name: 'Your closet' }).waitFor();
@@ -209,6 +246,24 @@ async function run(label, contextOptions) {
   await page.locator('.feature-banner').getByRole('button', { name: 'All outfits' }).click();
   await page.locator('.feature-banner').waitFor({ state: 'detached' });
   ok(`${label}: forgotten pieces are called out, filterable, and can be styled into an outfit`);
+
+  // ── closet insights and cost per wear ──
+  await page.goto('/closet');
+  await page.locator('.tile:not(.tile-add)').first().click();
+  const sheet2 = page.getByRole('dialog');
+  await sheet2.getByLabel(/What you paid/).fill('120');
+  await sheet2.getByRole('button', { name: 'I wore it today' }).click();
+  await page.locator('.toast').filter({ hasText: 'Logged' }).first().waitFor();
+  await sheet2.getByRole('button', { name: 'Save changes' }).click();
+  await sheet2.waitFor({ state: 'detached' });
+  await page.getByRole('button', { name: 'Insights', exact: true }).click();
+  await page.getByText('Worn in the last 30 days').waitFor();
+  await page.getByRole('heading', { name: 'Most worn' }).waitFor();
+  await page.getByText(/per wear/).first().waitFor();
+  await page.getByRole('heading', { name: 'What the closet is made of' }).waitFor();
+  await shot('10g-insights');
+  await page.getByRole('button', { name: 'Pieces', exact: true }).click();
+  ok(`${label}: closet insights show wear numbers and cost per wear`);
 
   // ── shop ──
   await page.goto('/shop');

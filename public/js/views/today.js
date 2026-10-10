@@ -20,7 +20,7 @@ export function useOutfits(date, occasion, seed, excludeIds = [], featureId = nu
   useEffect(() => {
     const ctl = new AbortController();
     setS((p) => ({ ...p, loading: true, error: null }));
-    api.post('/outfits/recommend', { date, occasion, seed: String(seed), count: 3, ...(excludeIds.length ? { excludeIds } : {}), ...(featureId ? { featureId } : {}) }, { signal: ctl.signal })
+    api.post('/outfits/recommend', { date, ...(occasion ? { occasion } : {}), seed: String(seed), count: 3, ...(excludeIds.length ? { excludeIds } : {}), ...(featureId ? { featureId } : {}) }, { signal: ctl.signal })
       .then((data) => setS({ loading: false, error: null, data }))
       .catch((error) => error.name !== 'AbortError' && setS({ loading: false, error, data: null }));
     return () => ctl.abort();
@@ -68,7 +68,8 @@ export function EmptyCloset({ missing, onDone }) {
 
 export function TodayView() {
   const { user, profile } = useStore();
-  const [occasion, setOccasion] = useState(() => sessionStorage.getItem('mw.occasion') || 'casual');
+  // null until the person picks one: then what the day is for (an event they added) decides
+  const [occasion, setOccasion] = useState(() => sessionStorage.getItem('mw.occasion') || null);
   const [seed, setSeed] = useState(1);
   const [index, setIndex] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -89,7 +90,7 @@ export function TodayView() {
   }, [featureId]);
 
   useEffect(() => {
-    sessionStorage.setItem('mw.occasion', occasion);
+    if (occasion) sessionStorage.setItem('mw.occasion', occasion);
     setIndex(0);
     setDropped([]);
     setSkipped([]);
@@ -102,6 +103,7 @@ export function TodayView() {
   if (!hasLocation) return html`<${NoLocation} />`;
 
   const data = s.data;
+  const activeOccasion = occasion ?? data?.occasion ?? 'casual';
   const outfits = (data?.outfits || []).filter((o) => !dropped.includes(o.key));
   const outfit = outfits[Math.min(index, outfits.length - 1)];
   const date = data?.date;
@@ -110,7 +112,7 @@ export function TodayView() {
   const wear = async () => {
     setBusy(true);
     try {
-      await api.post('/outfits/wear', { date, itemIds: outfit.itemIds, occasion, key: outfit.key });
+      await api.post('/outfits/wear', { date, itemIds: outfit.itemIds, occasion: activeOccasion, key: outfit.key });
       setWorn((w) => ({ ...w, [outfit.key]: true }));
       toast(t('Logged. Enjoy the day.'));
     } catch (e) {
@@ -198,8 +200,9 @@ export function TodayView() {
       : s.loading ? null : null}
 
     <div class="chips-scroll enter enter-2" role="group" aria-label=${t('Occasion')}>
-      ${occasionOptions().map((o) => html`<button key=${o.id} class="chip" aria-pressed=${occasion === o.id ? 'true' : 'false'} onClick=${() => setOccasion(o.id)}>${o.label}</button>`)}
+      ${occasionOptions().map((o) => html`<button key=${o.id} class="chip" aria-pressed=${activeOccasion === o.id ? 'true' : 'false'} onClick=${() => setOccasion(o.id)}>${o.label}</button>`)}
     </div>
+    ${data?.plan && !featureId ? html`<div class="plan-banner enter"><${Icon} name="calendar" size="16" /><span>${t('On your plan: {what}', { what: data.plan.note || t(OCCASIONS[data.plan.occasion].label) })}</span></div>` : null}
 
     ${featureId
       ? html`<div class="feature-banner enter"><span class="grow">${feature ? t('Outfits built around {name}', { name: feature.name }) : t('Outfits built around one piece')}</span><button class="btn btn-ghost btn-s" onClick=${clearFeature}><${Icon} name="x" size="14" />${t('All outfits')}</button></div>`
@@ -221,7 +224,7 @@ export function TodayView() {
       ? html`<div key=${outfit.key} class=${dir === 'l' ? 'slide-l' : 'slide-r'} onTouchStart=${onTouchStart} onTouchEnd=${onTouchEnd} style=${{ opacity: s.loading ? 0.55 : 1, transition: 'opacity .2s' }}>
           <${OutfitCard}
             outfit=${outfit}
-            occasionLabel=${t(OCCASIONS[occasion].label)}
+            occasionLabel=${t(OCCASIONS[activeOccasion].label)}
             pager=${pager}
             worn=${worn}
             busy=${busy}

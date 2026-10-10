@@ -4,7 +4,7 @@ import { partial, object, string, number, integer, boolean, oneOf, arrayOf, reco
 import { ARCHETYPE_IDS, PATTERNS } from '../../shared/taxonomy.js';
 import { PALETTE } from '../../shared/color.js';
 import {
-  DEPARTMENTS, UNITS, AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, mergeProfile, completeness
+  DEPARTMENTS, UNITS, CURRENCIES, AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, mergeProfile, completeness
 } from '../../shared/profile.js';
 import { RETAILER_IDS } from '../../shop/retailers.js';
 import { badRequest } from '../../util/errors.js';
@@ -18,6 +18,7 @@ const brand = () => string({ min: 1, max: 30 });
 export const profilePatchSchema = partial({
   department: oneOf(DEPARTMENTS),
   units: oneOf(UNITS),
+  currency: oneOf(CURRENCIES),
   locale: nullable(oneOf(Object.keys(LOCALES))),
   location: nullable(object({ name: string({ min: 1, max: 80 }), lat: number({ min: -90, max: 90 }), lon: number({ min: -180, max: 180 }), timezone: string({ max: 60 }) })),
   workDays: arrayOf(integer({ min: 0, max: 6 }), { max: 7, unique: true }),

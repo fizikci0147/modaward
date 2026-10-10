@@ -115,6 +115,10 @@ function Saved() {
 export function ShopView() {
   const { profile, entitlements } = useStore();
   const [tab, setTab] = useSession('mw.shop.tab', 'for-you');
+  useEffect(() => {
+    const wanted = new URLSearchParams(location.search).get('tab');
+    if (['for-you', 'gaps', 'saved'].includes(wanted)) setTab(wanted);
+  }, []);
   if (!profile?.location) return html`<${NoLocation} />`;
   return html`<div class="stack-l">
     <header class="stack enter" style=${{ gap: '8px' }}>

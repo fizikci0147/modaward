@@ -9,6 +9,9 @@ It is an installable web app (PWA) with an Express server and a SQLite database.
 | **Closet** | Add pieces with or without a photo. Photos get an automatic **background removal** (in the browser, private, instant) and colour detection. |
 | **Not worn lately** | Every piece shows when it was last worn. Forgotten pieces are called out in the closet, filterable, sortable, and the engine gently brings them back. |
 | **Add many at once** | Pick a pile of photos: backgrounds removed in the browser, pieces recognised by the AI stylist (when on), one review screen, add them all. |
+| **Insights** | Closet stats: how much is worn, cost per wear, best value, most worn, what is missing. |
+| **Pack for a trip** | The fewest pieces from your own closet that suit every day's forecast at the destination, with a checklist. |
+| **Events** | Mark a day as a wedding or a dinner; the outfits, Today and the morning reminder follow. |
 | **Reminders** | Morning outfit, week-ahead and forgotten-pieces nudges by push notification and/or email, in the person's language and time zone. |
 | **Today / Week** | Weather-aware outfits per occasion, with the reasoning shown. A layering model knows what you can take off by the afternoon; rain, snow, heat and cold change what is chosen. |
 | **Shop** | Stitch Fix-style looks: all-new outfits *and* looks built around what you already own, picked for your style quiz, colours, never-wear rules, budget, sizes and the week's weather. Closet-gap analysis explains what is missing. |

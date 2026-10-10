@@ -35,6 +35,7 @@ const sweep = setInterval(() => {
     deps.repos.sessions.purgeExpired();
     deps.codes.sweep();
     deps.repos.users.purgeActivity();
+    deps.repos.plans.purgeBefore(new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10));
     deps.db.run('DELETE FROM ai_cache WHERE expires_at < ?', Math.floor(Date.now() / 1000));
   } catch (e) {
     log.warn('sweep.failed', { message: e.message });

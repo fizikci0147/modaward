@@ -7,10 +7,11 @@ import { GarmentArt } from '/js/components/art.js';
 import { Sheet, Spinner, Empty, Switch } from '/js/components/common.js';
 import { CATEGORIES, TYPES, typesFor, PATTERNS, WARMTH_LABELS, FORMALITY_LABELS } from '/shared/taxonomy.js';
 import { PALETTE, colorName, dominantColor } from '/shared/color.js';
-import { cap } from '/js/format.js';
+import { cap, money } from '/js/format.js';
 import { useQuery, navigate } from '/js/router.js';
 import { readPhoto } from '/js/photo.js';
 import { BulkAddSheet } from '/js/views/bulk.js';
+import { ClosetInsights } from '/js/views/closet-insights.js';
 import { CUTOUT_MESSAGES } from '/shared/cutout.js';
 import { idleInfo, isDormant, dormantPieces, agoText } from '/shared/dormancy.js';
 import { todayLocal } from '/js/format.js';
@@ -111,6 +112,7 @@ function WearHistory({ garment }) {
 
 export function GarmentSheet({ garment, onClose, caps }) {
   const editing = Boolean(garment);
+  const currency = useStore().profile?.currency || 'USD';
   const [form, setForm] = useState(() => ({
     type: garment?.type || 'tee',
     color: garment?.color || '#1f2f54',
@@ -121,7 +123,8 @@ export function GarmentSheet({ garment, onClose, caps }) {
     waterproof: garment?.waterproof ?? false,
     brand: garment?.brand || '',
     notes: garment?.notes || '',
-    favorite: garment?.favorite || false
+    favorite: garment?.favorite || false,
+    price: garment?.priceCents ? String(garment.priceCents / 100) : ''
   }));
   const [photos, setPhotos] = useState(null); // { original, cutout, reason } for a newly chosen photo
   const [removeBg, setRemoveBg] = useState(true);
@@ -191,7 +194,11 @@ export function GarmentSheet({ garment, onClose, caps }) {
   const save = async () => {
     setBusy(true);
     try {
-      const body = { ...form, brand: form.brand, notes: form.notes };
+      const { price, ...rest } = form;
+      const body = { ...rest, brand: form.brand, notes: form.notes };
+      const paid = Number(String(price).replace(',', '.'));
+      if (price !== '' && Number.isFinite(paid) && paid >= 0) body.price = paid;
+      else if (editing && garment.priceCents) body.price = 0; // the field was cleared
       if (!body.name) delete body.name;
       let saved;
       if (editing) {
@@ -277,6 +284,8 @@ export function GarmentSheet({ garment, onClose, caps }) {
         <div class="spread"><div><div class="label">${t('Waterproof')}</div><div class="hint">${t('Keeps you dry in the rain')}</div></div><${Switch} label=${t('Waterproof')} checked=${form.waterproof} onChange=${(v) => { setTouched((t) => ({ ...t, waterproof: true })); set({ waterproof: v }); }} /></div>
         <div class="spread"><div><div class="label">${t('Favourite')}</div><div class="hint">${t('Favourites are chosen more often')}</div></div><${Switch} label=${t('Favourite')} checked=${form.favorite} onChange=${(v) => set({ favorite: v })} /></div>
 
+        <div class="field"><label for="g-price">${t('What you paid')} <span class="faint">${t('(optional)')}</span></label><input id="g-price" class="input" inputmode="decimal" placeholder=${money(4900, currency)} value=${form.price} onInput=${(e) => set({ price: e.target.value.replace(/[^\d.,]/g, '').slice(0, 9) })} /><span class="hint">${t('Used to show what each wear costs you.')}</span></div>
+
         ${editing ? html`<${WearHistory} garment=${garment} />` : null}
 
         <div class="size-row">
@@ -295,6 +304,7 @@ export function ClosetView() {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState('recent');
   const [idleOnly, setIdleOnly] = useState(false);
+  const [panel, setPanel] = useState(() => (q.get('view') === 'insights' ? 'insights' : 'pieces'));
   const today = todayLocal();
   const [sheet, setSheet] = useState(q.get('add') ? 'add' : null);
   const [busy, setBusy] = useState(false);
@@ -388,11 +398,18 @@ export function ClosetView() {
       </div>
     </header>
 
+    ${garments.length ? html`<div class="segmented enter" role="group" aria-label=${t('Closet view')} style=${{ justifySelf: 'start' }}>
+      <button aria-pressed=${panel === 'pieces' ? 'true' : 'false'} onClick=${() => setPanel('pieces')}>${t('Pieces')}</button>
+      <button aria-pressed=${panel === 'insights' ? 'true' : 'false'} onClick=${() => setPanel('insights')}>${t('Insights')}</button>
+    </div>` : null}
+
+    ${panel === 'insights' && garments.length ? html`<${ClosetInsights} onShowIdle=${() => { setPanel('pieces'); setCat('all'); setSearch(''); setIdleOnly(true); setSort('idle'); }} />` : null}
+
     ${full ? html`<div class="upsell enter"><div class="grow"><b>${t('Your closet is full')}</b><p>${t('Pro has no limit, so every piece you own can be part of an outfit.')}</p></div><button class="btn btn-s" onClick=${() => openUpgrade('closet')}>${t('See Pro')}</button></div>` : null}
 
-    ${dormant.length && garments.length ? html`<${Forgotten} pieces=${dormant} onWear=${wearToday} onStyle=${styleIt} onShow=${() => { setCat('all'); setSearch(''); setIdleOnly(true); setSort('idle'); }} />` : null}
+    ${panel === 'pieces' && dormant.length && garments.length ? html`<${Forgotten} pieces=${dormant} onWear=${wearToday} onStyle=${styleIt} onShow=${() => { setCat('all'); setSearch(''); setIdleOnly(true); setSort('idle'); }} />` : null}
 
-    ${garments.length === 0
+    ${panel === 'insights' && garments.length ? null : garments.length === 0
       ? html`<${Empty} title=${t('Nothing here yet')} text=${t('Start with a starter wardrobe to see the outfits right away, or add your own pieces one by one. A photo is optional: we can pick the colour from it.')}
           art=${html`<${GarmentArt} type="shirt" color="#8fa9c8" /><${GarmentArt} type="chinos" color="#a39a6a" /><${GarmentArt} type="loafers" color="#6b4a32" />`}>
           <div class="row-wrap" style=${{ justifyContent: 'center' }}>

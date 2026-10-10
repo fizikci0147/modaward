@@ -4,6 +4,18 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.5.0] · 2026-10-11
+
+### Added
+- **Closet → Insights.** How much of the closet gets worn (last 30 and 90 days), what has never been worn, the closet's value, **cost per wear** (best value, and which pieces are worth wearing more), most worn pieces, what the closet is made of, forgotten pieces with a one-tap *Style it*, and a short "What's missing" list that links to the Shop's gap finder.
+- **What you paid** on every piece (optional), and a **Currency** setting in *You → About you*.
+- **What's on this day?** On the Week screen, tell the app a day is for a wedding, a dinner, the office. The outfits follow, Today opens on that occasion with your note, and the morning reminder uses it too.
+- **Pack for a trip** (`/trip`, linked from Week and Insights): choose a destination, start day, length and occasions. It picks the fewest pieces from your closet that suit every day's forecast at the destination (shoes and outer layers capped at two each), with a tick-off checklist, an outfit for each day, and a copy/share button. Free: up to 3 days. Pro: the whole 8-day forecast.
+
+### Changed
+- The Week header no longer runs two sentences together.
+- Data export now includes planned days and reminder settings.
+
 ## [5.4.0] · 2026-10-10
 
 ### Added

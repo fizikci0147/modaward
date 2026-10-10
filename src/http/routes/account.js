@@ -10,7 +10,7 @@ const nameSchema = object({ name: string({ max: 60 }) });
 const passwordSchema = object({ current: string({ min: 1, max: 200, trim: false }), next: string({ min: 1, max: 200, trim: false }) });
 const deleteSchema = object({ password: string({ min: 1, max: 200, trim: false }), confirm: optional(string({ max: 20 }), undefined) });
 
-export function accountRoutes({ repos, images, billing, log }) {
+export function accountRoutes({ repos, images, billing, log, reminders }) {
   const r = Router();
   r.use('/account', requireUser);
 
@@ -39,7 +39,9 @@ export function accountRoutes({ repos, images, billing, log }) {
       tasteModel: repos.profiles.getTaste(id),
       garments: repos.garments.list(id, { includeArchived: true }),
       wearHistory: repos.wear.recent(id, 3650),
-      savedLooks: repos.saved.list(id)
+      savedLooks: repos.saved.list(id),
+      plannedDays: repos.plans.list(id, '0000-01-01', '9999-12-31'),
+      reminders: reminders?.get(id) ?? null
     };
     res.setHeader('Content-Disposition', 'attachment; filename="modaward-export.json"');
     res.json(data);

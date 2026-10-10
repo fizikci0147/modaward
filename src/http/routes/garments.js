@@ -20,7 +20,8 @@ const fields = {
   brand: string({ max: 40 }),
   styles: arrayOf(oneOf(ARCHETYPE_IDS), { max: 7, unique: true }),
   notes: string({ max: 300 }),
-  favorite: boolean()
+  favorite: boolean(),
+  price: number({ min: 0, max: 100000 })
 };
 
 const createSchema = object({
@@ -41,6 +42,12 @@ function assertPlausibleDate(date) {
   if (Number.isNaN(ago) || ago < -1 || ago > 3 * 365) throw badRequest('That date is out of range.');
 }
 
+/** The form speaks in currency units, the database in cents; 0 means "no price". */
+function withPriceCents(input) {
+  const { price, ...rest } = input;
+  return price === undefined ? rest : { ...rest, priceCents: price > 0 ? Math.round(price * 100) : null };
+}
+
 const ID_RE = /^[0-9a-f-]{36}$/;
 const idParam = (req) => {
   if (!ID_RE.test(req.params.id)) throw notFound('That item was not found.');
@@ -59,7 +66,7 @@ export function garmentRoutes({ config, repos, images }) {
   r.post('/garments', (req, res) => {
     const input = createSchema(req.body);
     assertCanAddGarments(req.user, config, repos.garments.count(req.user.id));
-    const { image, ...data } = input;
+    const { image, ...data } = withPriceCents(input);
     data.name ||= req.t('{color} {type}', { color: req.t(colorName(data.color)), type: req.t(TYPES[data.type].label).toLowerCase() }).replace(/^./, (c) => c.toUpperCase());
     let saved = null;
     if (image) saved = images.save(image);
@@ -88,7 +95,7 @@ export function garmentRoutes({ config, repos, images }) {
   });
 
   r.patch('/garments/:id', (req, res) => {
-    const patch = patchSchema(req.body);
+    const patch = withPriceCents(patchSchema(req.body));
     if (!Object.keys(patch).length) throw badRequest('Nothing to update.');
     const id = idParam(req);
     // un-archiving counts against the free limit like a new item

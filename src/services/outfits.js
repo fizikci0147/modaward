@@ -4,6 +4,7 @@
  */
 import { recommend, prepareGarments } from '../engine/outfit.js';
 import { planWeek, weekDigest } from '../engine/planner.js';
+import { packTrip } from '../engine/trip.js';
 import { normalizePrefs } from '../engine/scoring.js';
 import { TasteModel, withTaste } from '../ai/taste.js';
 import { OCCASION_IDS } from '../shared/taxonomy.js';
@@ -45,12 +46,15 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       return { ...w, units: profile.units, locked: entitlements(user, config).planDays };
     },
 
-    async forDay(user, { date, occasion = 'casual', seed, count = 3, curate = true, excludeIds, featureId, locale = 'en' }) {
+    async forDay(user, { date, occasion, seed, count = 3, curate = true, excludeIds, featureId, locale = 'en' }) {
       const tr = translatorFor(locale);
-      if (!OCCASION_IDS.includes(occasion)) throw badRequest('Unknown occasion.');
+      if (occasion !== undefined && !OCCASION_IDS.includes(occasion)) throw badRequest('Unknown occasion.');
       const profile = repos.profiles.get(user.id);
       const w = await forecastFor(profile);
       const target = date || w.today;
+      // what the person said the day is for (an event they added) decides the occasion unless they pick one
+      const plan = repos.plans.get(user.id, target);
+      occasion = occasion ?? plan?.occasion ?? 'casual';
       const index = w.days.findIndex((d) => d.date === target);
       if (index < 0) throw badRequest('That date is outside the forecast window.');
       const ent = entitlements(user, config);
@@ -89,6 +93,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       return {
         date: target,
         occasion,
+        plan,
         weather: { day, current: target === w.today ? w.current : null, location: w.location, stale: w.stale, units: profile.units },
         outfits,
         tips: result.tips,
@@ -106,6 +111,8 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       const ent = entitlements(user, config);
       const input = engineInputs(user, profile, w.today);
       const open = w.days.slice(0, ent.planDays);
+      const plans = new Map(repos.plans.list(user.id, w.days[0].date, w.days[w.days.length - 1].date).map((p) => [p.date, p]));
+      const planned = Object.fromEntries([...plans].map(([d, p]) => [d, p.occasion]));
       const plan = planWeek({
         garments: input.garments,
         days: open,
@@ -114,7 +121,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
         blockedKeys: input.blockedKeys,
         history: input.history,
         workDays: profile.workDays,
-        occasions,
+        occasions: { ...planned, ...occasions },
         units: profile.units,
         seed,
         nowHour: w.nowHour,
@@ -124,11 +131,28 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       });
       const byId = new Map(input.garments.map((g) => [g.id, g]));
       const days = w.days.map((d, i) => {
-        if (i >= ent.planDays) return { date: d.date, locked: true, weather: d };
+        if (i >= ent.planDays) return { date: d.date, locked: true, weather: d, plan: plans.get(d.date) ?? null };
         const p = plan[i];
-        return { date: d.date, occasion: p.occasion, weather: d, outfits: p.outfits.map((o) => hydrate(o, byId)), tips: p.tips, missing: p.missing, locked: false };
+        return { date: d.date, occasion: p.occasion, plan: plans.get(d.date) ?? null, weather: d, outfits: p.outfits.map((o) => hydrate(o, byId)), tips: p.tips, missing: p.missing, locked: false };
       });
       return { days, digest: weekDigest(w.days), units: profile.units, location: w.location, today: w.today, stale: w.stale };
+    },
+
+    /** A packing list for a trip, built from the closet and the destination's forecast. */
+    async trip(user, { location, startOffset = 0, days, occasions, seed, locale = 'en' }) {
+      const tr = translatorFor(locale);
+      const profile = repos.profiles.get(user.id);
+      const place = location ?? profile.location;
+      if (!place) throw needLocation();
+      const ent = entitlements(user, config);
+      if (days > ent.planDays) throw paymentRequired(`Packing lists for trips longer than ${ent.planDays} days are a Pro feature.`, { feature: 'plan' }, { template: 'Packing lists for trips longer than {n} days are a Pro feature.', vars: { n: ent.planDays } });
+      const w = await weather.forecast({ lat: place.lat, lon: place.lon, name: place.name });
+      const tripDays = w.days.slice(startOffset, startOffset + days);
+      if (!tripDays.length) throw badRequest('That date is outside the forecast window.');
+      const start = tripDays[0].date;
+      const input = engineInputs(user, profile, w.today);
+      const result = packTrip({ garments: input.garments, days: tripDays, occasions, prefs: input.prefs, history: input.history, blockedKeys: input.blockedKeys, units: profile.units, seed: seed ?? 'trip', t: tr.t, locale });
+      return { ...result, destination: { name: place.name, lat: place.lat, lon: place.lon }, start, requested: days, covered: tripDays.length, units: profile.units, location: w.location };
     },
 
     wear(user, { date, itemIds, occasion, key }) {

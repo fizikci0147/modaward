@@ -8,7 +8,7 @@ import { OutfitArt } from '/js/components/art.js';
 import { Sheet, Spinner, LocationPicker, Switch, ProBadge, LanguagePicker } from '/js/components/common.js';
 import { ARCHETYPES, PATTERNS, TYPES } from '/shared/taxonomy.js';
 import { PALETTE } from '/shared/color.js';
-import { DEPARTMENTS, AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, BUDGET_CATEGORIES } from '/shared/profile.js';
+import { DEPARTMENTS, AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, BUDGET_CATEGORIES, CURRENCIES } from '/shared/profile.js';
 import { cap, weekdayShort } from '/js/format.js';
 import { navigate } from '/js/router.js';
 import { RemindersSection } from '/js/views/reminders.js';
@@ -160,6 +160,7 @@ function AboutSection({ profile }) {
     <div class="size-row">
       <div class="field"><span class="label">${t('Location')}</span><button class="btn btn-outline" style=${{ justifyContent: 'space-between' }} onClick=${() => setLoc(true)}><span class="row"><${Icon} name="pin" />${profile.location?.name || t('Set location')}</span><${Icon} name="right" /></button></div>
       <div class="field"><span class="label">${t('Language')}</span><${LanguagePicker} /></div>
+      <div class="field"><label for="cur">${t('Currency')}</label><select id="cur" class="select" value=${profile.currency || 'USD'} onChange=${(e) => save({ currency: e.target.value })}>${CURRENCIES.map((c) => html`<option key=${c} value=${c}>${c}</option>`)}</select></div>
       <div class="field"><span class="label">${t('Units')}</span><${ToggleGroup} label=${t('Units')} options=${[['imperial', '°F · mph'], ['metric', '°C · km/h']]} value=${profile.units} onChange=${(v) => save({ units: v })} /></div>
       <div class="field"><label for="h">${t('Height (cm)')} <span class="faint">${t('(optional)')}</span></label><input id="h" class="input" inputmode="numeric" value=${height} placeholder="170" onInput=${(e) => setHeight(e.target.value.replace(/\D/g, '').slice(0, 3))} onBlur=${() => { const n = Number(height); if (!height) save({ heightCm: null }); else if (n >= 90 && n <= 230) save({ heightCm: n }); else toast(t('Enter a height between 90 and 230 cm.'), { kind: 'err' }); }} /></div>
     </div>

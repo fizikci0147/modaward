@@ -83,7 +83,8 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
 
     if (kind === 'daily') {
       if (!profile.location) return null;
-      const occasion = (profile.workDays || []).includes(local.weekday) ? 'work' : 'casual';
+      const plan = repos.plans.get(user.id, local.date);
+      const occasion = plan?.occasion || ((profile.workDays || []).includes(local.weekday) ? 'work' : 'casual');
       const data = await outfits.forDay(user, { occasion, count: 1, curate: false, locale });
       const outfit = data.outfits[0];
       if (!outfit) return null;
