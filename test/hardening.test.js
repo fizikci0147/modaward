@@ -146,6 +146,14 @@ describe('wear logging, trips, shop and reminders through the API', () => {
     assert.equal(t.deps.shop.stats.computed, 1, 'seeds 1, 25 and 49 are the same variation');
   });
 
+  test('a shop feed is built in a few seconds, not tens (layering must not multiply the search)', async () => {
+    const { c } = await person();
+    const started = Date.now();
+    const r = await c.post('/api/shop/looks', { seed: 'speed', limit: 24, curate: false });
+    assert.equal(r.status, 200);
+    assert.ok(Date.now() - started < 6000, `took ${Date.now() - started}ms`);
+  });
+
   test('the app keeps reminders on the device’s time zone, for people who already have reminders', async () => {
     const { c } = await person();
     assert.equal((await c.put('/api/reminders/timezone', { tz: 'Asia/Tokyo' })).status, 200);

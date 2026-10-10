@@ -531,7 +531,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 .slide-r { animation: slide-r 0.35s var(--ease) both; }
 @keyframes slide-l { from { opacity: 0; transform: translateX(28px); } }
 @keyframes slide-r { from { opacity: 0; transform: translateX(-28px); } }
-@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 1.6s !important; animation-iteration-count: infinite !important; } *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; } }
 
 .legal { max-width: 720px; margin: 0 auto; display: grid; gap: 14px; line-height: 1.65; }
 .legal h2 { font-family: var(--font-display); font-size: 28px; font-weight: 400; margin-top: 18px; }

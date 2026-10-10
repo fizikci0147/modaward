@@ -31,6 +31,8 @@ import { rng, hashString } from './rng.js';
 const MAX_CORES = 36;
 const MAX_SHOES = 8;
 const MAX_OUTERS = 7;
+const MAX_BASES = 8;
+const MAX_MIDS = 8;
 
 /** Normalise raw garments from storage or the shop catalogue. */
 export function prepareGarments(list) {
@@ -55,13 +57,14 @@ export function outfitKey(parts) {
 const emptyParts = () => ({ upper: [], bottom: null, dress: null, outer: null, shoes: null, accessories: [] });
 
 /** Everything that can be worn as the upper body, singly or layered. */
-function upperSets(tops, ctx) {
+function upperSets(tops, ctx, shortlist = (items) => items) {
   const sets = [];
   for (const t of tops) if (t.layer !== 'mid') sets.push([t]);
   const allowLayering = ctx.minFeels < 17 || ctx.avgFeels < 20;
   if (allowLayering) {
-    const bases = tops.filter((t) => t.layer === 'base' || (t.layer === 'either' && t.warmth <= 2.2));
-    const mids = tops.filter((t) => (t.layer === 'mid' || t.layer === 'either') && t.warmth >= 2);
+    // every base × every mid layer would multiply the whole search, so only the most promising few of each are paired
+    const bases = shortlist(tops.filter((t) => t.layer === 'base' || (t.layer === 'either' && t.warmth <= 2.2)), MAX_BASES);
+    const mids = shortlist(tops.filter((t) => (t.layer === 'mid' || t.layer === 'either') && t.warmth >= 2), MAX_MIDS);
     for (const b of bases) {
       for (const m of mids) {
         if (m.id === b.id || m.warmth < b.warmth) continue;
@@ -150,7 +153,7 @@ export function generate(args) {
 
   // ── stage 1: cores ──────────────────────────────────────────────────
   const cores = [];
-  const uppers = upperSets(tops, ctx);
+  const uppers = upperSets(tops, ctx, (items, limit) => (items.length > limit ? diverseShortlist(items, limit, env, keepAlways) : items));
   const baseParts = (core) => ({ ...emptyParts(), ...core });
 
   const coreList = [];
