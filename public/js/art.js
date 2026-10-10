@@ -389,12 +389,12 @@ export function outfitMarkup(items) {
       out += cell(tops[0], 12 + dx, 8, 156, 140) + shadow(92 + dx, 352, 56) + cell(dress, 14 + dx, 150, 156, 202);
     } else out += shadow(92 + dx, 352, 56) + cell(dress, 14 + dx, 14, 156, 338);
   } else {
-    // a base with its layer: the layer sits in front and a little higher, so the base shows at the
-    // collar and below the hem, the way the pair is actually worn
+    // a base with its layer: side by side, base first, never one drawn over the other, and clear of
+    // the right-hand column (outer layer, shoes) so nothing in the picture overlaps
     if (tops[1]) {
       const MID = new Set(['sweater', 'cardigan', 'hoodie']);
       const [base, mid] = MID.has(tops[0].art) && !MID.has(tops[1].art) ? [tops[1], tops[0]] : [tops[0], tops[1]];
-      out += cell(base, 10 + dx, 30, 150, 140) + cell(mid, 22 + dx, 4, 126, 126);
+      out += cell(base, 2 + dx, 16, 74, 128) + cell(mid, 78 + dx, 16, 74, 128);
     } else if (tops[0]) out += cell(tops[0], 12 + dx, 8, 156, 156);
     if (bottom) out += cell(bottom, 12 + dx, 156, 156, 196);
   }
