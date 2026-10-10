@@ -1,5 +1,5 @@
-import { html, useState, useEffect, useRef, useCallback } from '/js/ui.js';
-import { t, tn } from '/js/i18n.js';
+import { html, useState, useEffect, useRef } from '/js/ui.js';
+import { t } from '/js/i18n.js';
 import { api } from '/js/api.js';
 import { useStore, loadCloset, updateProfile, toast, fail, state, openUpgrade } from '/js/store.js';
 import { Icon } from '/js/icons.js';

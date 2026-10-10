@@ -2,7 +2,6 @@ import { localeMiddleware } from './i18n/index.js';
 import express from 'express';
 import compression from 'compression';
 import path from 'node:path';
-import fs from 'node:fs';
 import { requestContext, securityHeaders, csrf, rateLimit, sessionAuth, errorHandler } from './http/middleware.js';
 import { authRoutes } from './http/routes/auth.js';
 import { accountRoutes } from './http/routes/account.js';

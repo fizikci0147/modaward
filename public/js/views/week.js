@@ -1,5 +1,5 @@
 import { html, useState, useEffect } from '/js/ui.js';
-import { t, tn } from '/js/i18n.js';
+import { t } from '/js/i18n.js';
 import { api } from '/js/api.js';
 import { useStore, fail, openUpgrade, toast } from '/js/store.js';
 import { Icon, weatherIcon } from '/js/icons.js';

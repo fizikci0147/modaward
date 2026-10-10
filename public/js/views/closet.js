@@ -1,12 +1,12 @@
 import { html, useState, useEffect, useRef, useMemo } from '/js/ui.js';
 import { t, tn, getLocale } from '/js/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, loadCloset, upsertGarment, removeGarment, toast, fail, openUpgrade, state } from '/js/store.js';
+import { useStore, loadCloset, upsertGarment, removeGarment, toast, fail, openUpgrade } from '/js/store.js';
 import { Icon } from '/js/icons.js';
 import { GarmentArt } from '/js/components/art.js';
 import { Sheet, Spinner, Empty, Switch } from '/js/components/common.js';
 import { CATEGORIES, TYPES, typesFor, PATTERNS, WARMTH_LABELS, FORMALITY_LABELS } from '/shared/taxonomy.js';
-import { PALETTE, colorName, dominantColor } from '/shared/color.js';
+import { PALETTE, colorName } from '/shared/color.js';
 import { cap, money } from '/js/format.js';
 import { useQuery, navigate } from '/js/router.js';
 import { readPhoto } from '/js/photo.js';

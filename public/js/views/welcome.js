@@ -1,7 +1,7 @@
 import { html, useState } from '/js/ui.js';
 import { t, tn } from '/js/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, updateProfile, loadCloset, toast, fail } from '/js/store.js';
+import { useStore, updateProfile, loadCloset, fail } from '/js/store.js';
 import { Icon, Logo } from '/js/icons.js';
 import { LocationPicker, Spinner, LanguagePicker } from '/js/components/common.js';
 import { GarmentArt } from '/js/components/art.js';

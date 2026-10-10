@@ -1,4 +1,4 @@
-import { html, useState, useEffect } from '/js/ui.js';
+import { html, useState } from '/js/ui.js';
 import { t, tn } from '/js/i18n.js';
 import { api } from '/js/api.js';
 import { useStore, toast, fail, openUpgrade } from '/js/store.js';
