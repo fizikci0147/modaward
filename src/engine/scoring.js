@@ -4,16 +4,16 @@
  */
 import { L } from '../shared/i18n.js';
 import { DORMANT_DAYS } from '../shared/dormancy.js';
-import { OCCASIONS } from '../shared/taxonomy.js';
+import { stylePenalty, occasionSpec } from './stylist.js';
 import { harmony, colorName } from '../shared/color.js';
 import { thermalScore } from './thermal.js';
 
 export const WEIGHTS = Object.freeze({
-  thermal: 0.3,
-  protection: 0.14,
+  thermal: 0.26,
+  protection: 0.12,
   occasion: 0.2,
-  harmony: 0.16,
-  style: 0.14,
+  harmony: 0.14,
+  style: 0.22, // the person's taste matters as much as the weather
   fresh: 0.06
 });
 
@@ -44,7 +44,10 @@ export function normalizePrefs(profile) {
     archetypes: style.archetypes || {},
     liked: new Set(style.likedColors || []),
     avoided: new Set(style.avoidedColors || []),
-    hasProfile: Boolean(Object.keys(style.archetypes || {}).length)
+    hasProfile: Boolean(Object.keys(style.archetypes || {}).length),
+    dressCode: profile?.lifestyle?.dressCode || 'smart',
+    never: style.never || [],
+    avoidedPatterns: style.avoidedPatterns || []
   };
 }
 
@@ -108,8 +111,8 @@ export function harmonyScore(parts) {
 }
 
 /** Formality relative to the occasion, plus coherence between pieces. */
-export function occasionScore(parts, occasionId, outerMode) {
-  const occ = OCCASIONS[occasionId] || OCCASIONS.casual;
+export function occasionScore(parts, occasionId, outerMode, prefs) {
+  const occ = occasionSpec(occasionId, prefs);
   const visible = mainPieces(parts).filter((g) => g.category !== 'accessory');
   if (parts.outer && outerMode !== 'never') visible.push(parts.outer);
   if (!visible.length) return { score: 0.5, mean: 0, spread: 0 };
@@ -190,7 +193,7 @@ export function freshnessScore(parts, key, lastWornDaysAgo, avoid, recentOutfitK
 export function scoreParts(parts, env) {
   const thermal = thermalScore(parts, env.ctx);
   const protection = protectionScore(parts, env.ctx);
-  const occasion = occasionScore(parts, env.occasion, thermal.outer);
+  const occasion = occasionScore(parts, env.occasion, thermal.outer, env.prefs);
   const color = harmonyScore(parts);
   const style = styleScore(parts, env.prefs);
   const fresh = freshnessScore(parts, env.key, env.lastWorn, env.avoid, env.recentKeys);
@@ -205,6 +208,9 @@ export function scoreParts(parts, env) {
 
   // proportional penalties: being under-dressed is worse than over-dressed
   total -= 0.5 * thermal.deficit + 0.25 * thermal.excess;
+
+  // what a stylist would never put together
+  total -= stylePenalty(parts, env.ctx, env.occasion, env.prefs);
 
   // a rain shell on a dry day is utility wear; prefer a regular jacket of similar warmth
   if (parts.outer?.waterproof && env.ctx.rain === 'none' && !env.ctx.snow && thermal.outer !== 'never') total -= 0.035;

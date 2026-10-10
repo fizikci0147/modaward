@@ -2,12 +2,13 @@
  * Outfit generation.
  *
  * Search strategy (keeps a request to a few thousand evaluations even for 300-item closets):
- *   1. Build "cores": an upper-body set (one top, or base + mid layer) with a bottom, or a dress.
+ *   1. Build "cores": one top with a bottom, or a dress.
  *   2. Rank cores against the weather, occasion, colour and style, assuming the best outer layer.
  *   3. Take the best cores and add every sensible shoe × outer-layer combination, scoring fully.
  *   4. Choose a diverse top-N, then add weather-driven accessories to each.
  */
 import { OCCASIONS, withDefaults } from '../shared/taxonomy.js';
+import { occasionSpec, ownedAllowed, stylePenalty, beltSuits } from './stylist.js';
 import { L } from '../shared/i18n.js';
 import { colorName } from '../shared/color.js';
 import { DORMANT_DAYS, agoText } from '../shared/dormancy.js';
@@ -31,8 +32,6 @@ import { rng, hashString } from './rng.js';
 const MAX_CORES = 36;
 const MAX_SHOES = 8;
 const MAX_OUTERS = 7;
-const MAX_BASES = 8;
-const MAX_MIDS = 8;
 
 /** Normalise raw garments from storage or the shop catalogue. */
 export function prepareGarments(list) {
@@ -56,28 +55,19 @@ export function outfitKey(parts) {
 
 const emptyParts = () => ({ upper: [], bottom: null, dress: null, outer: null, shoes: null, accessories: [] });
 
-/** Everything that can be worn as the upper body, singly or layered. */
-function upperSets(tops, ctx, shortlist = (items) => items) {
-  const sets = [];
-  for (const t of tops) if (t.layer !== 'mid') sets.push([t]);
-  const allowLayering = ctx.minFeels < 17 || ctx.avgFeels < 20;
-  if (allowLayering) {
-    // every base × every mid layer would multiply the whole search, so only the most promising few of each are paired
-    const bases = shortlist(tops.filter((t) => t.layer === 'base' || (t.layer === 'either' && t.warmth <= 2.2)), MAX_BASES);
-    const mids = shortlist(tops.filter((t) => (t.layer === 'mid' || t.layer === 'either') && t.warmth >= 2), MAX_MIDS);
-    for (const b of bases) {
-      for (const m of mids) {
-        if (m.id === b.id || m.warmth < b.warmth) continue;
-        sets.push([b, m]);
-      }
-    }
-  }
-  return sets;
+/**
+ * What can be worn as the upper body. One top per outfit: two tops side by side (a polo and a
+ * button-up, a blouse and a cardigan) read as indecision, not style, and the board picture
+ * cannot show a real layered look. A cardigan can stand alone (a small penalty in scoring keeps
+ * sweaters and shirts ahead of it); warmth comes from the sweater, the outer layer and accessories.
+ */
+function upperSets(tops) {
+  return tops.map((t) => [t]);
 }
 
 /** Cheap per-garment relevance used to pick which shoes/outers get a full evaluation. */
 function quickRank(items, env, limit, mustKeep) {
-  const occ = OCCASIONS[env.occasion] || OCCASIONS.casual;
+  const occ = occasionSpec(env.occasion, env.prefs);
   const scored = items.map((g) => {
     const f = Math.exp(-(((g.formality - occ.formality) / 1.4) ** 2));
     const s = garmentAffinity(g, env.prefs);
@@ -92,7 +82,7 @@ function quickRank(items, env, limit, mustKeep) {
  * may fill more than its share, so a pool of 100 white tees cannot crowd out every other top.
  */
 function diverseShortlist(items, limit, env, mustKeep) {
-  const occ = OCCASIONS[env.occasion] || OCCASIONS.casual;
+  const occ = occasionSpec(env.occasion, env.prefs);
   const ranked = items
     .map((g) => ({ g, v: 0.5 * Math.exp(-(((g.formality - occ.formality) / 1.4) ** 2)) + 0.5 * garmentAffinity(g, env.prefs) + (mustKeep?.(g) ? 1 : 0) }))
     .sort((a, b) => b.v - a.v);
@@ -153,17 +143,13 @@ export function generate(args) {
 
   // ── stage 1: cores ──────────────────────────────────────────────────
   const cores = [];
-  const uppers = upperSets(tops, ctx, (items, limit) => (items.length > limit ? diverseShortlist(items, limit, env, keepAlways) : items));
+  const uppers = upperSets(tops);
   const baseParts = (core) => ({ ...emptyParts(), ...core });
 
   const coreList = [];
   for (const u of uppers) for (const b of bottoms) coreList.push({ upper: u, bottom: b });
   for (const d of dresses) {
     coreList.push({ upper: [], dress: d });
-    // a dress with a light layer (cardigan, sweater) on cool days
-    if (ctx.minFeels < 17 || ctx.avgFeels < 20) {
-      for (const t of tops) if ((t.layer === 'mid' || t.layer === 'either') && t.warmth >= 2) coreList.push({ upper: [t], dress: d });
-    }
   }
 
   for (const core of coreList) {
@@ -173,11 +159,13 @@ export function generate(args) {
       const t = thermalScore({ ...parts, outer, shoes: shoeRef }, ctx);
       if (!bestThermal || t.score > bestThermal) bestThermal = t.score;
     }
-    const occ = occasionScore(parts, occasion, 'always').score;
+    const occ = occasionScore(parts, occasion, 'always', prefs).score;
     const col = harmonyScore(parts).score;
     const sty = styleScore(parts, prefs);
     const fresh = freshnessScore(parts, '', lastWorn, avoid, new Set());
+    const rules = stylePenalty(parts, ctx, occasion, prefs);
     const s1 =
+      -rules +
       (args.coreBonus ? args.coreBonus(core) : 0) +
       WEIGHTS.thermal * bestThermal +
       WEIGHTS.occasion * occ +
@@ -291,7 +279,12 @@ export function pickAccessories(parts, ctx, occasion, prefs, accessories, rand) 
   if (ctx.rain !== 'none' && !ctx.snow) addType(['umbrella'], 1);
 
   if (['work', 'evening', 'formal'].includes(occasion)) {
-    if (parts.bottom && owned('style').some((a) => a.type === 'belt')) addType(['belt'], 1);
+    // a belt only when it matches the shoes and the bottoms can carry one
+    const belts = owned('style').filter((a) => a.type === 'belt' && beltSuits(a, parts));
+    if (belts.length) {
+      const pick = best(belts);
+      if (pick) chosen.push(pick);
+    }
     addType(['watch', 'bag'], 1);
   }
   return chosen.slice(0, 4);
@@ -388,6 +381,21 @@ function itemIds(parts) {
   return [...parts.upper, parts.dress, parts.bottom, parts.outer, parts.shoes, ...parts.accessories].filter(Boolean).map((g) => g.id);
 }
 
+/**
+ * The person's "never suggest" list applies to what they own too. If it would leave a whole
+ * category empty (someone who owns only shorts and said never shorts) we keep that category as it
+ * is: a suggestion they dislike beats an empty screen, and the closet nudge explains the gap.
+ */
+function honourNever(garments, prefs, keepId) {
+  const ok = ownedAllowed(prefs);
+  const kept = garments.filter((g) => g.id === keepId || ok(g));
+  if (kept.length === garments.length) return garments;
+  for (const cat of ['top', 'bottom', 'shoes']) {
+    if (garments.some((g) => g.category === cat) && !kept.some((g) => g.category === cat)) return garments;
+  }
+  return kept;
+}
+
 /** Which categories a closet needs before any outfit can be built. */
 export function missingEssentials(garments) {
   const has = (c) => garments.some((g) => g.category === c);
@@ -417,7 +425,8 @@ export function missingEssentials(garments) {
 export function recommend(args) {
   const occasion = OCCASIONS[args.occasion] ? args.occasion : 'casual';
   const units = args.units || 'metric';
-  const garments = prepareGarments(args.garments);
+  const prefs = args.prefs || normalizePrefs(args.profile);
+  const garments = honourNever(prepareGarments(args.garments), prefs, args.featureId);
   const ctx = buildContext(args.day, { units, nowHour: args.nowHour ?? null, t: args.t, locale: args.locale });
   const tips = dayTips(ctx);
   const missing = missingEssentials(garments);
@@ -431,7 +440,6 @@ export function recommend(args) {
   };
   if (missing.length) return { outfits: [], tips, context: summary, missing };
 
-  const prefs = args.prefs || normalizePrefs(args.profile);
   const lastWorn = new Map(Object.entries(args.history?.lastWorn || {}));
   const recentKeys = new Set(args.history?.recentKeys || []);
   const seed = hashString(`${args.seed ?? 'default'}|${ctx.date}|${occasion}`);

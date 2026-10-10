@@ -65,7 +65,8 @@ const slotOrder = (parts) => {
 /** Greedy variety: avoid near-duplicates (same top+bottom types, same signature, overused hero pieces). */
 function diversify(results, limit, usedSignatures = new Set(), usedPairs = new Map(), heroes = new Map()) {
   const chosen = [];
-  const sigOf = (parts) => [...parts.upper.map((g) => g.type), parts.bottom?.type ?? parts.dress?.type, parts.outer?.type, parts.shoes?.type].join('|');
+  // the same garment types in a different colour are a different look; the same types in the same colours are not
+  const sigOf = (parts) => [...parts.upper.map((g) => `${g.type}:${g.colorName}`), parts.bottom ? `${parts.bottom.type}:${parts.bottom.colorName}` : parts.dress ? `${parts.dress.type}:${parts.dress.colorName}` : '', parts.outer?.type, parts.shoes?.type].join('|');
   const pairOf = (parts) => `${parts.upper[0]?.type ?? 'x'}+${parts.bottom?.type ?? parts.dress?.type}`;
   const heroOf = (parts) => (parts.dress ?? parts.upper[0] ?? parts.bottom)?.id;
 
@@ -77,8 +78,8 @@ function diversify(results, limit, usedSignatures = new Set(), usedPairs = new M
       const pair = pairOf(r.parts);
       const hero = heroOf(r.parts);
       if (usedSignatures.has(sig)) continue;
-      if ((usedPairs.get(pair) || 0) >= (relaxed ? 3 : 2)) continue;
-      if ((heroes.get(hero) || 0) >= (relaxed ? 3 : 2)) continue;
+      if ((usedPairs.get(pair) || 0) >= (relaxed ? 4 : 2)) continue;
+      if ((heroes.get(hero) || 0) >= (relaxed ? 4 : 2)) continue;
       // at least half of the main pieces must be new to this selection
       const ids = new Set(mainPieces(r.parts).map((g) => g.id));
       if (!relaxed && chosen.some((c) => [...ids].filter((id) => mainPieces(c.parts).some((g) => g.id === id)).length > ids.size * 0.34)) continue;
