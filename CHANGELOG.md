@@ -4,6 +4,12 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.7.2] · 2026-10-12
+
+### Fixed
+- Free accounts can plan a short trip that starts later in the forecast again (5.7.0 wrongly asked them to upgrade for it); only trips longer than the free limit need Pro.
+- Slow AI requests (photo analysis, the stylist) are no longer cut off after a minute, and the Shop's request limit is back to a comfortable 20 a minute so switching filters quickly never shows "browsing very fast".
+
 ## [5.7.1] · 2026-10-12
 
 ### Fixed
