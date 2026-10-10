@@ -226,8 +226,19 @@ export function createRepos(db) {
   };
 
   const wear = {
+    /**
+     * Record what was worn on a day. A whole outfit replaces any earlier outfit logged for that
+     * date (people change their mind), but never the single-piece entries made from the closet.
+     * @returns {boolean} false when this exact outfit was already logged for the day
+     */
     log(userId, { garmentIds, date, outfitKey, occasion }) {
+      let changed = true;
       db.transaction(() => {
+        if (!outfitKey.startsWith('piece:')) {
+          const existing = db.all("SELECT garment_id FROM wear_log WHERE user_id = ? AND worn_on = ? AND outfit_key NOT LIKE 'piece:%'", userId, date).map((r) => r.garment_id);
+          changed = existing.length !== garmentIds.length || garmentIds.some((g) => !existing.includes(g));
+          if (existing.length) db.run("DELETE FROM wear_log WHERE user_id = ? AND worn_on = ? AND outfit_key NOT LIKE 'piece:%'", userId, date);
+        }
         for (const gid of garmentIds) {
           db.run(
             `INSERT INTO wear_log (user_id,garment_id,worn_on,outfit_key,occasion,created_at) VALUES (?,?,?,?,?,?)
@@ -236,11 +247,12 @@ export function createRepos(db) {
           );
         }
       });
+      return changed;
     },
     /** Remove one piece's wear entry for a date (the piece-level "I wore it" undo). */
     unlogOne: (userId, garmentId, date) => db.run('DELETE FROM wear_log WHERE user_id = ? AND garment_id = ? AND worn_on = ?', userId, garmentId, date).changes,
-    /** Undo "I wore this" for a date. */
-    unlog: (userId, date) => db.run('DELETE FROM wear_log WHERE user_id = ? AND worn_on = ?', userId, date).changes,
+    /** Undo "I wore this outfit" for a date, leaving single-piece entries alone. */
+    unlog: (userId, date) => db.run("DELETE FROM wear_log WHERE user_id = ? AND worn_on = ? AND outfit_key NOT LIKE 'piece:%'", userId, date).changes,
     /** Freshness inputs for the engine, relative to `today`. */
     history(userId, today) {
       const rows = db.all('SELECT garment_id, worn_on, outfit_key FROM wear_log WHERE user_id = ? AND worn_on >= date(?, \'-30 day\') AND worn_on <= ?', userId, today, today);

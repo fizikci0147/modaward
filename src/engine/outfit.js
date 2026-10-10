@@ -218,6 +218,9 @@ export function generate(args) {
   return results;
 }
 
+/** How far below the best outfit a suggestion may fall and still be shown. */
+const QUALITY_WINDOW = 0.25;
+
 const overlap = (a, b) => {
   const A = new Set(a.split('|'));
   const B = new Set(b.split('|'));
@@ -229,8 +232,12 @@ const overlap = (a, b) => {
 /** Greedy diverse selection: no two chosen outfits may share more than `maxOverlap` of their pieces. */
 export function pickDiverse(results, count, maxOverlap = 0.5) {
   const chosen = [];
+  // relaxing the overlap rule must never pull in an outfit far worse than the best one;
+  // better to show fewer looks than a bad one (results arrive best-first)
+  const floor = results.length ? results[0].total - QUALITY_WINDOW : -Infinity;
   for (const limit of [maxOverlap, 0.7, 1.01]) {
     for (const r of results) {
+      if (r.total < floor && chosen.length > 0) break;
       if (chosen.length >= count) break;
       if (chosen.includes(r)) continue;
       if (chosen.every((c) => overlap(c.key, r.key) <= limit)) chosen.push(r);
@@ -443,6 +450,8 @@ export function recommend(args) {
     avoid: args.avoid || new Map(),
     recentKeys,
     rand,
+    // a very large closet is shortlisted (diversely) so the combinations stay bounded
+    caps: { tops: 40, bottoms: 36, dresses: 24 },
     mustKeep: feature ? (g) => g.id === featureId : undefined,
     // rank the combinations that wear the chosen piece first, so they survive the shortlist
     coreBonus: feature ? (core) => ([...core.upper, core.bottom, core.dress].some((g) => g?.id === featureId) ? 1 : 0) : undefined

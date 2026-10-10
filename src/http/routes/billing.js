@@ -20,7 +20,9 @@ export function billingRoutes({ billing, config, codes }) {
   });
   // comped access works even when Stripe is not configured
   const redeemLimit = rateLimit({ windowMs: 600_000, max: 10, key: (req) => req.user.id });
-  r.post('/billing/redeem', redeemLimit, (req, res) => {
+  // a second bucket per address, so a script cannot guess codes by registering many accounts
+  const redeemByIp = rateLimit({ windowMs: 600_000, max: 30, message: 'Too many attempts. Please wait a few minutes.' });
+  r.post('/billing/redeem', redeemByIp, redeemLimit, (req, res) => {
     const { code } = object({ code: string({ min: 1, max: 40 }) })(req.body ?? {});
     res.json(codes.redeem(req.user, code));
   });

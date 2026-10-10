@@ -36,7 +36,9 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
 
   return {
     stats,
-    async looks(user, { kind = 'both', storeMode, occasions, seed, limit = 18, curate = true, locale = 'en' } = {}) {
+    async looks(user, { kind = 'both', storeMode, occasions, seed: rawSeed, limit = 18, curate = true, locale = 'en' } = {}) {
+      // a small set of variations: a free-form seed would let one account defeat the cache and force a rebuild per request
+      const seed = rawSeed === undefined ? undefined : String(Number.isFinite(Number(rawSeed)) ? Math.abs(Math.trunc(Number(rawSeed))) % 24 : hashString(String(rawSeed)) % 24);
       const tr = translatorFor(locale);
       const profile = repos.profiles.get(user.id);
       const ent = entitlements(user, config);

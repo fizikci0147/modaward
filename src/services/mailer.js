@@ -24,7 +24,7 @@ export function createMailer(config, log, transportOverride) {
         log.warn('mail.not_configured', config.logMailBodies ? { to, subject, preview: text.slice(0, 500) } : { to, subject });
         return { delivered: false };
       }
-      await transport.sendMail({ from: smtp.from, to, subject, text, html, headers });
+      await transport.sendMail({ from: smtp.from, to: typeof to === 'string' ? { name: '', address: to } : to, subject, text, html, headers });
       return { delivered: true };
     }
   };

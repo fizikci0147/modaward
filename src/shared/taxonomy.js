@@ -187,6 +187,10 @@ export function withDefaults(g) {
     warmth: g.warmth ?? def.warmth,
     formality: g.formality ?? def.formality,
     waterproof: g.waterproof ?? Boolean(def.water),
-    styles: g.styles?.length ? g.styles : def.styles
+    styles: g.styles?.length ? g.styles : def.styles,
+    // structural facts about the type, which the outfit engine needs and no client supplies
+    layer: def.layer,
+    open: Boolean(def.open),
+    accFn: def.accFn
   };
 }

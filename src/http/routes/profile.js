@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireUser, rateLimit } from '../middleware.js';
+import { requireUser, rateLimit, clientKey } from '../middleware.js';
 import { partial, object, string, number, integer, boolean, oneOf, arrayOf, record, nullable } from '../../util/validate.js';
 import { ARCHETYPE_IDS, PATTERNS } from '../../shared/taxonomy.js';
 import { PALETTE } from '../../shared/color.js';
@@ -77,7 +77,7 @@ export function profileRoutes({ repos, weather }) {
     res.json({ profile: next, completeness: completeness(next) });
   });
 
-  const geoLimit = rateLimit({ windowMs: 60_000, max: 40, key: (req) => req.user?.id || req.ip, message: 'Too many requests. Please slow down.' });
+  const geoLimit = rateLimit({ windowMs: 60_000, max: 40, key: (req) => req.user?.id || clientKey(req.ip), message: 'Too many requests. Please slow down.' });
   r.get('/geo/search', geoLimit, async (req, res) => {
     const q = string({ min: 2, max: 80 })(req.query.q, 'q');
     res.json({ results: await weather.geocode(q, req.locale) });

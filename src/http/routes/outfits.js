@@ -5,6 +5,7 @@ import { OCCASION_IDS } from '../../shared/taxonomy.js';
 import { SIGNALS } from '../../ai/taste.js';
 import { daysBetween } from '../../shared/dormancy.js';
 import { badRequest } from '../../util/errors.js';
+import { assertPlausibleDate } from '../../util/wear-date.js';
 
 const date = () => string({ pattern: /^\d{4}-\d{2}-\d{2}$/, patternMessage: 'must be a date like 2026-10-06', max: 10 });
 const ids = () => arrayOf(string({ min: 36, max: 36 }), { min: 1, max: 12, unique: true });
@@ -37,9 +38,19 @@ export function outfitRoutes({ outfits, repos }) {
   r.get('/weather', async (req, res) => res.json(await outfits.forecast(req.user)));
   r.post('/outfits/recommend', heavy, async (req, res) => res.json(await outfits.forDay(req.user, { ...recommendSchema(req.body), locale: req.locale })));
   r.post('/plan', heavy, async (req, res) => res.json(await outfits.week(req.user, { ...weekSchema(req.body ?? {}), locale: req.locale })));
-  r.post('/trips/plan', heavy, async (req, res) => res.json(await outfits.trip(req.user, { ...tripSchema(req.body), locale: req.locale })));
-  r.post('/outfits/wear', (req, res) => res.json(outfits.wear(req.user, wearSchema(req.body))));
-  r.delete('/outfits/wear', (req, res) => res.json(outfits.unwear(req.user, date()(req.query.date, 'date'))));
+  // every distinct destination is a forecast request to the weather provider, so keep this tighter
+  const tripLimit = rateLimit({ windowMs: 60_000, max: 8, key: (req) => req.user.id, message: 'You are asking for outfits very quickly. Take a breath and try again.' });
+  r.post('/trips/plan', tripLimit, async (req, res) => res.json(await outfits.trip(req.user, { ...tripSchema(req.body), locale: req.locale })));
+  r.post('/outfits/wear', (req, res) => {
+    const input = wearSchema(req.body);
+    assertPlausibleDate(input.date);
+    res.json(outfits.wear(req.user, input));
+  });
+  r.delete('/outfits/wear', (req, res) => {
+    const when = date()(req.query.date, 'date');
+    assertPlausibleDate(when);
+    res.json(outfits.unwear(req.user, when));
+  });
   r.post('/outfits/feedback', (req, res) => res.json(outfits.feedback(req.user, feedbackSchema(req.body))));
   // what each day is for (a dinner, a wedding, a day at the office): it decides the occasion
   const dayParam = (v) => {

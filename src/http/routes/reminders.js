@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { requireUser, rateLimit } from '../middleware.js';
+import { requireUser, rateLimit, clientKey } from '../middleware.js';
 import { object, partial, string, boolean, integer, optional, oneOf } from '../../util/validate.js';
 import { badRequest, unavailable } from '../../util/errors.js';
 import { isPushEndpoint } from '../../services/push.js';
@@ -17,6 +17,7 @@ const subscribeSchema = object({
   endpoint: string({ min: 20, max: 800 }),
   keys: object({ p256dh: string({ min: 20, max: 200 }), auth: string({ min: 8, max: 100 }) })
 });
+const timezoneSchema = object({ tz: string({ max: 64 }) });
 const endpointSchema = object({ endpoint: string({ min: 20, max: 800 }) });
 const testSchema = object({ kind: optional(oneOf(KINDS), 'daily') });
 const unsubscribeSchema = object({ u: string({ min: 36, max: 36 }), t: string({ min: 20, max: 80 }) });
@@ -24,7 +25,7 @@ const unsubscribeSchema = object({ u: string({ min: 36, max: 36 }), t: string({ 
 export function reminderRoutes({ reminders, push, mailer, config }) {
   const r = Router();
   // a test sends a real email to the account's address, so keep it to a few an hour
-  const limit = rateLimit({ windowMs: 3_600_000, max: 5, key: (req) => req.user?.id || req.ip, message: 'Too many tests for now. Please try again in a while.' });
+  const limit = rateLimit({ windowMs: 3_600_000, max: 5, key: (req) => req.user?.id || clientKey(req.ip), message: 'Too many tests for now. Please try again in a while.' });
 
   // the one route that needs no sign-in: the unsubscribe link in an email
   r.post('/reminders/unsubscribe', rateLimit({ windowMs: 60_000, max: 20, message: 'Too many attempts. Please try again in a minute.' }), (req, res) => {
@@ -48,6 +49,14 @@ export function reminderRoutes({ reminders, push, mailer, config }) {
     if (input.tz !== undefined && !isTimeZone(input.tz)) throw badRequest('That time zone is not recognised.');
     reminders.set(req.user.id, input);
     res.json(state(req));
+  });
+
+  // quiet, automatic: the app tells us the device's time zone each time it opens
+  r.put('/reminders/timezone', (req, res) => {
+    const { tz } = timezoneSchema(req.body);
+    if (!isTimeZone(tz)) throw badRequest('That time zone is not recognised.');
+    reminders.setTimezone(req.user.id, tz);
+    res.json({ ok: true });
   });
 
   r.post('/reminders/push/subscribe', (req, res) => {

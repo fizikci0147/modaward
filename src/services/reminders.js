@@ -69,6 +69,8 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
     tz: row?.tz || 'UTC'
   });
 
+  const release = (userId, kind, day) => db.run('DELETE FROM reminder_log WHERE user_id = ? AND kind = ? AND day = ? AND delivered = 0', userId, kind, day);
+  const markDelivered = (userId, kind, day) => db.run('UPDATE reminder_log SET delivered = 1 WHERE user_id = ? AND kind = ? AND day = ?', userId, kind, day);
   const claim = (userId, kind, day) => db.run('INSERT OR IGNORE INTO reminder_log (user_id, kind, day, sent_at) VALUES (?,?,?,?)', userId, kind, day, now()).changes === 1;
 
   const localeOf = (profile) => (isLocale(profile.locale) ? profile.locale : 'en');
@@ -112,7 +114,7 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
     }
 
     // idle: pieces that have been waiting a long time
-    const last = db.get("SELECT MAX(day) AS d FROM reminder_log WHERE user_id = ? AND kind = 'idle' AND day <> ?", user.id, local.date)?.d;
+    const last = db.get("SELECT MAX(day) AS d FROM reminder_log WHERE user_id = ? AND kind = 'idle' AND delivered = 1 AND day <> ?", user.id, local.date)?.d;
     if (last && daysBetween(last, local.date) < IDLE.everyDays) return null;
     const list = dormantPieces(repos.garments.list(user.id), local.date);
     if (!list.length) return null;
@@ -147,13 +149,14 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
 
   /** Send through whichever channels the person enabled. @returns {{push:number, email:boolean}} */
   async function deliver(user, prefs, msg) {
-    const out = { push: 0, email: false };
+    const out = { push: 0, email: false, failed: false };
     if (prefs.push_on && push) out.push = await push.notify(user.id, { title: msg.title, body: msg.body, url: msg.url, tag: msg.url });
     if (prefs.email_on && mailer?.configured && config.appUrl) {
       try {
         const r = await mailer.send({ to: user.email, ...emailFor(msg, user) });
         out.email = r.delivered !== false;
       } catch (e) {
+        out.failed = true;
         log.warn('reminder.email_failed', { message: String(e?.message || '').slice(0, 160) });
       }
     }
@@ -187,6 +190,19 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
       return present(row);
     },
 
+    /** Follow the person's device clock: reminders arrive at their local hour wherever they are. */
+    setTimezone(userId, tz) {
+      if (!isTimeZone(tz)) return false;
+      const res = db.run('UPDATE reminder_prefs SET tz = ?, updated_at = ? WHERE user_id = ? AND tz <> ?', tz, now(), userId, tz);
+      if (res.changes === 1) {
+        const row = prefsOf(userId);
+        const local = localParts(new Date(), row.tz);
+        // anything whose time has already passed in the new zone waits for tomorrow, as when saving
+        for (const kind of KINDS) if (enabled(kind, row) && passed(kind, row, local)) claim(userId, kind, local.date);
+      }
+      return true;
+    },
+
     /** Turn email reminders off from the link in an email. */
     unsubscribe(userId, token) {
       if (!safeEqual(token || '', tokenFor(userId))) return false;
@@ -211,13 +227,27 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
         const local = localParts(at, row.tz);
         for (const kind of KINDS) {
           if (!enabled(kind, row) || !due(kind, row, local)) continue;
-          if (!claim(row.user_id, kind, local.date)) continue;
           try {
-            const user = repos.users.byId(row.user_id);
-            const msg = user && (await build(kind, user, local));
-            if (!msg) continue;
-            const out = await deliver(user, row, msg);
-            if (out.push || out.email) sent += 1;
+            if (!claim(row.user_id, kind, local.date)) continue;
+            let outcome = 'none';
+            try {
+              const user = repos.users.byId(row.user_id);
+              const msg = user && (await build(kind, user, local));
+              if (!msg) continue;
+              const out = await deliver(user, row, msg);
+              if (out.push || out.email) outcome = 'sent';
+              else if (out.failed) outcome = 'retry';
+            } catch (e) {
+              outcome = 'retry';
+              log.warn('reminder.failed', { kind, message: String(e?.message || '').slice(0, 160) });
+            }
+            // nothing reached anyone because something broke: let the next pass try again
+            // (the catch-up window bounds how long it keeps trying)
+            if (outcome === 'retry') release(row.user_id, kind, local.date);
+            else if (outcome === 'sent') {
+              markDelivered(row.user_id, kind, local.date);
+              sent += 1;
+            }
           } catch (e) {
             log.warn('reminder.failed', { kind, message: String(e?.message || '').slice(0, 160) });
           }

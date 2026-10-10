@@ -82,8 +82,26 @@ export function csrf(config) {
   };
 }
 
-/** Fixed-window in-memory limiter. Per-process, which is right for a single Node instance. */
-export function rateLimit({ windowMs, max, key = (req) => req.ip, message, now = () => Date.now() }) {
+/**
+ * The part of an address a limiter should count. An IPv6 customer owns a whole /64, so counting
+ * the full address would let one person rotate through billions of "different" clients.
+ */
+export function clientKey(ip) {
+  const s = String(ip || '');
+  if (!s.includes(':') || /^::ffff:\d+\.\d+\.\d+\.\d+$/i.test(s)) return s.replace(/^::ffff:/i, '');
+  const [head, tail = ''] = s.split('::');
+  const a = head ? head.split(':') : [];
+  const b = tail ? tail.split(':') : [];
+  const groups = s.includes('::') ? [...a, ...Array(Math.max(0, 8 - a.length - b.length)).fill('0'), ...b] : a;
+  return `${groups.slice(0, 4).map((g) => g.toLowerCase().replace(/^0+(?=.)/, '')).join(':')}::/64`;
+}
+
+/**
+ * Fixed-window in-memory limiter. Per-process, which is right for a single Node instance.
+ * `onLimit(req, res)` can answer a capped request itself (instead of an error) when the error
+ * would reveal something.
+ */
+export function rateLimit({ windowMs, max, key = (req) => clientKey(req.ip), message, now = () => Date.now(), onLimit }) {
   const hits = new Map();
   return (req, res, next) => {
     const k = key(req);
@@ -96,6 +114,7 @@ export function rateLimit({ windowMs, max, key = (req) => req.ip, message, now =
     b.n += 1;
     if (hits.size > 20_000) for (const [id, v] of hits) if (t - v.start >= windowMs) hits.delete(id);
     if (b.n > max) {
+      if (onLimit) return onLimit(req, res, next);
       res.setHeader('Retry-After', String(Math.ceil((windowMs - (t - b.start)) / 1000)));
       return next(tooMany(message));
     }

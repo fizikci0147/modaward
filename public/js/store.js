@@ -80,9 +80,21 @@ export async function setLocale(code) {
   }
 }
 
+/** Tell the server which time zone this device is in, so reminders keep arriving at the right local hour. */
+function syncTimeZone() {
+  if (!state.user) return;
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    if (tz) api.put('/reminders/timezone', { tz }).catch(() => {});
+  } catch {
+    /* no Intl time zone: keep what is stored */
+  }
+}
+
 export async function boot() {
   try {
     await applyMe(await api.get('/auth/me'));
+    syncTimeZone();
   } catch {
     /* offline or server hiccup: stay signed out, the UI shows the login screen */
   }

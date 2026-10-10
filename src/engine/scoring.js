@@ -210,7 +210,7 @@ export function scoreParts(parts, env) {
   if (parts.outer?.waterproof && env.ctx.rain === 'none' && !env.ctx.snow && thermal.outer !== 'never') total -= 0.035;
 
   // hard caps: an outfit that fails the weather should never top the list
-  if (protection < 0.35 && (env.ctx.rain === 'heavy' || env.ctx.snow)) total = Math.min(total, 0.6);
+  if (protection < 0.35 && (env.ctx.rain === 'heavy' || env.ctx.snow)) total = Math.min(total, 0.35 + 0.5 * protection);
   if (thermal.worst < 0.12) total = Math.min(total, 0.55);
 
   return {

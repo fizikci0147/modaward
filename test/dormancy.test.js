@@ -77,7 +77,10 @@ describe('dormancy', () => {
         const out = recommend({ garments: pieces, day: weather, occasion: 'casual', seed: 's', featureId: piece.id, count: 3 });
         // a swimsuit-weight piece in a freezing downpour may legitimately have no sensible outfit,
         // but anything the fixture closet holds must work somewhere
-        if (weather === MILD) assert.ok(out.outfits.length > 0, `${piece.name} should be stylable in mild weather`);
+        // a parka on a 14–22°C day is rightly refused; it must work in the cold instead
+        const heavyCoat = piece.type === 'parka';
+        if (weather === MILD && !heavyCoat) assert.ok(out.outfits.length > 0, `${piece.name} should be stylable in mild weather`);
+        if (weather === COLD_RAIN && heavyCoat) assert.ok(out.outfits.length > 0, `${piece.name} should be stylable in the cold`);
         for (const o of out.outfits) assert.ok(o.itemIds.includes(piece.id));
       }
     }

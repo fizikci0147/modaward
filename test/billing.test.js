@@ -165,6 +165,29 @@ describe('billing', () => {
     assert.equal((await post(event('invoice.paid', {}))).status, 200);
   });
 
+  test('a trialing or past-due subscriber cannot start a second checkout', async () => {
+    const c = t.client();
+    const { user } = await registerUser(c);
+    for (const status of ['trialing', 'past_due']) {
+      t.deps.repos.users.setPlan(user.id, { plan: 'pro', status, customerId: 'cus_T', subscriptionId: 'sub_T' });
+      assert.equal((await c.post('/api/billing/checkout', {})).status, 400, status);
+    }
+  });
+
+  test('an old subscription ending does not cancel the live one', async () => {
+    const c = t.client();
+    const { user } = await registerUser(c);
+    const base = Math.floor(Date.now() / 1000);
+    t.deps.repos.users.setPlan(user.id, { plan: 'free', status: null, customerId: 'cus_R' });
+    await post(event('customer.subscription.created', { id: 'sub_new', customer: 'cus_R', status: 'active', metadata: { user_id: user.id }, current_period_end: base + 86400 }, base));
+    assert.equal(planOf(user.id).plan, 'pro');
+    await post(event('customer.subscription.deleted', { id: 'sub_old', customer: 'cus_R', metadata: { user_id: user.id } }, base + 5));
+    assert.equal(planOf(user.id).plan, 'pro', 'the live subscription stays');
+    assert.equal(planOf(user.id).stripe_subscription_id, 'sub_new');
+    await post(event('customer.subscription.deleted', { id: 'sub_new', customer: 'cus_R', metadata: { user_id: user.id } }, base + 9));
+    assert.equal(planOf(user.id).plan, 'free');
+  });
+
   test('portal needs a customer id; deleting the account cancels the subscription', async () => {
     const c = t.client();
     const { user, password } = await registerUser(c);

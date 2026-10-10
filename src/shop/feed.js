@@ -160,12 +160,21 @@ export function inferPattern(text) {
   return 'solid';
 }
 
+/**
+ * Feeds write prices as "29.99", "29,99 EUR", "1,299.00" or "1.299,00". The last separator is the
+ * decimal point when it is followed by one or two digits; otherwise separators group thousands.
+ */
 export function parsePriceCents(value) {
   if (value == null || value === '') return null;
-  const m = String(value).replace(/,/g, '').match(/(\d+(?:\.\d{1,2})?)/);
+  const m = String(value).match(/\d[\d.,]*/);
   if (!m) return null;
-  const cents = Math.round(Number(m[1]) * 100);
-  return cents > 0 && cents < 5_000_000 ? cents : null;
+  const raw = m[0].replace(/[.,]+$/, '');
+  const last = Math.max(raw.lastIndexOf('.'), raw.lastIndexOf(','));
+  let normal = raw;
+  if (last >= 0 && raw.length - last - 1 <= 2) normal = `${raw.slice(0, last).replace(/[.,]/g, '')}.${raw.slice(last + 1)}`;
+  else normal = raw.replace(/[.,]/g, '');
+  const cents = Math.round(Number(normal) * 100);
+  return Number.isFinite(cents) && cents > 0 && cents < 5_000_000 ? cents : null;
 }
 
 const ALIASES = {
@@ -230,7 +239,7 @@ export function mapFeed(rows, { retailer, map = {}, limit = Infinity }) {
     if (!color) return skipped.push({ index, reason: `unrecognised colour for "${title.slice(0, 40)}"` });
 
     const availability = pick(row, 'availability', map).toLowerCase();
-    const inStock = !/out|sold|unavailable|no|0|false/.test(availability) || /^in/.test(availability);
+    const inStock = !/^(out|sold|unavail|not\b|no\b|false|0$|discontinued)/.test(availability);
     const id = `${retailer}:${sku}`;
     if (seen.has(id)) return skipped.push({ index, reason: 'duplicate sku' });
     seen.add(id);

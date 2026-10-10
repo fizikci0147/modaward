@@ -37,17 +37,22 @@ export function packTrip({ garments, days, occasions, prefs, history, blockedKey
       missing.push({ date: slot.day.date, occasion: slot.occasion, reason: result.missing });
       continue;
     }
+    // bulky pieces are capped: prefer candidates that stay within the limit, and only break it
+    // when nothing else suits the day's weather
+    const overCap = (o) => {
+      const shoes = o.itemIds.find((id) => byId.get(id)?.category === 'shoes');
+      const outer = o.itemIds.find((id) => byId.get(id)?.category === 'outerwear');
+      return (shoes && !bag.has(shoes) && inBag('shoes').length >= MAX_SHOES) || (outer && !bag.has(outer) && inBag('outerwear').length >= MAX_OUTER);
+    };
+    const within = candidates.filter((o) => !overCap(o));
+    const pool = within.length ? within : candidates;
     let best = null;
     let bestScore = -Infinity;
-    for (const o of candidates) {
+    for (const o of pool) {
       const main = o.itemIds.filter((id) => byId.get(id)?.category !== 'accessory');
       const reused = main.filter((id) => bag.has(id)).length;
       const fresh = o.itemIds.filter((id) => !bag.has(id)).length;
-      let score = o.score / 100 + 0.5 * (main.length ? reused / main.length : 0) - 0.05 * fresh;
-      const shoes = o.itemIds.find((id) => byId.get(id)?.category === 'shoes');
-      const outer = o.itemIds.find((id) => byId.get(id)?.category === 'outerwear');
-      if (shoes && !bag.has(shoes) && inBag('shoes').length >= MAX_SHOES) score -= 1;
-      if (outer && !bag.has(outer) && inBag('outerwear').length >= MAX_OUTER) score -= 1;
+      const score = o.score / 100 + 0.5 * (main.length ? reused / main.length : 0) - 0.05 * fresh;
       if (score > bestScore) {
         bestScore = score;
         best = o;

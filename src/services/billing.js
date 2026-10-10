@@ -78,6 +78,11 @@ export function createBilling(config, repos, log, doFetch = globalThis.fetch) {
     }
     if (eventCreated < (user.plan_event_at ?? 0)) return;
     const pro = PRO_STATUSES.has(sub.status);
+    // an old subscription ending (a re-subscribe, a replaced plan) must not cancel the live one
+    if (!pro && sub.id && user.stripe_subscription_id && user.stripe_subscription_id !== sub.id && user.plan === 'pro' && PRO_STATUSES.has(user.plan_status)) {
+      log.info('stripe.ignored_old_subscription', { user: user.id });
+      return;
+    }
     repos.users.setPlan(user.id, { plan: pro ? 'pro' : 'free', status: sub.status, renewsAt: pro ? periodEnd(sub) : null, customerId: sub.customer, subscriptionId: sub.id });
     repos.db.run('UPDATE users SET plan_event_at = ? WHERE id = ?', eventCreated, user.id);
     log.info('stripe.plan', { user: user.id, plan: pro ? 'pro' : 'free', status: sub.status });
@@ -137,7 +142,7 @@ export function createBilling(config, repos, log, doFetch = globalThis.fetch) {
       const price = interval === 'year' ? stripe.priceYearly : stripe.priceMonthly;
       if (!price) throw badRequest('That billing option is not available.');
       if (!base) throw unavailable('Payments are not fully configured yet (the site address is missing).');
-      if (user.plan === 'pro' && user.plan_status === 'active') throw badRequest('You are already on Pro. Manage your plan from your profile.');
+      if (user.plan === 'pro' && PRO_STATUSES.has(user.plan_status)) throw badRequest('You are already on Pro. Manage your plan from your profile.');
       const params = {
         mode: 'subscription',
         'line_items[0][price]': price,

@@ -118,8 +118,7 @@ export function openMeteoProvider({ fetch: doFetch = globalThis.fetch, apiKey = 
         const res = await doFetch(url, { signal: AbortSignal.timeout(10_000), headers: { accept: 'application/json' } });
         if (res.status >= 500) throw new Error(`upstream ${res.status}`);
         if (!res.ok) {
-          const body = await res.text().catch(() => '');
-          throw new HttpError(502, 'weather_failed', 'The weather service rejected the request.', { status: res.status, reason: body.slice(0, 200) });
+          throw new HttpError(502, 'weather_failed', 'The weather service rejected the request.', { status: res.status });
         }
         return await res.json();
       } catch (e) {

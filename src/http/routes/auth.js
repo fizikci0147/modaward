@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { rateLimit, setSessionCookie, clearSessionCookie } from '../middleware.js';
+import { rateLimit, clientKey, setSessionCookie, clearSessionCookie } from '../middleware.js';
 import { object, string, email as emailRule, optional } from '../../util/validate.js';
 import { HttpError, conflict, forbidden, unauthorized } from '../../util/errors.js';
 import { hashPassword, verifyPassword, verifyAgainstDummy, assertStrongPassword, needsRehash } from '../../services/passwords.js';
@@ -21,12 +21,14 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
   const forgotLimit = bucket();
   const resetLimit = bucket();
   // a reset email goes to someone else's inbox, so cap it per recipient whoever asks
-  const forgotPerEmail = rateLimit({ windowMs: 3_600_000, max: 3, key: (req) => `forgot|${String(req.body?.email || '').toLowerCase()}`, message: 'Too many attempts. Please wait a few minutes.' });
+  // (it answers exactly as a normal request does, so nobody can use it to block someone else's reset or probe addresses)
+  const emailOf = (req) => (typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase().slice(0, 254) : '');
+  const forgotPerEmail = rateLimit({ windowMs: 3_600_000, max: 3, key: (req) => `forgot|${emailOf(req)}`, onLimit: (_req, res) => res.json({ ok: true }) });
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const perAccount = rateLimit({
     windowMs: 15 * 60_000,
     max: 10,
-    key: (req) => `${req.ip}|${String(req.body?.email || '').toLowerCase()}`,
+    key: (req) => `${clientKey(req.ip)}|${emailOf(req)}`,
     message: 'Too many sign-in attempts for this account. Please wait a few minutes or reset your password.'
   });
 

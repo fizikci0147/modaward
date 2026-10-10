@@ -54,7 +54,7 @@ export function createApp(deps) {
   });
 
   // Stripe needs the untouched body to verify its signature, so it is mounted before JSON parsing.
-  if (deps.billing) app.post('/api/billing/webhook', express.raw({ type: 'application/json', limit: '1mb' }), deps.billing.webhook);
+  if (deps.billing) app.post('/api/billing/webhook', express.raw({ type: 'application/json', limit: '256kb' }), deps.billing.webhook);
 
   // ── static assets ──
   const staticOpts = { index: false, etag: true, setHeaders: (res) => res.setHeader('Cache-Control', 'no-cache') };

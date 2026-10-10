@@ -75,7 +75,8 @@ export const hexColor = () => (v, path = '') => {
 export const email = () => (v, path = '') => {
     if (v === undefined || v === null) fail(path, 'is required');
   const s = string({ min: 3, max: 254 })(v, path).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s)) fail(path, 'must be a valid email address');
+  // no list separators, quotes or brackets: an address must name exactly one mailbox
+  if (!/^[^\s@,;:<>"()[\]\\]+@[^\s@,;:<>"()[\]\\]+\.[^\s@,;:<>"()[\]\\]{2,}$/.test(s)) fail(path, 'must be a valid email address');
   return s;
 };
 

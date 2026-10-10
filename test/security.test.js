@@ -32,7 +32,9 @@ describe('security hardening', () => {
     const { email } = await registerUser(t.client());
     const results = [];
     for (let i = 0; i < 5; i++) results.push((await t.client().post('/api/auth/forgot', { email })).status);
-    assert.deepEqual(results, [200, 200, 200, 429, 429]);
+    // beyond the cap it answers exactly as before (so it can neither block a real reset nor reveal anything) but sends nothing
+    assert.deepEqual(results, [200, 200, 200, 200, 200]);
+    assert.equal(sent.filter((m) => m.to === email).length, 3);
     // somebody else is unaffected
     const other = await registerUser(t.client());
     assert.equal((await t.client().post('/api/auth/forgot', { email: other.email })).status, 200);

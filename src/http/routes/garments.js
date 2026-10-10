@@ -7,7 +7,7 @@ import { colorName } from '../../shared/color.js';
 import { notFound, badRequest } from '../../util/errors.js';
 import { assertCanAddGarments, assertWithinStorageCap } from '../../services/plans.js';
 import { starterWardrobe } from '../../services/starter.js';
-import { daysBetween } from '../../shared/dormancy.js';
+import { assertPlausibleDate } from '../../util/wear-date.js';
 
 const fields = {
   name: string({ min: 1, max: 80 }),
@@ -34,13 +34,6 @@ const starterSchema = object({ department: optional(oneOf(['men', 'women', 'unis
 
 const dateField = string({ pattern: /^\d{4}-\d{2}-\d{2}$/, patternMessage: 'must be a date like 2026-10-06', max: 10 });
 const wornSchema = object({ date: dateField });
-
-/** A wear date may be backdated up to three years, and at most a day ahead (time zones). */
-function assertPlausibleDate(date) {
-  const today = new Date().toISOString().slice(0, 10);
-  const ago = daysBetween(date, today);
-  if (Number.isNaN(ago) || ago < -1 || ago > 3 * 365) throw badRequest('That date is out of range.');
-}
 
 /** The form speaks in currency units, the database in cents; 0 means "no price". */
 function withPriceCents(input) {
