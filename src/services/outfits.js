@@ -145,9 +145,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       const place = location ?? profile.location;
       if (!place) throw needLocation();
       const ent = entitlements(user, config);
-      // free accounts see a few days ahead: a trip that reaches beyond them is a Pro feature too
-      const reach = ent.planDays < 8 ? startOffset + days : days;
-      if (reach > ent.planDays) throw paymentRequired(`Packing lists for trips longer than ${ent.planDays} days are a Pro feature.`, { feature: 'plan' }, { template: 'Packing lists for trips longer than {n} days are a Pro feature.', vars: { n: ent.planDays } });
+      if (days > ent.planDays) throw paymentRequired(`Packing lists for trips longer than ${ent.planDays} days are a Pro feature.`, { feature: 'plan' }, { template: 'Packing lists for trips longer than {n} days are a Pro feature.', vars: { n: ent.planDays } });
       const w = await weather.forecast({ lat: place.lat, lon: place.lon, name: place.name });
       const tripDays = w.days.slice(startOffset, startOffset + days);
       if (!tripDays.length) throw badRequest('That date is outside the forecast window.');

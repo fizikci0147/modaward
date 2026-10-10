@@ -18,7 +18,8 @@ const listeners = new Set();
 export const onApiEvent = (fn) => (listeners.add(fn), () => listeners.delete(fn));
 const emit = (type, payload) => listeners.forEach((fn) => fn(type, payload));
 
-const TIMEOUT_MS = 60_000;
+// generous: photo analysis and the AI stylist can legitimately take over a minute
+const TIMEOUT_MS = 120_000;
 
 /** The caller's signal and a time limit, whichever comes first (a request must never hang forever). */
 function withTimeout(signal) {

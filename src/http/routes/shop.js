@@ -24,7 +24,7 @@ const saveSchema = object({ lookId: string({ min: 3, max: 40 }) });
 export function shopRoutes({ shop }) {
   const r = Router();
   r.use('/shop', requireUser);
-  const heavy = rateLimit({ windowMs: 60_000, max: 10, key: (req) => req.user.id, message: 'You are browsing looks very fast. Give it a moment.' });
+  const heavy = rateLimit({ windowMs: 60_000, max: 20, key: (req) => req.user.id, message: 'You are browsing looks very fast. Give it a moment.' });
 
   r.get('/shop/retailers', (_req, res) =>
     res.json({ retailers: RETAILERS.map(({ id, name, tier, departments }) => ({ id, name, tier, departments })) })

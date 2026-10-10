@@ -130,11 +130,10 @@ describe('wear logging, trips, shop and reminders through the API', () => {
     assert.deepEqual(left.map((r) => r.garment_id), [lone.id]);
   });
 
-  test('a free account cannot plan a trip that reaches beyond its forecast days', async () => {
+  test('a free account can plan a short trip starting later, but not a long one', async () => {
     const { c } = await person();
-    assert.equal((await c.post('/api/trips/plan', { days: 3, startOffset: 0, occasions: ['casual'] })).status, 200);
-    const far = await c.post('/api/trips/plan', { days: 3, startOffset: 4, occasions: ['casual'] });
-    assert.equal(far.status, 402);
+    assert.equal((await c.post('/api/trips/plan', { days: 3, startOffset: 4, occasions: ['casual'] })).status, 200);
+    assert.equal((await c.post('/api/trips/plan', { days: 6, startOffset: 0, occasions: ['casual'] })).status, 402);
   });
 
   test('looks use a small set of variations, so a made-up seed cannot force endless rebuilds', async () => {
