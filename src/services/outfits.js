@@ -10,6 +10,7 @@ import { OCCASION_IDS } from '../shared/taxonomy.js';
 import { entitlements } from './plans.js';
 import { HttpError, badRequest, paymentRequired } from '../util/errors.js';
 import { translatorFor } from '../i18n/index.js';
+import { idleInfo } from '../shared/dormancy.js';
 
 const needLocation = () => new HttpError(409, 'location_required', 'Set your location so we can check the weather.');
 
@@ -21,7 +22,8 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
   }
 
   function engineInputs(user, profile, today) {
-    const garments = repos.garments.list(user.id);
+    // idleDays lets the engine bring back pieces that have sat unworn for a long time
+    const garments = repos.garments.list(user.id).map((g) => ({ ...g, idleDays: idleInfo(g, today).days }));
     const taste = new TasteModel(repos.profiles.getTaste(user.id));
     const prefs = withTaste(normalizePrefs(profile), taste);
     return {
@@ -43,7 +45,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
       return { ...w, units: profile.units, locked: entitlements(user, config).planDays };
     },
 
-    async forDay(user, { date, occasion = 'casual', seed, count = 3, curate = true, excludeIds, locale = 'en' }) {
+    async forDay(user, { date, occasion = 'casual', seed, count = 3, curate = true, excludeIds, featureId, locale = 'en' }) {
       const tr = translatorFor(locale);
       if (!OCCASION_IDS.includes(occasion)) throw badRequest('Unknown occasion.');
       const profile = repos.profiles.get(user.id);
@@ -67,6 +69,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
         blockedKeys: input.blockedKeys,
         seed,
         count,
+        featureId,
         units: profile.units,
         nowHour: target === w.today ? w.nowHour : null,
         t: tr.t,
@@ -90,6 +93,7 @@ export function createOutfitService({ repos, weather, config, stylist = null }) 
         outfits,
         tips: result.tips,
         missing: result.missing,
+        featureMissing: Boolean(result.featureMissing),
         stylistNote,
         worn: repos.wear.recent(user.id, 2).find((r) => r.date === target) ?? null
       };

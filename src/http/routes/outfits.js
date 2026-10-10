@@ -13,7 +13,8 @@ const recommendSchema = object({
   seed: optional(string({ max: 40 }), undefined),
   count: optional(integer({ min: 1, max: 5 }), 3),
   curate: optional(boolean(), true),
-  excludeIds: optional(arrayOf(string({ min: 36, max: 36 }), { min: 1, max: 20, unique: true }), undefined)
+  excludeIds: optional(arrayOf(string({ min: 36, max: 36 }), { min: 1, max: 20, unique: true }), undefined),
+  featureId: optional(string({ min: 36, max: 36 }), undefined)
 });
 const wearSchema = object({ date: date(), itemIds: ids(), occasion: optional(oneOf(OCCASION_IDS), undefined), key: optional(string({ max: 600 }), undefined) });
 const feedbackSchema = object({ itemIds: ids(), signal: oneOf(Object.keys(SIGNALS)), key: optional(string({ max: 600 }), undefined) });

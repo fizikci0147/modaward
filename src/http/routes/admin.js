@@ -1,7 +1,13 @@
 import { Router } from 'express';
 import { requireUser } from '../middleware.js';
 import { forbidden } from '../../util/errors.js';
-import { object, string, integer, optional, email } from '../../util/validate.js';
+import { object, string, integer, optional, email, oneOf, boolean } from '../../util/validate.js';
+import crypto from 'node:crypto';
+import { RETAILER_IDS } from '../../shop/retailers.js';
+import { TYPE_IDS, TYPES } from '../../shared/taxonomy.js';
+import { PALETTE, isHex, nearestSwatch } from '../../shared/color.js';
+import { mapFeed, rowsFromText, inferColor, parsePriceCents } from '../../shop/feed.js';
+import { badRequest, notFound } from '../../util/errors.js';
 
 const codeSchema = object({
   code: optional(string({ min: 4, max: 32 })),
@@ -10,6 +16,35 @@ const codeSchema = object({
   expiresInDays: optional(integer({ min: 1, max: 3660 })),
   note: optional(string({ max: 200 }), '')
 });
+const productSchema = object({
+  retailer: oneOf(RETAILER_IDS),
+  title: string({ min: 2, max: 200 }),
+  brand: optional(string({ max: 60 }), ''),
+  url: string({ min: 12, max: 1500 }),
+  imageUrl: string({ min: 12, max: 1500 }),
+  price: optional(string({ max: 20 }), ''),
+  currency: optional(string({ min: 3, max: 3 }), 'USD'),
+  type: oneOf(TYPE_IDS),
+  color: string({ min: 1, max: 30 }),
+  gender: optional(oneOf(['men', 'women', 'unisex']), 'unisex')
+});
+const stockSchema = object({ inStock: boolean() });
+const importSchema = object({
+  retailer: oneOf(RETAILER_IDS),
+  text: string({ min: 10, max: 11_000_000, trim: false }),
+  format: optional(oneOf(['auto', 'csv', 'json']), 'auto'),
+  dryRun: optional(boolean(), true),
+  fullSync: optional(boolean(), false)
+});
+const PRODUCT_ID = /^[a-z0-9-]{2,30}:[^\s]{1,100}$/i;
+const httpsOnly = (u) => {
+  try {
+    const url = new URL(u);
+    return url.protocol === 'https:' && !url.username && !url.password ? url.toString() : null;
+  } catch {
+    return null;
+  }
+};
 const grantSchema = object({ email: email(), days: integer({ min: 1, max: 3660 }) });
 
 /** Operator dashboard data. Access is limited to the emails in ADMIN_EMAILS. */
@@ -72,7 +107,7 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
       appUrl: config.appUrl || null,
       trustProxy: config.trustProxy ?? null,
       weather: { provider: weather.provider, probe, lastError: weather.lastError },
-      integrations: { ai: Boolean(capabilities?.ai), stripe: Boolean(capabilities?.billing), email: Boolean(mailer?.configured), backgroundRemovalService: Boolean(capabilities?.cutoutService) }
+      integrations: { ai: Boolean(capabilities?.ai), stripe: Boolean(capabilities?.billing), email: Boolean(mailer?.configured), push: Boolean(capabilities?.push), backgroundRemovalService: Boolean(capabilities?.cutoutService) }
     });
   });
 
@@ -160,6 +195,76 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
     const { email: to, days } = grantSchema(req.body ?? {});
     res.json(codes.grant(to, days));
   });
+
+  // ── product catalogue: hand-picked products and feed imports ──
+  r.get('/admin/products', (req, res) => {
+    const retailer = RETAILER_IDS.includes(req.query.retailer) ? req.query.retailer : undefined;
+    const q = String(req.query.q || '').trim().slice(0, 80);
+    const page = Math.max(0, Math.min(10_000, Number.parseInt(req.query.page, 10) || 0));
+    const { total, products } = catalog.list({ retailer, q: q || undefined, limit: 40, offset: page * 40 });
+    res.json({ total, page, pageSize: 40, products, byRetailer: catalog.byRetailer(), retailers: RETAILER_IDS, colors: PALETTE.map((p) => p.name), types: TYPE_IDS.map((id) => ({ id, label: TYPES[id].label, category: TYPES[id].category })) });
+  });
+
+  r.post('/admin/products', (req, res) => {
+    const p = productSchema(req.body);
+    const url = httpsOnly(p.url);
+    const imageUrl = httpsOnly(p.imageUrl);
+    if (!url) throw badRequest('The product link must start with https://');
+    if (!imageUrl) throw badRequest('The photo address must start with https://');
+    const color = isHex(p.color) ? nearestSwatch(p.color).name : PALETTE.find((s) => s.name === p.color.toLowerCase())?.name ?? inferColor(p.color);
+    if (!color) throw badRequest('Choose one of the listed colours.');
+    const sku = `m-${crypto.createHash('sha1').update(url).digest('hex').slice(0, 14)}`;
+    catalog.upsert([{ retailer: p.retailer, sku, title: p.title, brand: p.brand, url, imageUrl, priceCents: parsePriceCents(p.price), currency: p.currency.toUpperCase(), category: TYPES[p.type].category, type: p.type, color, gender: p.gender, pattern: 'solid', keywords: `${p.title} ${p.brand}`.toLowerCase().slice(0, 300), inStock: true }]);
+    res.status(201).json({ id: `${p.retailer}:${sku}` });
+  });
+
+  r.patch('/admin/products/:id', (req, res) => {
+    if (!PRODUCT_ID.test(req.params.id)) throw notFound('Product not found.');
+    if (!catalog.setStock(req.params.id, stockSchema(req.body).inStock)) throw notFound('Product not found.');
+    res.json({ ok: true });
+  });
+
+  r.delete('/admin/products/:id', (req, res) => {
+    if (!PRODUCT_ID.test(req.params.id) || !catalog.remove(req.params.id)) throw notFound('Product not found.');
+    res.json({ ok: true });
+  });
+
+  // paste or upload an affiliate feed (CSV, TSV or JSON). Preview first, then import.
+  r.post('/admin/products/import', (req, res) => {
+    const { retailer, text, format, dryRun, fullSync } = importSchema(req.body);
+    let rows;
+    try {
+      rows = rowsFromText(text, { format });
+    } catch {
+      throw badRequest('That file could not be read. Check that it is a CSV, TSV or JSON product feed.');
+    }
+    if (!rows.length) throw badRequest('That file has no product rows.');
+    if (rows.length > 100_000) throw badRequest('That feed has more than 100,000 rows. Use the command line importer for files this large.');
+    const { products, skipped } = mapFeed(rows, { retailer });
+    const reasons = new Map();
+    for (const s of skipped) {
+      const key = s.reason.replace(/"[^"]*"/g, '"…"');
+      reasons.set(key, (reasons.get(key) || 0) + 1);
+    }
+    const byType = {};
+    for (const p of products) byType[p.type] = (byType[p.type] || 0) + 1;
+    const out = {
+      rows: rows.length,
+      usable: products.length,
+      skipped: skipped.length,
+      reasons: [...reasons].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([reason, count]) => ({ reason, count })),
+      byType: Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([type, count]) => ({ type, count })),
+      sample: products.slice(0, 6).map((p) => ({ title: p.title, imageUrl: p.imageUrl, priceCents: p.priceCents, currency: p.currency, type: p.type, color: p.color })),
+      dryRun
+    };
+    if (!dryRun) {
+      const started = Math.floor(Date.now() / 1000) - 1;
+      Object.assign(out, catalog.upsert(products));
+      if (fullSync) out.markedOutOfStock = catalog.markMissingOutOfStock(retailer, started);
+    }
+    res.json(out);
+  });
+
   return r;
 }
 

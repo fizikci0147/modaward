@@ -27,7 +27,7 @@ show(nodeOk, 'Node.js version', process.version, 'Choose Node.js 22.x or 24.x in
 for (const f of ['server.js', 'src/main.js', 'public/index.html', 'package.json']) show(fs.existsSync(path.join(root, f)), `file ${f}`, '', 'Upload the whole project folder; some files are missing.');
 
 // dependencies
-for (const dep of ['express', 'compression', 'nodemailer', '@anthropic-ai/sdk']) {
+for (const dep of ['express', 'compression', 'nodemailer', '@anthropic-ai/sdk', 'web-push']) {
   let ok = true;
   try {
     require.resolve(dep);

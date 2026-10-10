@@ -14,7 +14,7 @@ const executablePath =
   process.env.CHROMIUM_PATH ||
   (fs.existsSync('/opt/pw-browsers') ? fs.readdirSync('/opt/pw-browsers').filter((d) => d.startsWith('chromium-')).map((d) => `/opt/pw-browsers/${d}/chrome-linux/chrome`).find(fs.existsSync) : undefined);
 
-const t = await startTestServer({ env: { NODE_ENV: 'test' } });
+const t = await startTestServer({ env: { NODE_ENV: 'test', ADMIN_EMAILS: 'boss@example.com' } });
 const browser = await chromium.launch({ executablePath, args: ['--no-sandbox'] });
 const failures = [];
 const fail = (m) => (failures.push(m), console.error('✖', m));
@@ -101,6 +101,14 @@ async function run(label, contextOptions) {
   await page.getByRole('button', { name: 'Dislike this outfit' }).waitFor();
   ok(`${label}: a single piece can be swapped out and brought back; Dislike is a labelled control`);
 
+  // ── share the outfit as a picture ──
+  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 20000 }), page.getByRole('button', { name: 'Share this outfit as a picture' }).click()]);
+  const sharedFile = await download.path();
+  const png = fs.readFileSync(sharedFile);
+  if (png.subarray(1, 4).toString() !== 'PNG' || png.readUInt32BE(16) !== 1080 || png.readUInt32BE(20) !== 1350) fail(`${label}: shared outfit is not a 1080×1350 PNG`);
+  if (shots) fs.copyFileSync(sharedFile, path.join(shots, `${label}-share-poster.png`));
+  ok(`${label}: an outfit can be shared as a 1080×1350 picture`);
+
   // ── week ──
   await page.goto('/week');
   await page.getByRole('heading', { name: 'The week ahead' }).waitFor();
@@ -121,7 +129,7 @@ async function run(label, contextOptions) {
   await shot('10-closet-add');
   await page.getByRole('dialog').getByRole('button', { name: 'Hoodie', exact: true }).click();
   await page.getByRole('button', { name: 'Add to closet' }).click();
-  await page.getByText(/added$/).waitFor();
+  await page.locator('.toast').filter({ hasText: /added$/ }).first().waitFor();
   ok(`${label}: closet lists pieces and adding one works`);
 
   // ── photo with automatic background removal ──
@@ -154,6 +162,54 @@ async function run(label, contextOptions) {
   await shot('10c-closet-with-cutout');
   ok(`${label}: photo upload removes the background, detects the colour and stores a transparent PNG`);
 
+  // ── add several pieces at once ──
+  await page.goto('/closet');
+  await page.getByRole('heading', { name: 'Your closet' }).waitFor();
+  const beforeCount = await page.locator('.tile:not(.tile-add)').count();
+  await page.getByRole('button', { name: 'Add several' }).click();
+  const bulk = page.getByRole('dialog');
+  await bulk.getByRole('heading', { name: 'Add several pieces' }).waitFor();
+  await bulk.locator('input[type=file]').setInputFiles([
+    { name: 'one.png', mimeType: 'image/png', buffer: syntheticGarmentPng() },
+    { name: 'two.png', mimeType: 'image/png', buffer: syntheticGarmentPng() }
+  ]);
+  await bulk.locator('.bulk-card img.cutout').nth(1).waitFor({ timeout: 30000 });
+  await shot('10d-bulk-review');
+  const addBtn = bulk.getByRole('button', { name: /Add 2 pieces/ });
+  if (!(await addBtn.isDisabled())) fail(`${label}: bulk add let pieces through without a type`);
+  await bulk.getByText('Choose a type for 2 pieces to continue.').waitFor();
+  const selects = bulk.locator('.bulk-card select');
+  await selects.nth(0).selectOption('tee');
+  await selects.nth(1).selectOption('jeans');
+  await addBtn.click();
+  await page.locator('.toast').filter({ hasText: /2 pieces added/ }).first().waitFor();
+  await page.getByRole('dialog').waitFor({ state: 'detached' });
+  if ((await page.locator('.tile:not(.tile-add)').count()) !== beforeCount + 2) fail(`${label}: bulk add did not add both pieces`);
+  ok(`${label}: several photos are cut out, reviewed on one screen and added together`);
+
+  // ── pieces that have not been worn in a while ──
+  const api = (method, url, data) => page.request.fetch(url, { method, data, headers: { 'x-requested-with': 'modaward', 'content-type': 'application/json' } });
+  const list = (await (await api('GET', '/api/garments')).json()).garments;
+  const target = list.find((g) => g.name === 'Hoodie') || list[0];
+  const wornResp = await api('POST', `/api/garments/${target.id}/worn`, { date: new Date(Date.now() - 100 * 86400000).toISOString().slice(0, 10) });
+  if (!wornResp.ok()) fail(`${label}: could not back-date a wear (${wornResp.status()})`);
+  await page.goto('/closet');
+  await page.locator('.forgotten').waitFor();
+  await page.locator('.forgotten').getByText(/Last worn 3 months ago/).first().waitFor();
+  await page.locator('.idle-pill').first().waitFor();
+  await shot('10e-closet-forgotten');
+  await page.getByRole('button', { name: /Not worn lately/ }).click();
+  const idleTiles = await page.locator('.tile:not(.tile-add)').count();
+  if (idleTiles < 1 || idleTiles >= beforeCount + 2) fail(`${label}: the "Not worn lately" filter did not narrow the closet (${idleTiles})`);
+  await page.getByRole('button', { name: /Not worn lately/ }).click();
+  await page.locator('.forgotten').getByRole('button', { name: 'Style it' }).first().click();
+  await page.locator('.feature-banner').waitFor();
+  await page.locator('.outfit').or(page.getByText(/doesn’t suit today/)).first().waitFor();
+  await shot('10f-style-it');
+  await page.locator('.feature-banner').getByRole('button', { name: 'All outfits' }).click();
+  await page.locator('.feature-banner').waitFor({ state: 'detached' });
+  ok(`${label}: forgotten pieces are called out, filterable, and can be styled into an outfit`);
+
   // ── shop ──
   await page.goto('/shop');
   await page.getByRole('heading', { name: 'Looks for you' }).waitFor();
@@ -180,6 +236,21 @@ async function run(label, contextOptions) {
     await shot(`14-profile-${s.split(' ')[0].toLowerCase()}`);
   }
   ok(`${label}: profile sections render`);
+
+  // ── reminders ──
+  await page.getByRole('button', { name: 'Reminders', exact: true }).click();
+  await page.getByRole('heading', { name: 'Reminders' }).waitFor();
+  await page.getByRole('switch', { name: 'Morning outfit' }).click();
+  await page.locator('#rem-hour').waitFor();
+  await page.locator('#rem-hour').selectOption('6');
+  await shot('14b-reminders');
+  await page.reload();
+  await page.getByRole('button', { name: 'Reminders', exact: true }).click();
+  await page.locator('#rem-hour').waitFor();
+  if ((await page.locator('#rem-hour').inputValue()) !== '6') fail(`${label}: reminder time was not saved`);
+  await page.getByRole('button', { name: 'Send me a test' }).click();
+  await page.locator('.toast').filter({ hasText: /nowhere to send|Sent/ }).first().waitFor();
+  ok(`${label}: reminders can be set, are saved, and a test explains where it would go`);
 
   // ── the language is remembered on the account ──
   await page.getByRole('button', { name: 'About you' }).click();
@@ -219,9 +290,48 @@ async function run(label, contextOptions) {
   await ctx.close();
 }
 
+/** The operator's product screen: add one product by hand, then preview and import a feed. */
+async function runAdmin() {
+  const ctx = await browser.newContext({ viewport: { width: 1366, height: 900 }, baseURL: t.base });
+  const page = await ctx.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  const reg = await page.request.post('/api/auth/register', { data: { email: 'boss@example.com', password: 'correct horse battery', name: 'Boss' }, headers: { 'x-requested-with': 'modaward' } });
+  if (!reg.ok()) fail(`admin: could not register (${reg.status()})`);
+  await page.goto('/admin');
+  await page.getByRole('heading', { name: 'Business' }).waitFor();
+  await page.getByRole('tab', { name: 'Products' }).click();
+  await page.getByRole('heading', { name: 'Add a product' }).waitFor();
+  const form = page.locator('.prod-form');
+  await form.getByLabel('Store').selectOption('zara');
+  await form.getByLabel('Name').fill('Camel wool coat');
+  await form.getByLabel('Product link (https)').fill('https://www.zara.com/us/en/coat-p1.html');
+  await form.getByLabel('Photo address (https)').fill('https://static.zara.net/coat.jpg');
+  await form.getByLabel('Price').fill('129');
+  await form.getByLabel('What is it?').selectOption('wool-coat');
+  await form.getByLabel('Colour').selectOption('camel');
+  await page.getByRole('button', { name: 'Save product' }).click();
+  await page.locator('.prod-row').filter({ hasText: 'Camel wool coat' }).waitFor();
+  await page.locator('.prod-row').filter({ hasText: 'Camel wool coat' }).getByRole('button', { name: 'Mark out of stock' }).click();
+  await page.locator('.prod-row.off').filter({ hasText: 'Camel wool coat' }).waitFor();
+
+  const csv = 'id,title,link,image_link,price,color,gender,product_type\nz1,Slim Navy Chinos,https://www.zara.com/p/z1,https://static.zara.net/z1.jpg,49.90,navy,men,Chinos\nz2,Mystery Object,https://www.zara.com/p/z2,https://static.zara.net/z2.jpg,9,navy,men,Misc\n';
+  await page.locator('select[aria-label="Store"]').selectOption('zara');
+  await page.locator('input[type=file]').setInputFiles({ name: 'zara-feed.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+  await page.getByRole('button', { name: 'Preview' }).click();
+  await page.getByText(/2 rows, 1 usable, 1 skipped/).waitFor();
+  if (shots) await page.screenshot({ path: path.join(shots, 'admin-products.png'), fullPage: true });
+  await page.getByRole('button', { name: /^Import 1 products$/ }).click();
+  await page.locator('.toast').filter({ hasText: /1 added/ }).first().waitFor();
+  await page.locator('.prod-row').filter({ hasText: 'Slim Navy Chinos' }).waitFor();
+  if (errors.length) fail(`admin: ${errors.join('; ')}`);
+  ok('admin: a product can be added by hand, and a feed can be previewed and imported');
+  await ctx.close();
+}
 try {
   await run('mobile', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await run('desktop', { viewport: { width: 1366, height: 900 } });
+  await runAdmin();
 } catch (e) {
   fail(e.stack || e.message);
 } finally {

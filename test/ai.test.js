@@ -201,6 +201,39 @@ describe('AI photo tagging', () => {
     assert.equal(r.json.suggestion.name, 'Khaki chinos');
   });
 
+  test('bulk: several photos in ONE model call, answers matched by photo number, bad ones become null', async () => {
+    const free = t.client();
+    await registerUser(free);
+    assert.equal((await free.post('/api/ai/analyze-garments', { images: [PNG] })).status, 402);
+
+    const c = await pro();
+    const tag = (index, extra = {}) => ({ index, type: 'tee', color_hex: '#112233', pattern: 'solid', name: `Piece ${index}`, warmth: 1, formality: 1, waterproof: false, confidence: 0.9, ...extra });
+    // out of order, one unusable, one duplicated index, one out of range
+    fake.reply = ok({ items: [tag(3, { type: 'jeans', color_hex: '#22314F' }), tag(1, { type: 'sweater' }), tag(2, { type: 'spaceship' }), tag(1, { type: 'tee' }), tag(9)] });
+    const before = fake.requests.length;
+    const r = await c.post('/api/ai/analyze-garments', { images: [PNG, PNG, PNG] });
+    assert.equal(r.status, 200);
+    assert.equal(fake.requests.length - before, 1, 'one call for the whole batch');
+    const content = fake.requests.at(-1).messages[0].content;
+    assert.equal(content.filter((b) => b.type === 'image').length, 3);
+    assert.equal(r.json.suggestions.length, 3);
+    assert.equal(r.json.suggestions[0].type, 'sweater');
+    assert.equal(r.json.suggestions[1], null);
+    assert.equal(r.json.suggestions[2].type, 'jeans');
+    assert.equal(r.json.suggestions[2].color, '#22314f');
+  });
+
+  test('bulk: validates the batch before spending a call', async () => {
+    const c = await pro();
+    const before = fake.requests.length;
+    assert.equal((await c.post('/api/ai/analyze-garments', { images: [] })).status, 400);
+    assert.equal((await c.post('/api/ai/analyze-garments', { images: Array(7).fill(PNG) })).status, 400);
+    assert.equal((await c.post('/api/ai/analyze-garments', { images: ['data:image/png;base64,' + Buffer.from('<html>').toString('base64')] })).status, 400);
+    assert.equal(fake.requests.length, before);
+    fake.reply = new Error('boom');
+    assert.equal((await c.post('/api/ai/analyze-garments', { images: [PNG] })).status, 422);
+  });
+
   test('unsure or invalid answers produce a helpful 422, and non-images are rejected before any call', async () => {
     const c = await pro();
     const before = fake.requests.length;

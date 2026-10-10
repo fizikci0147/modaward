@@ -53,6 +53,12 @@ Claude is an *editor* on top of the deterministic engine, never the source of tr
 
 Classical, in-browser, private: model the backdrop from the photo's border in CIE Lab (k-means, ≤ 3 clusters), score each pixel against it with shadow discounting, Otsu-threshold, flood-fill from the border so interior details survive, drop specks, fill pin-holes, feather the edge. A self-check *declines* rather than ships a bad cut-out (low contrast, no clear backdrop, cluttered). Runs in a Web Worker. The same pure code is unit-tested in Node on synthetic photos with ground truth. An optional server-side remove.bg path covers hard photos for Pro.
 
+## Reminders and push (`src/services/reminders.js`, `push.js`)
+
+A timer in the server process wakes every five minutes. For each person with a reminder on, it works out their local date, hour and weekday from the time zone saved with their preferences, and a reminder is *due* once their local clock reaches its time (and no more than three hours later, so a restart never sends a morning outfit at night). A row in `reminder_log` is claimed **before** anything is built, which makes each reminder go out at most once per local day even if two processes run. Turning a reminder on after its time has passed waits for the next occurrence.
+
+The message is built by the same service that powers the Today screen (outfit, weather tip), in the person's language, then sent through every channel they enabled: web push (`web-push`, VAPID keys auto-generated into `DATA_DIR/secrets/vapid.json`) and/or email (SMTP, opt-in, with a signed unsubscribe link and `List-Unsubscribe` header). Push endpoints are only accepted from the browser vendors' push services (`isPushEndpoint`), and subscriptions that return 404/410 are removed. Like the rate limiter, the timer assumes **one process**; the claim row keeps a second process from double-sending, not from doing the work.
+
 ## Languages
 
 English text is the translation key: `t('Take the style quiz')`, with `{placeholders}` for values and `tn(n, '{n} piece', '{n} pieces')` for plurals (`Intl.PluralRules` picks the form). A missing translation falls back to the English text, so a gap never breaks a screen.
@@ -97,4 +103,4 @@ SQLite (WAL) via `node:sqlite`, or `better-sqlite3` on older Node, behind one ad
 
 ## Scaling notes
 
-A single Node process comfortably serves thousands of users: engine requests take tens of milliseconds, weather is cached per ~1 km cell. SQLite and the in-memory rate limiter assume **one process**. When you outgrow that: move to Postgres (all SQL is in `src/repo` and `src/db`), put the rate limiter and weather cache in Redis, and move photos to object storage.
+A single Node process comfortably serves thousands of users: engine requests take tens of milliseconds, weather is cached per ~1 km cell. SQLite, the reminder timer and the in-memory rate limiter assume **one process**. When you outgrow that: move to Postgres (all SQL is in `src/repo` and `src/db`), put the rate limiter and weather cache in Redis, and move photos to object storage.

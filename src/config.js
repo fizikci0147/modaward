@@ -91,6 +91,15 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
       dailyLimitGlobal: int(env.AI_GLOBAL_DAILY_LIMIT, 2000)
     },
 
+    push: {
+      enabled: bool(env.PUSH_ENABLED, true),
+      publicKey: str(env.VAPID_PUBLIC_KEY),
+      privateKey: str(env.VAPID_PRIVATE_KEY),
+      subject: str(env.VAPID_SUBJECT)
+    },
+
+    reminders: { enabled: bool(env.REMINDERS_ENABLED, true), intervalSeconds: int(env.REMINDERS_INTERVAL_SECONDS, 300) },
+
     cutout: {
       apiKey: str(env.REMOVEBG_API_KEY),
       size: str(env.REMOVEBG_SIZE, 'regular'),

@@ -1,5 +1,5 @@
 import { html, useState, useEffect, useRef, useMemo } from '/js/ui.js';
-import { t, tn } from '/js/i18n.js';
+import { t, tn, getLocale } from '/js/i18n.js';
 import { api } from '/js/api.js';
 import { useStore, loadCloset, upsertGarment, removeGarment, toast, fail, openUpgrade, state } from '/js/store.js';
 import { Icon } from '/js/icons.js';
@@ -10,31 +10,102 @@ import { PALETTE, colorName, dominantColor } from '/shared/color.js';
 import { cap } from '/js/format.js';
 import { useQuery, navigate } from '/js/router.js';
 import { readPhoto } from '/js/photo.js';
+import { BulkAddSheet } from '/js/views/bulk.js';
 import { CUTOUT_MESSAGES } from '/shared/cutout.js';
+import { idleInfo, isDormant, dormantPieces, agoText } from '/shared/dormancy.js';
+import { todayLocal } from '/js/format.js';
 
 /** Suggested name for a new piece, in the person's language: "Navy T-shirt". */
 const garmentName = (color, type) => t('{color} {type}', { color: cap(t(color)), type: t(TYPES[type].label).toLowerCase() });
 
 const CAT_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory'];
 
-function Tile({ g, onOpen, onFav, onRemove }) {
+/** "Last worn 3 weeks ago" / "Not worn yet", plus how long it has been waiting when that is notable. */
+export function wornLine(g, today = todayLocal()) {
+  const { days, never } = idleInfo(g, today);
+  if (never) return days >= 14 ? t('Not worn yet · added {when}', { when: agoText(days, getLocale()) }) : t('Not worn yet');
+  return t('Last worn {when}', { when: agoText(days, getLocale()) });
+}
+
+function Tile({ g, onOpen, onFav, onRemove, today }) {
+  const dormant = isDormant(g, today);
   return html`<div class="tile enter">
     <button class="tile-btn" onClick=${() => onOpen(g)} aria-label=${t('Edit {name}', { name: g.name })}>
       <div class="tile-art">${g.imageUrl ? html`<img class=${/\.png/.test(g.imageUrl) ? 'cutout' : ''} src=${g.imageUrl} alt="" loading="lazy" decoding="async" />` : html`<${GarmentArt} type=${g.type} color=${g.color} pattern=${g.pattern} />`}</div>
       <div class="tile-meta">
         <span class="tile-name">${g.name}</span>
-        <span class="tile-sub">${t(TYPES[g.type]?.label || '')}${g.wearCount ? ` · ${t('worn {n}×', { n: g.wearCount })}` : ` · ${t('not worn yet')}`}</span>
+        <span class="tile-sub">${t(TYPES[g.type]?.label || '')}${g.wearCount ? ` · ${t('worn {n}×', { n: g.wearCount })}` : ''}</span>
+        <span class=${`tile-sub tile-idle ${dormant ? 'dormant' : ''}`}>${wornLine(g, today)}</span>
       </div>
     </button>
+    ${dormant ? html`<span class="idle-pill" title=${t('Not worn in a while')}><${Icon} name="clock" size="12" />${t('Idle')}</span>` : null}
     <button class=${`fav ${g.favorite ? 'on' : ''}`} onClick=${() => onFav(g)} aria-label=${g.favorite ? t('Remove from favourites') : t('Add to favourites')} aria-pressed=${g.favorite ? 'true' : 'false'}><${Icon} name="heart" /></button>
     <button class="remove" onClick=${() => onRemove(g)} aria-label=${t('Remove {name}', { name: g.name })} title=${t('Remove from closet')}><${Icon} name="trash" /></button>
   </div>`;
+}
+
+/** The pieces that have gone longest without being worn, with one-tap ways to put them back to use. */
+function Forgotten({ pieces, onWear, onStyle, onShow }) {
+  const shown = pieces.slice(0, 6);
+  return html`<section class="card card-pad stack enter forgotten" aria-label=${t('Not worn in a while')}>
+    <div class="spread" style=${{ alignItems: 'flex-start', flexWrap: 'wrap', gap: '10px' }}>
+      <div class="stack" style=${{ gap: '2px' }}>
+        <span class="eyebrow">${t('Not worn in a while')}</span>
+        <p class="muted small">${tn(pieces.length, '{n} piece is waiting for its turn.', '{n} pieces are waiting for their turn.')}</p>
+      </div>
+      ${pieces.length > shown.length ? html`<button class="btn btn-ghost btn-s" onClick=${onShow}>${t('See all {n}', { n: pieces.length })}</button>` : null}
+    </div>
+    <div class="forgotten-row">
+      ${shown.map((g) => html`<div class="forgotten-item" key=${g.id}>
+        <div class="forgotten-art">${g.imageUrl ? html`<img class=${/\.png/.test(g.imageUrl) ? 'cutout' : ''} src=${g.imageUrl} alt="" loading="lazy" decoding="async" />` : html`<${GarmentArt} type=${g.type} color=${g.color} pattern=${g.pattern} />`}</div>
+        <b class="small forgotten-name">${g.name}</b>
+        <span class="small muted">${wornLine(g)}</span>
+        <div class="row" style=${{ gap: '6px', flexWrap: 'wrap' }}>
+          <button class="btn btn-outline btn-s" onClick=${() => onStyle(g)}><${Icon} name="sparkle" size="14" />${t('Style it')}</button>
+          <button class="btn btn-ghost btn-s" onClick=${() => onWear(g)} title=${t('I wore this today')}><${Icon} name="check" size="14" />${t('Wore it today')}</button>
+        </div>
+      </div>`)}
+    </div>
+  </section>`;
 }
 
 function Slider({ label, value, min, max, step = 0.5, labels, onChange, id }) {
   return html`<div class="field">
     <div class="spread"><label for=${id}>${label}</label><span class="small muted">${labels[Math.round(value)] || ''}</span></div>
     <input id=${id} class="range" type="range" min=${min} max=${max} step=${step} value=${value} onInput=${(e) => onChange(Number(e.target.value))} />
+  </div>`;
+}
+
+/** Wear tracking for one piece: when it was last worn, a one-tap "wore it today", and back-dating. */
+function WearHistory({ garment }) {
+  const [g, setG] = useState(garment);
+  const [busy, setBusy] = useState(false);
+  const [date, setDate] = useState('');
+  const today = todayLocal();
+  const log = async (d) => {
+    setBusy(true);
+    try {
+      const { garment: next } = await api.post(`/garments/${g.id}/worn`, { date: d });
+      setG(next);
+      upsertGarment(next);
+      setDate('');
+      toast(t('Logged'));
+    } catch (e) {
+      fail(e);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const idle = idleInfo(g, today);
+  return html`<div class="field wear-history">
+    <span class="label">${t('Wear history')}</span>
+    <p class=${`small ${isDormant(g, today) ? 'idle-warn' : 'muted'}`}>${g.wearCount ? `${t('worn {n}×', { n: g.wearCount })} · ` : ''}${wornLine(g, today)}${isDormant(g, today) && !idle.never ? ` · ${t('It has been a while. Time to bring it back?')}` : ''}</p>
+    <div class="row-wrap" style=${{ alignItems: 'center' }}>
+      <button class="btn btn-outline btn-s" onClick=${() => log(today)} disabled=${busy}><${Icon} name="check" size="14" />${t('I wore it today')}</button>
+      <label class="sr-only" for="g-wore-on">${t('Date you wore it')}</label>
+      <input id="g-wore-on" class="input" type="date" max=${today} value=${date} onInput=${(e) => setDate(e.target.value)} style=${{ width: 'auto', minHeight: '36px', padding: '4px 10px' }} />
+      <button class="btn btn-ghost btn-s" onClick=${() => date && log(date)} disabled=${busy || !date}>${t('Log that date')}</button>
+    </div>
   </div>`;
 }
 
@@ -206,6 +277,8 @@ export function GarmentSheet({ garment, onClose, caps }) {
         <div class="spread"><div><div class="label">${t('Waterproof')}</div><div class="hint">${t('Keeps you dry in the rain')}</div></div><${Switch} label=${t('Waterproof')} checked=${form.waterproof} onChange=${(v) => { setTouched((t) => ({ ...t, waterproof: true })); set({ waterproof: v }); }} /></div>
         <div class="spread"><div><div class="label">${t('Favourite')}</div><div class="hint">${t('Favourites are chosen more often')}</div></div><${Switch} label=${t('Favourite')} checked=${form.favorite} onChange=${(v) => set({ favorite: v })} /></div>
 
+        ${editing ? html`<${WearHistory} garment=${garment} />` : null}
+
         <div class="size-row">
           <div class="field"><label for="g-brand">${t('Brand')}</label><input id="g-brand" class="input" maxlength="40" value=${form.brand} onInput=${(e) => set({ brand: e.target.value })} /></div>
           <div class="field"><label for="g-notes">${t('Notes')}</label><input id="g-notes" class="input" maxlength="300" value=${form.notes} onInput=${(e) => set({ notes: e.target.value })} /></div>
@@ -220,6 +293,9 @@ export function ClosetView() {
   const q = useQuery();
   const [cat, setCat] = useState('all');
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState('recent');
+  const [idleOnly, setIdleOnly] = useState(false);
+  const today = todayLocal();
   const [sheet, setSheet] = useState(q.get('add') ? 'add' : null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -237,14 +313,21 @@ export function ClosetView() {
     return c;
   }, [garments]);
 
+  const dormant = useMemo(() => dormantPieces(garments || [], today), [garments, today]);
+  const dormantIds = useMemo(() => new Set(dormant.map((g) => g.id)), [dormant]);
+
   const shown = useMemo(() => {
     const term = search.trim().toLowerCase();
-    return (garments || []).filter((g) => (cat === 'all' || g.category === cat) && (!term || `${g.name} ${g.brand} ${t(TYPES[g.type]?.label || '')} ${t(g.colorName || '')}`.toLowerCase().includes(term)));
-  }, [garments, cat, search]);
+    const list = (garments || []).filter((g) => (cat === 'all' || g.category === cat) && (!idleOnly || dormantIds.has(g.id)) && (!term || `${g.name} ${g.brand} ${t(TYPES[g.type]?.label || '')} ${t(g.colorName || '')}`.toLowerCase().includes(term)));
+    if (sort === 'idle') return [...list].sort((a, b) => idleInfo(b, today).days - idleInfo(a, today).days);
+    if (sort === 'worn') return [...list].sort((a, b) => b.wearCount - a.wearCount);
+    return list;
+  }, [garments, cat, search, sort, idleOnly, dormantIds, today]);
 
   const limit = entitlements?.closetLimit;
   const full = limit != null && (garments?.length || 0) >= limit;
   const openAdd = () => (full ? openUpgrade('closet') : setSheet('add'));
+  const openBulk = () => (full ? openUpgrade('closet') : setSheet('bulk'));
 
   const remove = async (g) => {
     if (!confirm(t('Remove “{name}” from your closet?', { name: g.name }))) return;
@@ -265,6 +348,17 @@ export function ClosetView() {
       fail(e);
     }
   };
+
+  const wearToday = async (g) => {
+    try {
+      const { garment } = await api.post(`/garments/${g.id}/worn`, { date: today });
+      upsertGarment(garment);
+      toast(t('Logged. {name} is back in rotation.', { name: g.name }));
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const styleIt = (g) => navigate(`/?with=${g.id}`);
 
   const starter = async () => {
     setBusy(true);
@@ -288,16 +382,22 @@ export function ClosetView() {
         <h1 class="display h-xl">${t('Your closet')}</h1>
         <p class="muted">${limit != null ? t('{count} of {limit} pieces on the free plan', { count: garments.length, limit }) : tn(garments.length, '{n} piece', '{n} pieces')}</p>
       </div>
-      <button class="btn btn-primary" onClick=${openAdd}><${Icon} name="plus" />${t('Add a piece')}</button>
+      <div class="row-wrap">
+        <button class="btn btn-outline" onClick=${openBulk}><${Icon} name="upload" />${t('Add several')}</button>
+        <button class="btn btn-primary" onClick=${openAdd}><${Icon} name="plus" />${t('Add a piece')}</button>
+      </div>
     </header>
 
     ${full ? html`<div class="upsell enter"><div class="grow"><b>${t('Your closet is full')}</b><p>${t('Pro has no limit, so every piece you own can be part of an outfit.')}</p></div><button class="btn btn-s" onClick=${() => openUpgrade('closet')}>${t('See Pro')}</button></div>` : null}
+
+    ${dormant.length && garments.length ? html`<${Forgotten} pieces=${dormant} onWear=${wearToday} onStyle=${styleIt} onShow=${() => { setCat('all'); setSearch(''); setIdleOnly(true); setSort('idle'); }} />` : null}
 
     ${garments.length === 0
       ? html`<${Empty} title=${t('Nothing here yet')} text=${t('Start with a starter wardrobe to see the outfits right away, or add your own pieces one by one. A photo is optional: we can pick the colour from it.')}
           art=${html`<${GarmentArt} type="shirt" color="#8fa9c8" /><${GarmentArt} type="chinos" color="#a39a6a" /><${GarmentArt} type="loafers" color="#6b4a32" />`}>
           <div class="row-wrap" style=${{ justifyContent: 'center' }}>
             <button class="btn btn-primary" onClick=${openAdd}><${Icon} name="plus" />${t('Add a piece')}</button>
+            <button class="btn btn-outline" onClick=${openBulk}><${Icon} name="upload" />${t('Add several photos at once')}</button>
             <button class="btn btn-outline" onClick=${starter} disabled=${busy}>${busy ? html`<${Spinner} />` : null}${t('Start with a starter wardrobe')}</button>
           </div>
         </${Empty}>`
@@ -309,12 +409,22 @@ export function ClosetView() {
           <div class="chips-scroll" role="group" aria-label=${t('Filter by category')}>
             <button class="chip" aria-pressed=${cat === 'all' ? 'true' : 'false'} onClick=${() => setCat('all')}>All ${counts.all}</button>
             ${CAT_ORDER.filter((c) => counts[c]).map((c) => html`<button key=${c} class="chip" aria-pressed=${cat === c ? 'true' : 'false'} onClick=${() => setCat(c)}>${t(CATEGORIES[c].label)} ${counts[c]}</button>`)}
+            ${dormant.length ? html`<button class="chip chip-idle" aria-pressed=${idleOnly ? 'true' : 'false'} onClick=${() => setIdleOnly((v) => !v)}><${Icon} name="clock" size="14" />${t('Not worn lately')} ${dormant.length}</button>` : null}
+          </div>
+          <div class="row" style=${{ gap: '8px', alignItems: 'center' }}>
+            <label class="small muted" for="closet-sort">${t('Sort by')}</label>
+            <select id="closet-sort" class="select" style=${{ width: 'auto', minHeight: '36px', padding: '4px 36px 4px 12px' }} value=${sort} onChange=${(e) => setSort(e.target.value)}>
+              <option value="recent">${t('Recently added')}</option>
+              <option value="idle">${t('Longest unworn')}</option>
+              <option value="worn">${t('Most worn')}</option>
+            </select>
           </div>
         </div>
         ${shown.length
-          ? html`<div class="grid wide">${shown.map((g) => html`<${Tile} key=${g.id} g=${g} onOpen=${(x) => setSheet(x)} onFav=${fav} onRemove=${remove} />`)}<button class="tile tile-add" onClick=${openAdd}><${Icon} name="plus" /><span>${t('Add a piece')}</span></button></div>`
+          ? html`<div class="grid wide">${shown.map((g) => html`<${Tile} key=${g.id} g=${g} today=${today} onOpen=${(x) => setSheet(x)} onFav=${fav} onRemove=${remove} />`)}<button class="tile tile-add" onClick=${openAdd}><${Icon} name="plus" /><span>${t('Add a piece')}</span></button></div>`
           : html`<${Empty} title=${t('No matches')} text=${t('Try a different search or category.')} />`}`}
 
-    ${sheet ? html`<${GarmentSheet} garment=${sheet === 'add' ? null : sheet} caps=${{ vision: capabilities.vision && entitlements?.photoTagging, cutoutService: capabilities.cutoutService && entitlements?.photoTagging }} onClose=${() => setSheet(null)} />` : null}
+    ${sheet === 'bulk' ? html`<${BulkAddSheet} room=${limit != null ? Math.max(0, limit - garments.length) : null} vision=${Boolean(capabilities.vision && entitlements?.photoTagging)} onClose=${() => setSheet(null)} />` : null}
+    ${sheet && sheet !== 'bulk' ? html`<${GarmentSheet} garment=${sheet === 'add' ? null : sheet} caps=${{ vision: capabilities.vision && entitlements?.photoTagging, cutoutService: capabilities.cutoutService && entitlements?.photoTagging }} onClose=${() => setSheet(null)} />` : null}
   </div>`;
 }

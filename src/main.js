@@ -27,6 +27,8 @@ const server = app.listen(config.port, config.host, () => {
   });
 });
 
+deps.reminders.start();
+
 // housekeeping: expired sessions and AI cache
 const sweep = setInterval(() => {
   try {
@@ -44,6 +46,7 @@ function shutdown(signal) {
   log.info('server.stopping', { signal });
   server.close(() => {
     clearInterval(sweep);
+    deps.reminders.stop();
     deps.db.close();
     process.exit(0);
   });

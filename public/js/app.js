@@ -15,6 +15,7 @@ import { AuthView } from '/js/views/auth.js';
 import { WelcomeView } from '/js/views/welcome.js';
 import { ProView } from '/js/views/pro.js';
 import { PrivacyView, TermsView } from '/js/views/legal.js';
+import { UnsubscribeView } from '/js/views/unsubscribe.js';
 import { AdminView } from '/js/views/admin.js';
 
 const NAV = [
@@ -24,7 +25,7 @@ const NAV = [
   ['/shop', L('Shop'), 'bag'],
   ['/style', L('You'), 'user']
 ];
-const PUBLIC = new Set(['/login', '/register', '/forgot', '/reset', '/privacy', '/terms', '/pro']);
+const PUBLIC = new Set(['/login', '/register', '/forgot', '/reset', '/privacy', '/terms', '/pro', '/unsubscribe']);
 const TITLES = { '/': L('Today'), '/week': L('The week ahead'), '/closet': L('Your closet'), '/shop': L('Shop'), '/style': L('You'), '/pro': L('Pro'), '/privacy': L('Privacy'), '/terms': L('Terms'), '/login': L('Sign in'), '/register': L('Create account'), '/welcome': L('Welcome'), '/admin': L('Business') };
 
 function Splash() {
@@ -108,6 +109,7 @@ export function App() {
   else if (path === '/reset') page = html`<${AuthView} mode="reset" />`;
   else if (path === '/privacy') page = html`<${PublicPage}><${PrivacyView} /></${PublicPage}>`;
   else if (path === '/terms') page = html`<${PublicPage}><${TermsView} /></${PublicPage}>`;
+  else if (path === '/unsubscribe') page = html`<${PublicPage}><${UnsubscribeView} /></${PublicPage}>`;
   else if (!user) page = html`<${Splash} />`;
   else if (path === '/welcome') page = html`<${WelcomeView} />`;
   else if (path === '/pro') page = html`<${Shell} path=${path}><${ProView} /></${Shell}>`;

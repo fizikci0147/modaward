@@ -10,6 +10,12 @@ import { hexToRgb, swatch, nearestSwatch } from '../shared/color.js';
 
 const GENDERS = { men: ['men', 'unisex'], women: ['women', 'unisex'], unisex: ['men', 'women', 'unisex'] };
 
+const productRow = (r) => ({
+  id: r.id, retailer: r.retailer, sku: r.sku, title: r.title, brand: r.brand, url: r.url, imageUrl: r.image_url,
+  priceCents: r.price_cents, currency: r.currency, category: r.category, type: r.type, color: r.color, gender: r.gender,
+  inStock: Boolean(r.in_stock), updatedAt: r.updated_at
+});
+
 /** @param {import('../db/index.js').Db} db */
 export function createCatalog(db) {
   const isEmpty = () => db.get('SELECT 1 AS x FROM catalog_products LIMIT 1') === undefined;
@@ -18,6 +24,24 @@ export function createCatalog(db) {
     isEmpty,
     count: () => db.get('SELECT COUNT(*) AS n FROM catalog_products WHERE in_stock = 1').n,
     byRetailer: () => db.all('SELECT retailer, COUNT(*) AS n FROM catalog_products WHERE in_stock = 1 GROUP BY retailer ORDER BY n DESC'),
+
+    /** A page of products for the admin screen, newest first. */
+    list({ retailer, q, limit = 40, offset = 0 } = {}) {
+      const where = [];
+      const args = [];
+      if (retailer) (where.push('retailer = ?'), args.push(retailer));
+      if (q) {
+        where.push("(title LIKE ? ESCAPE '\\' OR brand LIKE ? ESCAPE '\\')");
+        const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+        args.push(like, like);
+      }
+      const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
+      const total = db.get(`SELECT COUNT(*) AS n FROM catalog_products ${clause}`, ...args).n;
+      const rows = db.all(`SELECT * FROM catalog_products ${clause} ORDER BY updated_at DESC, id LIMIT ? OFFSET ?`, ...args, limit, offset);
+      return { total, products: rows.map(productRow) };
+    },
+    setStock: (id, inStock) => db.run('UPDATE catalog_products SET in_stock = ?, updated_at = ? WHERE id = ?', inStock ? 1 : 0, now(), id).changes,
+    remove: (id) => db.run('DELETE FROM catalog_products WHERE id = ?', id).changes,
 
     /** Insert or update products. Returns counts. */
     upsert(rows) {

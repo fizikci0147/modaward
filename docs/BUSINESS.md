@@ -57,6 +57,8 @@ node scripts/import-feed.mjs --retailer hm --file hm-feed.csv --full-sync
 node scripts/import-feed.mjs --retailer zara --file zara.csv --map title=product_name,url=deeplink
 ```
 
+**No command line? Use the browser.** *Business → Products* does the same job: choose the store, pick the feed file (up to 10 MB), look at the preview (what will be imported, what is skipped and why, a few sample photos), then import. You can also add a single hand-picked product there: paste the product page address (your affiliate link works) and the photo address the network gives you. Feeds bigger than 10 MB, and nightly refreshes, still use the command line.
+
 The importer infers garment type, colour, gender and pattern from the text, **skips what it cannot place** (and says why) rather than guessing, and only accepts `https` links and images. Run it nightly from a cron job per retailer. Product images are loaded from the retailer's servers; use them only as your network's terms allow.
 
 ### Disclosure (required)
@@ -83,6 +85,10 @@ Run the numbers on your own plan: *(average paid AI calls per Pro user per month
 1. Switch to a cheaper model with one setting: `AI_MODEL=claude-sonnet-5-5` (about half the price) or `claude-haiku-4-5` (cheaper still). Curation is a simple ranking-plus-copy task, so a smaller model is usually enough: compare a week of notes yourself.
 2. Lower `AI_DAILY_LIMIT`.
 3. Watch real usage in `/admin` (AI calls today) and the `ai_usage` table (calls and tokens per user per day).
+
+### Photo recognition when people add many pieces at once
+
+*Add several pieces* sends small thumbnails, six per model call, so recognising a 36-piece closet is six calls (one call counts once against `AI_DAILY_LIMIT`, default 12 per person per day, so up to 72 photos a day). It is a Pro feature; without it people choose each piece's type and still add them in one go.
 
 ## 5. Numbers to watch
 

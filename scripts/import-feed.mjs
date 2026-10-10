@@ -19,7 +19,7 @@ import path from 'node:path';
 import { loadConfig } from '../src/config.js';
 import { openDb } from '../src/db/index.js';
 import { createCatalog } from '../src/shop/catalog.js';
-import { parseCsv, detectDelimiter, mapFeed } from '../src/shop/feed.js';
+import { rowsFromText, mapFeed } from '../src/shop/feed.js';
 import { RETAILER_IDS } from '../src/shop/retailers.js';
 
 const args = process.argv.slice(2);
@@ -42,14 +42,7 @@ if (!RETAILER_IDS.includes(retailer)) {
 
 const map = Object.fromEntries((opt('map') || '').split(',').filter(Boolean).map((p) => p.split('=')));
 const text = fs.readFileSync(path.resolve(file), 'utf8');
-let rows;
-if (/\.json$/i.test(file)) {
-  const json = JSON.parse(text);
-  const list = Array.isArray(json) ? json : json.products ?? json.items ?? [];
-  rows = list.map((o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k.toLowerCase(), v == null ? '' : String(v)])));
-} else {
-  rows = parseCsv(text, detectDelimiter(text));
-}
+const rows = rowsFromText(text, { format: /\.json$/i.test(file) ? 'json' : 'auto' });
 
 const { products, skipped } = mapFeed(rows, { retailer, map, limit: opt('limit') ? Number(opt('limit')) : Infinity });
 console.log(`Read ${rows.length} rows → ${products.length} usable products, ${skipped.length} skipped.`);

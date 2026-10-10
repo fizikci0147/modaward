@@ -4,6 +4,22 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.4.0] · 2026-10-10
+
+### Added
+- **Not worn in a while.** Every piece shows when it was last worn ("Last worn 3 weeks ago", "Not worn yet · added 2 months ago"). Pieces idle for 60+ days (or never worn 3 weeks after being added) get an *Idle* tag, a **Not worn lately** filter, a **Sort by longest unworn** option, and a "Not worn in a while" card at the top of the closet with one-tap **Style it** and **Wore it today**. A piece's own screen has a wear history with *I wore it today* and back-dating. The outfit engine now gently brings forgotten pieces back and says so ("Brings back the navy polo, which you last wore 4 months ago").
+- **Style it**: outfits built around one chosen piece (from the closet).
+- **Add several pieces at once**: pick up to 40 photos; backgrounds are removed in the browser, and with the AI stylist on, Claude recognises the pieces (six photos per call, so a 36-photo closet is six calls). Everything lands on one review screen where you fix types or colours and add them all together. Without AI you choose the type for each piece and still add them in one go.
+- **Reminders**: a morning outfit at a time you choose, a Sunday-evening look at the week ahead, and a Saturday nudge about forgotten pieces. Delivered as **push notifications** (Android, desktop, and iPhone once added to the Home Screen) and/or **email** (off until the person turns it on; every email has an unsubscribe link). Follows each person's language and time zone. *You → Reminders* has a "Send me a test" button.
+- **Share an outfit as a picture** (1080×1350) from the Today screen, through the phone's share sheet or as a download.
+- **Business → Products**: add a hand-picked product (store, link, photo address, price, type, colour) or **upload an affiliate feed** (CSV, TSV or JSON) in the browser, preview what will be imported, then import. Browse, mark out of stock, or delete products.
+
+### Changed
+- Web push uses VAPID keys that are generated once and kept in the data folder, so it needs no setup. The optional `PUSH_ENABLED`, `VAPID_*` and `REMINDERS_*` settings are in `.env.example`.
+
+### Security
+- Push subscriptions are only accepted from the browser vendors' real push services, so the server can never be pointed at an arbitrary address.
+
 ## [5.3.0] · 2026-10-08
 
 ### Added

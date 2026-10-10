@@ -41,6 +41,17 @@ export function parseCsv(text, delimiter = ',') {
   return rows.slice(1).map((r) => Object.fromEntries(header.map((h, i) => [h, (r[i] ?? '').trim()])));
 }
 
+/** Rows (lower-cased column names) from the text of a CSV/TSV or JSON feed. */
+export function rowsFromText(text, { format = 'auto' } = {}) {
+  const head = text.trimStart()[0];
+  if (format === 'json' || (format === 'auto' && (head === '[' || head === '{'))) {
+    const json = JSON.parse(text);
+    const list = Array.isArray(json) ? json : json.products ?? json.items ?? [];
+    return list.map((o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k.toLowerCase(), v == null ? '' : String(v)])));
+  }
+  return parseCsv(text, detectDelimiter(text));
+}
+
 export function detectDelimiter(text) {
   const first = text.slice(0, 2000).split(/\r?\n/)[0] ?? '';
   const counts = { ',': 0, '\t': 0, '|': 0, ';': 0 };

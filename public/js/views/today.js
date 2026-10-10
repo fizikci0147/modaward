@@ -9,21 +9,22 @@ import { LocationPicker, Empty, Spinner } from '/js/components/common.js';
 import { GarmentArt } from '/js/components/art.js';
 import { OCCASIONS } from '/shared/taxonomy.js';
 import { greeting } from '/js/format.js';
-import { navigate } from '/js/router.js';
+import { navigate, useQuery } from '/js/router.js';
+import { shareOutfit } from '/js/share.js';
 
 const occasionOptions = () => Object.entries(OCCASIONS).map(([id, o]) => ({ id, label: t(o.label) }));
 
 /** Loads (and reloads) outfits for one day/occasion. */
-export function useOutfits(date, occasion, seed, excludeIds = []) {
+export function useOutfits(date, occasion, seed, excludeIds = [], featureId = null) {
   const [s, setS] = useState({ loading: true, error: null, data: null });
   useEffect(() => {
     const ctl = new AbortController();
     setS((p) => ({ ...p, loading: true, error: null }));
-    api.post('/outfits/recommend', { date, occasion, seed: String(seed), count: 3, ...(excludeIds.length ? { excludeIds } : {}) }, { signal: ctl.signal })
+    api.post('/outfits/recommend', { date, occasion, seed: String(seed), count: 3, ...(excludeIds.length ? { excludeIds } : {}), ...(featureId ? { featureId } : {}) }, { signal: ctl.signal })
       .then((data) => setS({ loading: false, error: null, data }))
       .catch((error) => error.name !== 'AbortError' && setS({ loading: false, error, data: null }));
     return () => ctl.abort();
-  }, [date, occasion, seed, excludeIds.join(',')]);
+  }, [date, occasion, seed, excludeIds.join(','), featureId]);
   return [s, setS];
 }
 
@@ -77,7 +78,15 @@ export function TodayView() {
   const [dropped, setDropped] = useState([]);
   const [skipped, setSkipped] = useState([]); // pieces left out of today's suggestions: [{id, name}]
   const hasLocation = Boolean(profile?.location);
-  const [s, setS] = useOutfits(undefined, occasion, hasLocation ? seed : 'x', skipped.map((p) => p.id));
+  // "Style it" from the closet: build outfits around one piece
+  const [featureId, setFeatureId] = useState(() => useQuery().get('with'));
+  const clearFeature = () => { setFeatureId(null); navigate('/', { replace: true }); };
+  const feature = featureId ? (state.garments || []).find((g) => g.id === featureId) : null;
+  const [s, setS] = useOutfits(undefined, occasion, hasLocation ? seed : 'x', skipped.map((p) => p.id), featureId);
+
+  useEffect(() => {
+    if (featureId && !state.garments) loadCloset().catch(() => {});
+  }, [featureId]);
 
   useEffect(() => {
     sessionStorage.setItem('mw.occasion', occasion);
@@ -141,6 +150,14 @@ export function TodayView() {
     }
     if (outfits.length <= 1) setSeed((x) => x + 1);
   };
+  const share = async () => {
+    try {
+      const how = await shareOutfit({ outfit, weather: data.weather.day, date, units: data.weather.units });
+      if (how === 'saved') toast(t('Picture saved. Share it anywhere.'));
+    } catch {
+      toast(t('Could not make the picture. Please try again.'), { kind: 'err' });
+    }
+  };
   const swap = (item) => {
     setSkipped((list) => (list.some((p) => p.id === item.id) ? list : [...list, { id: item.id, name: item.name }]));
     setIndex(0);
@@ -184,13 +201,20 @@ export function TodayView() {
       ${occasionOptions().map((o) => html`<button key=${o.id} class="chip" aria-pressed=${occasion === o.id ? 'true' : 'false'} onClick=${() => setOccasion(o.id)}>${o.label}</button>`)}
     </div>
 
+    ${featureId
+      ? html`<div class="feature-banner enter"><span class="grow">${feature ? t('Outfits built around {name}', { name: feature.name }) : t('Outfits built around one piece')}</span><button class="btn btn-ghost btn-s" onClick=${clearFeature}><${Icon} name="x" size="14" />${t('All outfits')}</button></div>`
+      : null}
+    ${data?.featureMissing && featureId
+      ? html`<div class="card card-pad stack center"><p>${t('This piece doesn’t suit today’s weather or occasion. Try another occasion, or come back on a different day.')}</p><div><button class="btn btn-outline" onClick=${clearFeature}>${t('Show my usual outfits')}</button></div></div>`
+      : null}
+
     ${s.loading && !data ? html`<${Skeleton} />` : null}
     ${s.error
       ? s.error.code === 'location_required'
         ? html`<${NoLocation} />`
         : html`<div class="card card-pad stack center"><p>${s.error.message}</p><div><button class="btn btn-outline" onClick=${() => setSeed((x) => x + 1)}>${t('Try again')}</button></div></div>`
       : null}
-    ${data && !outfit && skipped.length
+    ${data && !outfit && data.featureMissing ? null : data && !outfit && skipped.length
       ? html`<div class="card card-pad stack center"><p>${t('There are no other outfits without {names}.', { names: skipped.map((p) => p.name).join(', ') })}</p><div><button class="btn btn-outline" onClick=${() => setSkipped([])}>${t('Bring them back')}</button></div></div>`
       : data && !outfit ? html`<${EmptyCloset} missing=${data.missing} onDone=${() => setSeed((x) => x + 1)} />` : null}
     ${outfit
@@ -208,6 +232,7 @@ export function TodayView() {
             onLove=${love}
             onDislike=${dislike}
             onSwap=${swap}
+            onShare=${share}
             onShuffle=${() => setSeed((x) => x + 1)} />
         </div>`
       : null}

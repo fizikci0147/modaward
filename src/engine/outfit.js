@@ -10,6 +10,7 @@
 import { OCCASIONS, withDefaults } from '../shared/taxonomy.js';
 import { L } from '../shared/i18n.js';
 import { colorName } from '../shared/color.js';
+import { DORMANT_DAYS, agoText } from '../shared/dormancy.js';
 import { cToF } from '../shared/weather-codes.js';
 import { buildContext, dayTips, fmtHour } from './context.js';
 import { requiredInsulation } from './thermal.js';
@@ -351,7 +352,10 @@ function explain({ parts, scores, ctx, occasion, prefs, units }) {
     warnings.push(t('Some pieces here are much dressier than others.'));
   }
 
-  if (scores.fresh >= 0.97 && mainPieces(parts).some((g) => !g.wearCount)) {
+  const forgotten = [...mainPieces(parts), parts.outer].filter((g) => g && g.wearCount > 0 && (g.idleDays ?? 0) >= DORMANT_DAYS).sort((a, b) => b.idleDays - a.idleDays)[0];
+  if (forgotten) {
+    reasons.push({ kind: 'fresh', text: t('Brings back {item}, which you last wore {when}.', { item: lower(forgotten.name), when: agoText(forgotten.idleDays, locale) }) });
+  } else if (scores.fresh >= 0.97 && mainPieces(parts).some((g) => !g.wearCount)) {
     reasons.push({ kind: 'fresh', text: t('Includes pieces you have not worn yet.') });
   }
   if (scores.color.score < 0.5 && scores.color.note) warnings.push(`${t(scores.color.note)}.`);
@@ -426,6 +430,10 @@ export function recommend(args) {
     .filter((g) => g.category === 'accessory')
     .map((g) => ({ ...g, _accFn: g.accFn }));
 
+  const featureId = args.featureId ?? null;
+  const feature = featureId ? garments.find((g) => g.id === featureId) : null;
+  if (featureId && !feature) return { outfits: [], tips, context: summary, missing: [], featureMissing: true };
+
   const results = generate({
     garments: garments.filter((g) => g.category !== 'accessory'),
     ctx,
@@ -434,14 +442,21 @@ export function recommend(args) {
     lastWorn,
     avoid: args.avoid || new Map(),
     recentKeys,
-    rand
+    rand,
+    mustKeep: feature ? (g) => g.id === featureId : undefined,
+    // rank the combinations that wear the chosen piece first, so they survive the shortlist
+    coreBonus: feature ? (core) => ([...core.upper, core.bottom, core.dress].some((g) => g?.id === featureId) ? 1 : 0) : undefined
   });
 
   const blocked = args.blockedKeys;
-  const allowed = blocked?.size ? results.filter((r) => !blocked.has(r.key)) : results;
+  let allowed = blocked?.size ? results.filter((r) => !blocked.has(r.key)) : results;
+  // "style this piece": only outfits that wear it (an accessory is added to the best outfits instead)
+  if (feature && feature.category !== 'accessory') allowed = allowed.filter((r) => itemIds(r.parts).includes(featureId));
   const chosen = pickDiverse(allowed, args.count ?? 3);
   const outfits = chosen.map((r) => {
-    const parts = { ...r.parts, accessories: pickAccessories(r.parts, ctx, occasion, prefs, accessories, rand) };
+    let accs = pickAccessories(r.parts, ctx, occasion, prefs, accessories, rand);
+    if (feature?.category === 'accessory' && !accs.some((a) => a.id === featureId)) accs = [...accs.slice(0, 3), accessories.find((a) => a.id === featureId)];
+    const parts = { ...r.parts, accessories: accs };
     const env = { ctx, occasion, prefs, lastWorn, avoid: args.avoid || new Map(), recentKeys, key: r.key };
     const scores = scoreParts(parts, env);
     const { reasons, warnings } = explain({ parts, scores, ctx, occasion, prefs, units });
@@ -467,7 +482,7 @@ export function recommend(args) {
 
   // accessories shift scores slightly, so order by the final number
   outfits.sort((a, b) => b.score - a.score);
-  return { outfits, tips, context: summary, missing: [] };
+  return { outfits, tips, context: summary, missing: [], featureMissing: Boolean(feature) && outfits.length === 0 };
 }
 
 export { requiredInsulation };

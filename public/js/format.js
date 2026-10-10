@@ -29,3 +29,9 @@ export function greeting(hour, name) {
 export const cx = (...parts) => parts.filter(Boolean).join(' ');
 export const initials = (name = '') => name.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '·';
 export const cap = (s = '') => s.charAt(0).toUpperCase() + s.slice(1);
+
+/** Today's date in the device's own time zone, as YYYY-MM-DD. */
+export const todayLocal = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};

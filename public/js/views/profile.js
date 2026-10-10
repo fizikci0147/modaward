@@ -11,6 +11,7 @@ import { PALETTE } from '/shared/color.js';
 import { DEPARTMENTS, AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, BUDGET_CATEGORIES } from '/shared/profile.js';
 import { cap, weekdayShort } from '/js/format.js';
 import { navigate } from '/js/router.js';
+import { RemindersSection } from '/js/views/reminders.js';
 
 /** Sample board for each style archetype: drawn, not photographed. */
 const SAMPLE = {
@@ -283,6 +284,7 @@ const SECTIONS = [
   ['about', L('About you'), 'user', (c) => c.next.every((n) => n.key !== 'location')],
   ['fit', L('Sizes & fit'), 'sliders', (c) => c.next.every((n) => n.key !== 'sizes')],
   ['life', L('Lifestyle & budget'), 'bag', (c) => c.next.every((n) => n.key !== 'lifestyle')],
+  ['reminders', L('Reminders'), 'bell', () => true],
   ['account', L('Account & plan'), 'settings', () => true]
 ];
 
@@ -320,13 +322,14 @@ export function ProfileView() {
     </header>
     <div class="profile-grid">
       <nav class="profile-nav" aria-label=${t('Profile sections')}>
-        ${SECTIONS.map(([id, label, icon, done]) => html`<button key=${id} class="pn" aria-current=${section === id ? 'true' : 'false'} onClick=${() => jump(id)}><${Icon} name=${icon} size="18" />${t(label)}${id !== 'account' ? html`<span class=${`done ${done(c) ? 'y' : ''}`} aria-hidden="true"></span>` : null}</button>`)}
+        ${SECTIONS.map(([id, label, icon, done]) => html`<button key=${id} class="pn" aria-current=${section === id ? 'true' : 'false'} onClick=${() => jump(id)}><${Icon} name=${icon} size="18" />${t(label)}${id !== 'account' && id !== 'reminders' ? html`<span class=${`done ${done(c) ? 'y' : ''}`} aria-hidden="true"></span>` : null}</button>`)}
       </nav>
       <div key=${section}>
         ${section === 'style' ? html`<${StyleSection} profile=${profile} />` : null}
         ${section === 'about' ? html`<${AboutSection} profile=${profile} />` : null}
         ${section === 'fit' ? html`<${SizesFitSection} profile=${profile} />` : null}
         ${section === 'life' ? html`<${LifestyleBudget} profile=${profile} />` : null}
+        ${section === 'reminders' ? html`<${RemindersSection} />` : null}
         ${section === 'account' ? html`<${AccountSection} user=${user} entitlements=${entitlements} capabilities=${capabilities} />` : null}
       </div>
     </div>

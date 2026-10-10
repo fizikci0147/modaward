@@ -581,3 +581,55 @@ ul { margin: 0; padding: 0; list-style: none; }
 .narrow-text { max-width: 36ch; }
 
 .piece-row .nm { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* ── not worn in a while ── */
+.tile-idle.dormant { color: var(--warn); font-weight: 500; }
+.idle-pill { position: absolute; top: 9px; left: 9px; display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px 3px 6px; border-radius: 999px; font-size: 11px; font-weight: 600; background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--warn); backdrop-filter: blur(6px); border: 1px solid color-mix(in srgb, var(--warn) 35%, transparent); }
+.chip-idle { display: inline-flex; align-items: center; gap: 6px; }
+.idle-warn { color: var(--warn); }
+.forgotten-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(150px, 170px); gap: 14px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x proximity; }
+.forgotten-item { display: grid; gap: 6px; align-content: start; scroll-snap-align: start; }
+.forgotten-art { aspect-ratio: 1; border-radius: var(--radius-m); background: var(--board); display: grid; place-items: center; overflow: hidden; }
+.forgotten-art img { width: 100%; height: 100%; object-fit: cover; }
+.forgotten-art img.cutout { object-fit: contain; padding: 9%; }
+.forgotten-art svg { width: 82%; height: 82%; }
+.forgotten-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.feature-banner { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: var(--radius-m); background: var(--surface-2); border: 1px solid var(--line); font-weight: 500; }
+
+/* ── add several pieces at once ── */
+.bulk-drop { aspect-ratio: auto; min-height: 0; padding: 24px 16px; display: grid; justify-items: center; gap: 6px; text-align: center; }
+.bulk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 14px; }
+.bulk-card { display: grid; gap: 10px; align-content: start; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-m); background: var(--surface); min-width: 0; }
+.bulk-card.need { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.bulk-photo { position: relative; aspect-ratio: 1; border-radius: var(--radius-s); background: var(--board); display: grid; place-items: center; overflow: hidden; }
+.bulk-photo img { width: 100%; height: 100%; object-fit: cover; }
+.bulk-photo img.cutout { object-fit: contain; padding: 8%; }
+.bulk-photo svg { width: 70%; height: 70%; }
+.bulk-wait { display: grid; place-items: center; }
+.bulk-x { position: absolute; top: 6px; right: 6px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--surface) 88%, transparent); backdrop-filter: blur(6px); }
+.bulk-badge { position: absolute; left: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: color-mix(in srgb, var(--surface) 90%, transparent); color: var(--ink-2); }
+.bulk-badge.ok { color: var(--ok); }
+.bulk-color { position: relative; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--surface); box-shadow: 0 0 0 1px var(--line-2); overflow: hidden; cursor: pointer; flex: none; }
+.bulk-color input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+.bulk-colorname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── reminders ── */
+.rem-row { gap: 16px; align-items: center; padding: 6px 0; }
+.rem-time { gap: 10px; padding-left: 2px; align-items: center; }
+.rem-tip { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: var(--radius-m); background: var(--surface-2); color: var(--ink-2); }
+.rem-tip svg { flex: none; margin-top: 2px; }
+
+/* ── admin: products ── */
+.prod-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+.prod-form .span2 { grid-column: span 2; }
+@media (max-width: 520px) { .prod-form .span2 { grid-column: auto; } }
+.prod-thumb { width: 64px; height: 64px; object-fit: cover; border-radius: var(--radius-s); background: var(--board); }
+.prod-samples { display: grid; grid-auto-flow: column; grid-auto-columns: 110px; gap: 12px; overflow-x: auto; }
+.prod-samples img { width: 110px; height: 130px; object-fit: cover; border-radius: var(--radius-s); background: var(--board); }
+.prod-list { display: grid; gap: 4px; }
+.prod-row { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+.prod-row img { width: 56px; height: 66px; object-fit: cover; border-radius: var(--radius-s); background: var(--board); }
+.prod-row.off { opacity: 0.55; }
+.prod-row a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 640px) { .prod-row { grid-template-columns: 56px minmax(0, 1fr); } .prod-row > .row { grid-column: 1 / -1; } }

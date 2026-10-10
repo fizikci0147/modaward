@@ -235,6 +235,8 @@ export function createRepos(db) {
         }
       });
     },
+    /** Remove one piece's wear entry for a date (the piece-level "I wore it" undo). */
+    unlogOne: (userId, garmentId, date) => db.run('DELETE FROM wear_log WHERE user_id = ? AND garment_id = ? AND worn_on = ?', userId, garmentId, date).changes,
     /** Undo "I wore this" for a date. */
     unlog: (userId, date) => db.run('DELETE FROM wear_log WHERE user_id = ? AND worn_on = ?', userId, date).changes,
     /** Freshness inputs for the engine, relative to `today`. */

@@ -344,6 +344,38 @@ describe('API', () => {
       assert.equal((await c.post('/api/outfits/feedback', { itemIds: [dropped.id], signal: 'dislike' })).status, 200);
     });
 
+    test('"style this piece" returns only outfits that wear it', async () => {
+      const { c } = await ready();
+      const base = (await c.post('/api/outfits/recommend', { occasion: 'casual', count: 3 })).json.outfits[0];
+      const piece = base.items.find((i) => i.category === 'top') || base.items[0];
+      const res = await c.post('/api/outfits/recommend', { occasion: 'casual', count: 3, featureId: piece.id });
+      assert.equal(res.status, 200);
+      assert.ok(res.json.outfits.length > 0);
+      for (const o of res.json.outfits) assert.ok(o.itemIds.includes(piece.id), 'feature piece must be in every outfit');
+      const none = await c.post('/api/outfits/recommend', { occasion: 'casual', featureId: '00000000-0000-4000-8000-000000000000' });
+      assert.equal(none.json.featureMissing, true);
+      assert.equal(none.json.outfits.length, 0);
+    });
+
+    test('logging a single piece as worn updates its last-worn date, and can be undone', async () => {
+      const { c } = await ready();
+      const g = (await c.get('/api/garments')).json.garments[0];
+      assert.equal(g.lastWornOn, null);
+      const logged = await c.post(`/api/garments/${g.id}/worn`, { date: '2026-08-01' });
+      assert.equal(logged.status, 200);
+      assert.equal(logged.json.garment.lastWornOn, '2026-08-01');
+      assert.equal(logged.json.garment.wearCount, 1);
+      // a later date wins
+      assert.equal((await c.post(`/api/garments/${g.id}/worn`, { date: '2026-09-15' })).json.garment.lastWornOn, '2026-09-15');
+      const undone = await c.del(`/api/garments/${g.id}/worn?date=2026-09-15`);
+      assert.equal(undone.json.garment.lastWornOn, '2026-08-01');
+      // validation
+      assert.equal((await c.post(`/api/garments/${g.id}/worn`, { date: 'yesterday' })).status, 400);
+      assert.equal((await c.post(`/api/garments/${g.id}/worn`, { date: '2001-01-01' })).status, 400);
+      assert.equal((await c.post(`/api/garments/${g.id}/worn`, { date: '2999-01-01' })).status, 400);
+      assert.equal((await c.post('/api/garments/00000000-0000-4000-8000-000000000000/worn', { date: '2026-08-01' })).status, 404);
+    });
+
     test('free plan limits planning to three days; other days are locked, not leaked', async () => {
       const { c } = await ready();
       const week = (await c.post('/api/plan', {})).json;

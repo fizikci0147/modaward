@@ -90,7 +90,8 @@ export function createApp(deps) {
   api.use(sessionAuth(repos));
   const big = express.json({ limit: '5mb' });
   const small = express.json({ limit: '100kb' });
-  api.use((req, res, next) => (/^\/(garments|ai|photos)(\/|$)/.test(req.path) ? big : small)(req, res, next));
+  const huge = express.json({ limit: '12mb' }); // admin feed imports only
+  api.use((req, res, next) => (req.path === '/admin/products/import' ? huge : /^\/(garments|ai|photos)(\/|$)/.test(req.path) ? big : small)(req, res, next));
   api.use(csrf(config));
 
   api.use('/auth', authRoutes({ ...deps, capabilities: deps.capabilities ?? {} }));

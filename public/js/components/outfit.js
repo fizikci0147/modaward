@@ -6,7 +6,7 @@ import { Spinner } from '/js/components/common.js';
 
 const REASON_ICON = { weather: 'thermo', protection: 'umbrella', style: 'heart', occasion: 'tag', color: 'sliders', fresh: 'sparkle' };
 
-export function OutfitCard({ outfit, occasionLabel, pager, worn, busy, onWear, onUndo, onLove, onDislike, onSwap, onShuffle, loved, compact = false, stylistNote }) {
+export function OutfitCard({ outfit, occasionLabel, pager, worn, busy, onWear, onUndo, onLove, onDislike, onSwap, onShuffle, onShare, loved, compact = false, stylistNote }) {
   const label = t('Outfit: {items}', { items: outfit.items.map((i) => i.name).join(', ') });
   return html`<article class="card outfit card-lift" aria-label=${label}>
     <div class="outfit-board">
@@ -44,6 +44,7 @@ export function OutfitCard({ outfit, occasionLabel, pager, worn, busy, onWear, o
             ? html`<button class="btn btn-outline" onClick=${onUndo} disabled=${busy}><${Icon} name="check" />${t('Wearing this today. Undo')}</button>`
             : html`<button class="btn btn-primary" onClick=${onWear} disabled=${busy}>${busy ? html`<${Spinner} />` : html`<${Icon} name="check" />`}${t('I’m wearing this')}</button>`}
         <button class="btn btn-ghost" onClick=${onShuffle}><${Icon} name="refresh" />${t('Show me others')}</button>
+        ${onShare ? html`<button class="btn btn-ghost" onClick=${onShare} aria-label=${t('Share this outfit as a picture')}><${Icon} name="share" />${t('Share')}</button>` : null}
       </div>
     </div>
   </article>`;

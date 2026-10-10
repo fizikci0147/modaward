@@ -41,6 +41,44 @@ const personSummary = (profile) => ({
   noteFromPerson: clean(profile.style?.notes, 400)
 });
 
+
+const TAG_SYSTEM = `You catalogue photos of single clothing items for a wardrobe app. Identify the garment type, its main colour, its pattern, and sensible warmth (0.5 very light to 5 very warm) and formality (1 athletic or lounge to 5 formal) ratings. Choose the closest type from the allowed list. If the photo does not show a garment, return type "tee" with confidence 0.`;
+
+const TAG_SCHEMA = {
+  type: 'object',
+  properties: {
+    type: { type: 'string', enum: TYPE_IDS },
+    color_hex: { type: 'string' },
+    pattern: { type: 'string', enum: PATTERNS },
+    name: { type: 'string' },
+    warmth: { type: 'number' },
+    formality: { type: 'number' },
+    waterproof: { type: 'boolean' },
+    confidence: { type: 'number' }
+  },
+  required: ['type', 'color_hex', 'pattern', 'name', 'warmth', 'formality', 'waterproof', 'confidence'],
+  additionalProperties: false
+};
+
+/** Validate and clamp one model answer into a suggestion, or null when it is unusable. */
+function normaliseTag(result) {
+  if (!result || !TYPES[result.type] || !isHex(result.color_hex) || !(result.confidence > 0.15)) return null;
+  const clamp = (v, lo, hi, step = 0.5) => Math.round(Math.max(lo, Math.min(hi, Number(v) || lo)) / step) * step;
+  const base = withDefaults({ type: result.type });
+  return {
+    type: result.type,
+    color: result.color_hex.toLowerCase(),
+    pattern: PATTERNS.includes(result.pattern) ? result.pattern : 'solid',
+    name: clean(result.name, 60),
+    warmth: Number.isFinite(result.warmth) ? clamp(result.warmth, 0.5, 5) : base.warmth,
+    formality: Number.isFinite(result.formality) ? clamp(result.formality, 1, 5) : base.formality,
+    waterproof: Boolean(result.waterproof),
+    confidence: Math.round(Math.max(0, Math.min(1, result.confidence)) * 100) / 100
+  };
+}
+
+export const MAX_TAG_BATCH = 6;
+
 const hash = (value) => crypto.createHash('sha256').update(JSON.stringify(value)).digest('hex').slice(0, 32);
 
 /** @param {{ai: ReturnType<import('./client.js').createAiClient> extends Promise<infer T> ? T : never, db: import('../db/index.js').Db, log: object}} deps */
@@ -173,42 +211,52 @@ const languageNote = (locale) => (LANGUAGE_NAME[locale] ? `\n\nWrite the headlin
         user,
         kind: 'vision_tag',
         effort: 'medium',
-        system: `You catalogue photos of single clothing items for a wardrobe app. Identify the garment type, its main colour, its pattern, and sensible warmth (0.5 very light to 5 very warm) and formality (1 athletic or lounge to 5 formal) ratings. Choose the closest type from the allowed list. If the photo does not show a garment, return type "tee" with confidence 0.`,
+        system: TAG_SYSTEM,
         content: [
           { type: 'image', source: { type: 'base64', media_type: info.mime, data: data.toString('base64') } },
           { type: 'text', text: 'Catalogue this item.' }
         ],
+        schema: TAG_SCHEMA
+      });
+      const tag = normaliseTag(result);
+      if (!tag) throw new HttpError(422, 'ai_unsure', 'We could not tell what that is from the photo. Pick the type yourself, it only takes a moment.');
+      return tag;
+    },
+
+    /**
+     * Catalogue several photos in one model call (one call of the daily allowance for up to
+     * MAX_BATCH photos). Returns one entry per photo, in order: a suggestion, or null when the
+     * model could not tell. Throws only when the whole call produced nothing.
+     */
+    async analyzeGarments({ user, imageDataUrls }) {
+      const decoded = imageDataUrls.map((u) => decodeDataUrl(u));
+      const content = [];
+      decoded.forEach(({ data, info }, i) => {
+        content.push({ type: 'text', text: `Photo ${i + 1}:` });
+        content.push({ type: 'image', source: { type: 'base64', media_type: info.mime, data: data.toString('base64') } });
+      });
+      content.push({ type: 'text', text: `Catalogue each of the ${decoded.length} photos above. Return one entry per photo, with its photo number in "index" (starting at 1).` });
+      const result = await ai.askJson({
+        user,
+        kind: 'vision_tag',
+        effort: 'medium',
+        system: `${TAG_SYSTEM} Each photo shows one item and the photos are numbered; answer for every photo.`,
+        content,
+        maxTokens: 6000,
         schema: {
           type: 'object',
-          properties: {
-            type: { type: 'string', enum: TYPE_IDS },
-            color_hex: { type: 'string' },
-            pattern: { type: 'string', enum: PATTERNS },
-            name: { type: 'string' },
-            warmth: { type: 'number' },
-            formality: { type: 'number' },
-            waterproof: { type: 'boolean' },
-            confidence: { type: 'number' }
-          },
-          required: ['type', 'color_hex', 'pattern', 'name', 'warmth', 'formality', 'waterproof', 'confidence'],
+          properties: { items: { type: 'array', items: { type: 'object', properties: { index: { type: 'integer' }, ...TAG_SCHEMA.properties }, required: ['index', ...TAG_SCHEMA.required], additionalProperties: false } } },
+          required: ['items'],
           additionalProperties: false
         }
       });
-      if (!result || !TYPES[result.type] || !isHex(result.color_hex) || !(result.confidence > 0.15)) {
-        throw new HttpError(422, 'ai_unsure', 'We could not tell what that is from the photo. Pick the type yourself, it only takes a moment.');
+      if (!result || !Array.isArray(result.items)) throw new HttpError(422, 'ai_unsure', 'We could not read those photos. Pick the types yourself, it only takes a moment.');
+      const out = decoded.map(() => null);
+      for (const entry of result.items) {
+        const i = Number(entry?.index) - 1;
+        if (Number.isInteger(i) && i >= 0 && i < out.length && !out[i]) out[i] = normaliseTag(entry);
       }
-      const clamp = (v, lo, hi, step = 0.5) => Math.round(Math.max(lo, Math.min(hi, Number(v) || lo)) / step) * step;
-      const base = withDefaults({ type: result.type });
-      return {
-        type: result.type,
-        color: result.color_hex.toLowerCase(),
-        pattern: PATTERNS.includes(result.pattern) ? result.pattern : 'solid',
-        name: clean(result.name, 60),
-        warmth: Number.isFinite(result.warmth) ? clamp(result.warmth, 0.5, 5) : base.warmth,
-        formality: Number.isFinite(result.formality) ? clamp(result.formality, 1, 5) : base.formality,
-        waterproof: Boolean(result.waterproof),
-        confidence: Math.round(Math.max(0, Math.min(1, result.confidence)) * 100) / 100
-      };
+      return out;
     }
   };
 }

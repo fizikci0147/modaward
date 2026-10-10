@@ -17,6 +17,9 @@ import { createLinker } from './shop/links.js';
 import { createCatalog } from './shop/catalog.js';
 import { createAiClient } from './ai/client.js';
 import { createStylist } from './ai/stylist.js';
+import { createPush } from './services/push.js';
+import { createReminders } from './services/reminders.js';
+import { reminderRoutes } from './http/routes/reminders.js';
 import { shopRoutes } from './http/routes/shop.js';
 import { photoRoutes } from './http/routes/photos.js';
 import { billingRoutes } from './http/routes/billing.js';
@@ -60,7 +63,10 @@ export async function createDeps(config, overrides = {}) {
   const deps = { config, db, repos, codes, log, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
   deps.outfits = createOutfitService({ repos, weather, config, stylist });
   deps.shop = createShopService({ repos, weather, catalog, linker, config, stylist });
-  for (const routes of [shopRoutes, photoRoutes, billingRoutes, aiRoutes, insightsRoutes, adminRoutes]) deps.extraApiRoutes.push((api) => api.use(routes(deps)));
+  deps.push = overrides.push === undefined ? await createPush(config, db, log, overrides.pushSender) : overrides.push;
+  deps.reminders = createReminders({ db, repos, outfits: deps.outfits, push: deps.push, mailer, config, log, secret: persistentSecret(config.dataDir, 'reminders') });
+  capabilities.push = Boolean(deps.push);
+  for (const routes of [shopRoutes, photoRoutes, billingRoutes, aiRoutes, insightsRoutes, adminRoutes, reminderRoutes]) deps.extraApiRoutes.push((api) => api.use(routes(deps)));
   return deps;
 }
 

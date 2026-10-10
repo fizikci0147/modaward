@@ -3,6 +3,7 @@
  * They are pure and cheap because the engine evaluates thousands of combinations per request.
  */
 import { L } from '../shared/i18n.js';
+import { DORMANT_DAYS } from '../shared/dormancy.js';
 import { OCCASIONS } from '../shared/taxonomy.js';
 import { harmony, colorName } from '../shared/color.js';
 import { thermalScore } from './thermal.js';
@@ -175,7 +176,9 @@ export function freshnessScore(parts, key, lastWornDaysAgo, avoid, recentOutfitK
   if (recentOutfitKeys.has(key)) score -= 0.5;
   // gently surface pieces that have not seen daylight
   const unloved = pieces.filter((g) => (g.wearCount ?? 0) === 0 && !lastWornDaysAgo.has(g.id)).length;
-  score += Math.min(0.08, unloved * 0.03);
+  // and bring back what has sat unworn for a long time (idleDays is set by the outfit service)
+  const forgotten = pieces.filter((g) => (g.wearCount ?? 0) > 0 && (g.idleDays ?? 0) >= DORMANT_DAYS && !lastWornDaysAgo.has(g.id)).length;
+  score += Math.min(0.08, unloved * 0.03 + forgotten * 0.03);
   return clamp01(score);
 }
 

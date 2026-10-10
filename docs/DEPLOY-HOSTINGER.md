@@ -54,7 +54,7 @@ Do **not** set `PORT` unless Hostinger tells you to: the platform provides it.
 
 Press **Start / Restart**, then open:
 
-- `https://yourdomain.com/health` → `{"ok":true,"version":"5.3.0","build":"5.3.0+1f3c33a",...}`. The version and build must match the name of the zip you uploaded (`modaward-5.3.0-1f3c33a.zip`); if they don't, the old code is still running
+- `https://yourdomain.com/health` → `{"ok":true,"version":"5.4.0","build":"5.4.0+abc1234",...}`. The version and build must match the name of the zip you uploaded (`modaward-5.4.0-abc1234.zip`); if they don't, the old code is still running
 - `https://yourdomain.com/` → the sign-in page. Create your account.
 
 On the server's SSH terminal you can also run the integration check once your keys are in place:
@@ -70,7 +70,8 @@ npm run live:check
 2. **Stripe (Pro subscriptions).** In Stripe create one product with two recurring prices (monthly, yearly). Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`. Add a webhook endpoint `https://yourdomain.com/api/billing/webhook` for the events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and copy its signing secret into `STRIPE_WEBHOOK_SECRET`. Enable the Customer Portal in Stripe settings. Test in Stripe test mode first (`npm run live:check` prints TEST mode).
 3. **Affiliate links and products.** See [BUSINESS.md](BUSINESS.md): join networks, set `AFFILIATE_CONFIG`, import product feeds.
 4. **AI stylist.** Set `ANTHROPIC_API_KEY`. Read the cost notes in BUSINESS.md first; the default per-user daily cap is 12 calls.
-5. **Background removal fallback (optional).** `REMOVEBG_API_KEY`.
+5. **Reminders (push and email).** Nothing to set up for push: keys are generated into `DATA_DIR/secrets` on first start (keep that folder in your backups, because devices subscribed with these keys stop receiving notifications if the keys change). Email reminders need the `SMTP_*` settings and `APP_URL`. The reminder timer runs inside the Node process, so the app must stay running (Business Cloud Node apps do; if your plan sleeps idle apps, reminders only go out while it is awake). Open *You → Reminders* and press "Send me a test". On iPhone, notifications work only after the person adds the app to the Home Screen.
+6. **Background removal fallback (optional).** `REMOVEBG_API_KEY`.
 
 ## 6. Updating
 

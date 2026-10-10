@@ -7,6 +7,7 @@ import { colorName } from '../../shared/color.js';
 import { notFound, badRequest } from '../../util/errors.js';
 import { assertCanAddGarments } from '../../services/plans.js';
 import { starterWardrobe } from '../../services/starter.js';
+import { daysBetween } from '../../shared/dormancy.js';
 
 const fields = {
   name: string({ min: 1, max: 80 }),
@@ -29,6 +30,16 @@ const createSchema = object({
 const patchSchema = partial({ ...fields, archived: boolean() });
 const photoSchema = object({ image: string({ min: 20, max: 5_000_000, trim: false }) });
 const starterSchema = object({ department: optional(oneOf(['men', 'women', 'unisex']), undefined) });
+
+const dateField = string({ pattern: /^\d{4}-\d{2}-\d{2}$/, patternMessage: 'must be a date like 2026-10-06', max: 10 });
+const wornSchema = object({ date: dateField });
+
+/** A wear date may be backdated up to three years, and at most a day ahead (time zones). */
+function assertPlausibleDate(date) {
+  const today = new Date().toISOString().slice(0, 10);
+  const ago = daysBetween(date, today);
+  if (Number.isNaN(ago) || ago < -1 || ago > 3 * 365) throw badRequest('That date is out of range.');
+}
 
 const ID_RE = /^[0-9a-f-]{36}$/;
 const idParam = (req) => {
@@ -95,6 +106,24 @@ export function garmentRoutes({ config, repos, images }) {
     if (removedImage === null) throw notFound('That item was not found.');
     if (removedImage) images.remove(removedImage);
     res.json({ ok: true });
+  });
+
+  // "I wore this piece": log (or back-date) a single piece without picking a whole outfit
+  r.post('/garments/:id/worn', (req, res) => {
+    const id = idParam(req);
+    const { date } = wornSchema(req.body);
+    assertPlausibleDate(date);
+    if (!repos.garments.get(req.user.id, id)) throw notFound('That item was not found.');
+    repos.wear.log(req.user.id, { garmentIds: [id], date, outfitKey: `piece:${id}`, occasion: null });
+    res.json({ garment: repos.garments.get(req.user.id, id) });
+  });
+
+  r.delete('/garments/:id/worn', (req, res) => {
+    const id = idParam(req);
+    const { date } = wornSchema({ date: req.query.date });
+    if (!repos.garments.get(req.user.id, id)) throw notFound('That item was not found.');
+    repos.wear.unlogOne(req.user.id, id, date);
+    res.json({ garment: repos.garments.get(req.user.id, id) });
   });
 
   r.put('/garments/:id/photo', (req, res) => {

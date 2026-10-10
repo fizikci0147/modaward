@@ -18,12 +18,12 @@ export function createMailer(config, log, transportOverride) {
 
   return {
     configured: configured || Boolean(transportOverride),
-    async send({ to, subject, text, html }) {
+    async send({ to, subject, text, html, headers }) {
       if (!transport) {
         log.warn('mail.not_configured', { to, subject, preview: text.slice(0, 500) });
         return { delivered: false };
       }
-      await transport.sendMail({ from: smtp.from, to, subject, text, html });
+      await transport.sendMail({ from: smtp.from, to, subject, text, html, headers });
       return { delivered: true };
     }
   };

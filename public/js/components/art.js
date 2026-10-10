@@ -22,7 +22,7 @@ export function GarmentArt({ type, color = '#cccccc', pattern = 'solid', class: 
 }
 
 const isCutout = (u) => typeof u === 'string' && /\/uploads\/g_[a-f0-9]+\.png/.test(u);
-const toArtItem = (g) => ({ art: TYPES[g.type]?.art || 'tee', category: g.category || TYPES[g.type]?.category, color: g.color, pattern: g.pattern || 'solid', image: isCutout(g.imageUrl) ? g.imageUrl : null });
+export const toArtItem = (g) => ({ art: TYPES[g.type]?.art || 'tee', category: g.category || TYPES[g.type]?.category, color: g.color, pattern: g.pattern || 'solid', image: isCutout(g.imageUrl) ? g.imageUrl : null });
 
 /** A flat-lay board for a set of garments or look pieces. */
 export function OutfitArt({ items, class: cls = '', label }) {
