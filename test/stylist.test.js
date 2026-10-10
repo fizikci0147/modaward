@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { recommend, prepareGarments } from '../src/engine/outfit.js';
 import { starterWardrobe } from '../src/services/starter.js';
 import { occasionSpec, ownedAllowed, stylePenalty } from '../src/engine/stylist.js';
-import { normalizePrefs } from '../src/engine/scoring.js';
+import { normalizePrefs, garmentAffinity } from '../src/engine/scoring.js';
 import { OCCASION_IDS } from '../src/shared/taxonomy.js';
 import { day } from './fixtures.js';
 
@@ -82,6 +82,13 @@ describe('the stylist', () => {
     const plain = stylePenalty(parts, ctx, 'casual', normalizePrefs({ style: { archetypes: { classic: 1 } } }));
     const street = stylePenalty(parts, ctx, 'casual', normalizePrefs({ style: { archetypes: { street: 1 } } }));
     assert.ok(plain >= 0.25 && street < plain);
+  });
+
+  test('prints follow taste: minimalists skip loud ones, boho loves florals', () => {
+    const floral = { type: 'blouse', pattern: 'floral', styles: ['boho', 'polished'], color: '#d9a5b3' };
+    const quiet = normalizePrefs({ style: { archetypes: { minimal: 1, boho: 0 } } });
+    const boho = normalizePrefs({ style: { archetypes: { minimal: 0, boho: 1 } } });
+    assert.ok(garmentAffinity(floral, boho) > garmentAffinity(floral, quiet));
   });
 
   test('a stated taste decides between otherwise equal outfits', () => {

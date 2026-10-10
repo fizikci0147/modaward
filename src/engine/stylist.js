@@ -55,6 +55,23 @@ export function ownedAllowed(prefs) {
   };
 }
 
+/** How much the person's taste for loud or quiet prints shifts a piece: minimalists skip them, boho loves florals, streetwear loves graphics. */
+export function patternAdjust(g, prefs) {
+  const a = prefs?.archetypes || {};
+  switch (g.pattern) {
+    case 'floral':
+      return 0.1 * (a.boho ?? 0) - 0.16 * (a.minimal ?? 0) - 0.06 * (a.polished ?? 0);
+    case 'graphic':
+      return 0.12 * (a.street ?? 0) - 0.2 * Math.max(a.classic ?? 0, a.minimal ?? 0, a.polished ?? 0);
+    case 'animal':
+      return -0.18 * Math.max(a.minimal ?? 0, a.classic ?? 0);
+    case 'checked':
+      return 0.05 * (a.classic ?? 0) - 0.08 * (a.minimal ?? 0);
+    default:
+      return 0;
+  }
+}
+
 const ATHLETIC = new Set(['hoodie', 'sportstop', 'joggers', 'leggings', 'cargo', 'runners']);
 const DRESSY = new Set(['blazer', 'wool-coat', 'trench', 'dressshoes', 'heels', 'trousers', 'eveningdress', 'loafers', 'chelsea']);
 const SUITING = new Set(['blazer', 'wool-coat', 'trench', 'dressshoes', 'heels', 'eveningdress']);
@@ -94,6 +111,8 @@ export function stylePenalty(parts, ctx, occasionId, prefs) {
   // sportswear and tailoring do not share an outfit (a hoodie under a blazer, joggers with loafers)...
   const athletic = worn.some((g) => ATHLETIC.has(g.type));
   if (athletic && worn.some((g) => DRESSY.has(g.type))) p += streetwise ? 0.12 : 0.3;
+  // a silk blouse does not go with cargo pants, joggers or leggings
+  if (types.has('blouse') && worn.some((g) => g.category === 'bottom' && ['cargo', 'joggers', 'leggings'].includes(g.type))) p += 0.22;
   // ...and neither do shorts and a coat or smart shoes
   if (types.has('shorts') && worn.some((g) => SUITING.has(g.type))) p += 0.3;
   // a skirt under a hoodie only works as streetwear

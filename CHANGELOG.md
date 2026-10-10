@@ -4,6 +4,17 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.8.0] · 2026-10-12
+
+A stylist pass on the recommendations: fewer mistakes, more of the person's own taste.
+
+### Changed
+- **One top per outfit.** The 5.7 layering experiment put two tops in one outfit (a blouse beside a cardigan, a polo beside a button-up). That is gone: warmth comes from the sweater, the coat and the scarf.
+- **New stylist rules** that no amount of warmth or colour can outvote: sportswear and tailoring do not share an outfit (a hoodie under a blazer) unless you love streetwear; shorts stay out of cool weather, jackets and work; sundresses and open shoes wait for warm days; rain boots are for the wet; a belt is only suggested when it matches the shoes; black and brown are not mixed; denim over jeans, a silk blouse over cargo pants and a lone cardigan are marked down.
+- **Your taste counts for more.** Your style quiz and learned taste now carry more weight than before, and printed pieces follow it (minimalists see fewer loud prints, boho more florals, streetwear more graphics).
+- **Your profile is honoured when styling what you own.** The "never suggest" list (shorts, heels, wool, leather, …), avoided patterns and your dress code (casual, smart, business, formal) previously only shaped the Shop. They now shape Today, Week and trips too; if that would leave a whole category empty the app keeps the category rather than showing a blank screen.
+- Shop feed variety now counts the same garments in different colours as different looks.
+
 ## [5.7.2] · 2026-10-12
 
 ### Fixed

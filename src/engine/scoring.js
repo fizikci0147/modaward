@@ -4,7 +4,7 @@
  */
 import { L } from '../shared/i18n.js';
 import { DORMANT_DAYS } from '../shared/dormancy.js';
-import { stylePenalty, occasionSpec } from './stylist.js';
+import { stylePenalty, occasionSpec, patternAdjust } from './stylist.js';
 import { harmony, colorName } from '../shared/color.js';
 import { thermalScore } from './thermal.js';
 
@@ -64,6 +64,7 @@ export function garmentAffinity(g, prefs) {
     if (prefs.avoided.has(name)) aff -= 0.4;
     else if (prefs.liked.has(name)) aff += 0.14;
   }
+  if (g.pattern && g.pattern !== 'solid' && prefs.hasProfile) aff += patternAdjust(g, prefs);
   if (g.favorite) aff += 0.08;
   return clamp01(aff);
 }
