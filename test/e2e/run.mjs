@@ -70,10 +70,23 @@ async function run(label, contextOptions) {
   // ── onboarding ──
   await page.getByPlaceholder('Search for your city').fill('new york');
   await page.getByRole('button', { name: /New York, NY/ }).click();
+  // the quiz: about you → style → colours → fit → life → rules → closet
+  await page.getByRole('heading', { name: 'Let’s start with you' }).waitFor();
+  await shot('03-welcome-about');
+  await page.getByRole('button', { name: 'Menswear', exact: true }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('heading', { name: /style\?/ }).waitFor();
   await shot('03-welcome-style');
-  await page.getByRole('button', { name: 'Menswear', exact: true }).click();
+  if (!(await page.getByRole('button', { name: 'Continue' }).isDisabled())) fail(`${label}: quiz lets you skip the style votes`);
   for (const name of ['Classic', 'Minimalist']) await page.getByRole('group', { name: new RegExp(`feel about ${name}`) }).getByRole('button', { name: 'Love' }).click();
+  for (const heading of ['Your colours', 'Fit and sizes', 'Your life and budget', 'Your rules and stores']) {
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await page.getByRole('heading', { name: heading }).waitFor();
+    await shot(`03-welcome-${heading.toLowerCase().replace(/\W+/g, '-')}`);
+  }
+  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('heading', { name: 'Your life and budget' }).waitFor();
+  await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('heading', { name: /your closet/ }).waitFor();
   await shot('04-welcome-closet');
@@ -330,6 +343,14 @@ async function run(label, contextOptions) {
     await shot(`14-profile-${s.split(' ')[0].toLowerCase()}`);
   }
   ok(`${label}: profile sections render`);
+
+  // ── retaking the quiz from the profile, and closing it again ──
+  await page.getByRole('button', { name: 'Style & colours' }).click();
+  await page.getByRole('button', { name: 'Retake the style quiz' }).click();
+  await page.getByRole('heading', { name: 'Let’s start with you' }).waitFor();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await page.waitForURL('**/style');
+  ok(`${label}: the style quiz can be retaken from the profile and closed`);
 
   // ── reminders ──
   await page.getByRole('button', { name: 'Reminders', exact: true }).click();

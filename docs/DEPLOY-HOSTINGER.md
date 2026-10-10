@@ -58,7 +58,7 @@ Do **not** set `PORT` unless Hostinger tells you to: the platform provides it.
 
 Press **Start / Restart**, then open:
 
-- `https://yourdomain.com/health` → `{"ok":true,"version":"5.10.1","build":"5.10.1+abc1234",...}`. The version and build must match the name of the zip you uploaded (`modaward-5.10.1-abc1234.zip`); if they don't, the old code is still running
+- `https://yourdomain.com/health` → `{"ok":true,"version":"5.11.0","build":"5.11.0+abc1234",...}`. The version and build must match the name of the zip you uploaded (`modaward-5.11.0-abc1234.zip`); if they don't, the old code is still running
 - `https://yourdomain.com/` → the sign-in page. Create your account.
 
 On the server's SSH terminal you can also run the integration check once your keys are in place:

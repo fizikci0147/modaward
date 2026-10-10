@@ -4,6 +4,15 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.11.0] · 2026-10-13
+
+### Added
+- **A style quiz when you join.** After choosing your city, a seven-step quiz now builds your profile before the first outfit: *about you* (who you shop for, language, currency), *style* (vote on looks), *colours* (loved, avoided, patterns), *fit and sizes*, *life and budget*, and *rules and stores* (what to never suggest, how current you like to look, where you shop). Each step is the same form you already had under *You*, saves as you go, and has Back and Continue. *Skip for now* still works. You can take it again any time from *You → Style → Start over → Retake the style quiz*; your answers stay until you change them.
+- **A sign-up agreement.** Creating an account now requires confirming you are at least 16 and accept the Terms and Privacy Policy, and that suggestions are guidance only. Existing accounts are asked once. The version and time of acceptance are stored with the account and included in the data export. The legal pages were expanded to match. These are plain-language templates, not legal advice: have a lawyer review them and set `OPERATOR_NAME` and `CONTACT_EMAIL` before launch.
+
+### Changed
+- On the *You* page, every style section now shows its own "Saved" confirmation.
+
 ## [5.10.1] · 2026-10-13
 
 ### Fixed

@@ -102,11 +102,27 @@ function StyleDna() {
   </section>`;
 }
 
-function StyleSection({ profile }) {
+export function StyleVotesSection({ profile }) {
   const [status, save] = useSaver();
   const s = profile.style;
-  const [stores, setStores] = useState([]);
-  useEffect(() => { api.get('/shop/retailers').then((d) => setStores(d.retailers)).catch(() => {}); }, []);
+  return html`<${Section} title=${t('Your style')} blurb=${t('Vote on each style. We use it to choose what to show you, and it keeps learning from every outfit you love or skip.')} status=${status}>
+      <${ArchetypeGrid} value=${s.archetypes} onChange=${(archetypes) => save({ style: { archetypes, quizDone: true } })} />
+    </${Section}>`;
+}
+
+export function TrendSection({ profile }) {
+  const [status, save] = useSaver();
+  const s = profile.style;
+  return html`<${Section} title=${t('How current should your outfits be?')} blurb=${t('Trends only ever nudge between looks you already like. Your taste always comes first.')} status=${status}>
+      <div class="segmented" role="group" aria-label=${t('How current should your outfits be?')}>
+        ${[['off', t('Timeless')], ['light', t('A little current')], ['forward', t('Very current')]].map(([id, label]) => html`<button key=${id} aria-pressed=${(s.trendiness || 'light') === id ? 'true' : 'false'} onClick=${() => save({ style: { trendiness: id } })}>${label}</button>`)}
+      </div>
+    </${Section}>`;
+}
+
+export function ColoursSection({ profile }) {
+  const [status, save] = useSaver();
+  const s = profile.style;
   const colorState = (name) => (s.likedColors.includes(name) ? 'like' : s.avoidedColors.includes(name) ? 'avoid' : '');
   const cycle = (name) => {
     const st = colorState(name);
@@ -116,7 +132,46 @@ function StyleSection({ profile }) {
     else if (st === 'like') save({ style: { likedColors: liked, avoidedColors: [...avoided, name].slice(-8) } });
     else save({ style: { likedColors: liked, avoidedColors: avoided } });
   };
+  return html`<${Section} title=${t('Colours')} blurb=${t('Tap once to love a colour, twice to avoid it, three times to clear it.')} status=${status}>
+      <div class="swatches">${PALETTE.map((p) => html`<button key=${p.name} class=${`swatch ${colorState(p.name) === 'avoid' ? 'avoid' : ''}`} style=${{ background: p.hex }} title=${`${cap(t(p.name))}${colorState(p.name) ? ` (${colorState(p.name) === 'like' ? t('love') : t('avoid')})` : ''}`} aria-label=${`${t(p.name)}: ${colorState(p.name) === 'like' ? t('love') : colorState(p.name) === 'avoid' ? t('avoid') : t('neutral')}`} aria-pressed=${colorState(p.name) ? 'true' : 'false'} onClick=${() => cycle(p.name)}></button>`)}</div>
+      <div class="small muted">${s.likedColors.length ? `${t('Love: {colours}.', { colours: s.likedColors.map((c) => cap(t(c))).join(', ') })} ` : ''}${s.avoidedColors.length ? t('Avoid: {colours}.', { colours: s.avoidedColors.map((c) => cap(t(c))).join(', ') }) : s.likedColors.length ? '' : t('No preferences yet.')}</div>
+      <div class="stack" style=${{ gap: '8px' }}><span class="label">${t('Patterns to avoid')}</span><${ToggleGroup} multi label=${t('Patterns to avoid')} options=${PATTERNS.filter((p) => p !== 'solid').map((p) => [p, t(cap(p))])} value=${s.avoidedPatterns} onChange=${(v) => save({ style: { avoidedPatterns: v } })} /></div>
+    </${Section}>`;
+}
+
+export function NeverSection({ profile }) {
+  const [status, save] = useSaver();
+  const s = profile.style;
+  return html`<${Section} title=${t('Never suggest')} blurb=${t('Anything here is ruled out completely, in every look and recommendation.')} status=${status}>
+      <${ToggleGroup} multi label=${t('Never suggest')} options=${Object.entries(NEVER_TAGS).map(([id, x]) => [id, t(x)])} value=${s.never} onChange=${(v) => save({ style: { never: v } })} />
+    </${Section}>`;
+}
+
+export function BrandsStoresSection({ profile }) {
+  const [status, save] = useSaver();
+  const s = profile.style;
+  const [stores, setStores] = useState([]);
+  useEffect(() => { api.get('/shop/retailers').then((d) => setStores(d.retailers)).catch(() => {}); }, []);
   const dept = profile.department;
+  return html`<${Section} title=${t('Brands and stores')} blurb=${t('Pick stores you like to shop at (or none, and we’ll choose). Avoided brands never appear.')} status=${status}>
+      <div class="store-grid">${stores.filter((r) => dept === 'unisex' || r.departments.includes(dept)).map((r) => html`<button key=${r.id} class="opt" aria-pressed=${s.stores.includes(r.id) ? 'true' : 'false'} onClick=${() => save({ style: { stores: s.stores.includes(r.id) ? s.stores.filter((x) => x !== r.id) : [...s.stores, r.id] } })}><b>${r.name}</b><span>${{ value: '$', mid: '$$', premium: '$$$' }[r.tier]}</span></button>`)}</div>
+      <div class="spread"><div><div class="label">${t('Mix brands in one look')}</div><div class="hint">${t('Off keeps each look to a single store')}</div></div><${Switch} label=${t('Mix brands')} checked=${s.mixStores} onChange=${(v) => save({ style: { mixStores: v } })} /></div>
+      <div class="size-row">
+        <div class="field"><span class="label">${t('Brands you love')}</span><${TagInput} label=${t('Brands you love')} values=${s.brands.love} placeholder=${t('Type a brand, press Enter')} onChange=${(v) => save({ style: { brands: { love: v } } })} /></div>
+        <div class="field"><span class="label">${t('Brands to avoid')}</span><${TagInput} label=${t('Brands to avoid')} values=${s.brands.avoid} placeholder=${t('Type a brand, press Enter')} onChange=${(v) => save({ style: { brands: { avoid: v } } })} /></div>
+      </div>
+    </${Section}>`;
+}
+
+export function NotesSection({ profile }) {
+  const [status, save] = useSaver();
+  const s = profile.style;
+  return html`<${Section} title=${t('A note for your stylist')} blurb=${t('Anything that helps: fabrics you can’t stand, an event coming up, what you wish you wore more.')} status=${status}>
+      <${NoteField} value=${s.notes} onSave=${(notes) => save({ style: { notes } })} />
+    </${Section}>`;
+}
+
+function StyleSection({ profile }) {
   const [resetting, setResetting] = useState(false);
   const reset = async (what, question, done) => {
     if (question && !confirm(question)) return;
@@ -131,40 +186,20 @@ function StyleSection({ profile }) {
   };
   return html`<div class="stack-l">
     <${StyleDna} />
-    <${Section} title=${t('Your style')} blurb=${t('Vote on each style. We use it to choose what to show you, and it keeps learning from every outfit you love or skip.')} status=${status}>
-      <${ArchetypeGrid} value=${s.archetypes} onChange=${(archetypes) => save({ style: { archetypes, quizDone: true } })} />
-    </${Section}>
-    <${Section} title=${t('How current should your outfits be?')} blurb=${t('Trends only ever nudge between looks you already like. Your taste always comes first.')}>
-      <div class="segmented" role="group" aria-label=${t('How current should your outfits be?')}>
-        ${[['off', t('Timeless')], ['light', t('A little current')], ['forward', t('Very current')]].map(([id, label]) => html`<button key=${id} aria-pressed=${(s.trendiness || 'light') === id ? 'true' : 'false'} onClick=${() => save({ style: { trendiness: id } })}>${label}</button>`)}
-      </div>
-    </${Section}>
+    <${StyleVotesSection} profile=${profile} />
+    <${TrendSection} profile=${profile} />
     <${Section} title=${t('Start over')} blurb=${t('Changed your mind about your style? Reset it here. Your closet is never touched.')}>
       <div class="row-wrap">
+        <button class="btn btn-outline" onClick=${() => navigate('/welcome?quiz=1')}>${t('Retake the style quiz')}</button>
         <button class="btn btn-outline" disabled=${resetting} onClick=${() => reset('style', t('Reset your style quiz answers, colours, “never” list, brands and fit choices? Your closet stays as it is.'), t('Your style choices were reset.'))}>${t('Reset my style choices')}</button>
         <button class="btn btn-outline" disabled=${resetting} onClick=${() => reset('learned', t('Forget what ModaWard learned from your likes and skips? Your closet and style choices stay as they are.'), t('Starting fresh from your style choices.'))}>${t('Forget what you’ve learned')}</button>
         <button class="btn btn-outline" disabled=${resetting} onClick=${() => reset('removed', null, t('Everything is back in play.'))}>${t('Bring back removed pieces and pairings')}</button>
       </div>
     </${Section}>
-    <${Section} title=${t('Colours')} blurb=${t('Tap once to love a colour, twice to avoid it, three times to clear it.')}>
-      <div class="swatches">${PALETTE.map((p) => html`<button key=${p.name} class=${`swatch ${colorState(p.name) === 'avoid' ? 'avoid' : ''}`} style=${{ background: p.hex }} title=${`${cap(t(p.name))}${colorState(p.name) ? ` (${colorState(p.name) === 'like' ? t('love') : t('avoid')})` : ''}`} aria-label=${`${t(p.name)}: ${colorState(p.name) === 'like' ? t('love') : colorState(p.name) === 'avoid' ? t('avoid') : t('neutral')}`} aria-pressed=${colorState(p.name) ? 'true' : 'false'} onClick=${() => cycle(p.name)}></button>`)}</div>
-      <div class="small muted">${s.likedColors.length ? `${t('Love: {colours}.', { colours: s.likedColors.map((c) => cap(t(c))).join(', ') })} ` : ''}${s.avoidedColors.length ? t('Avoid: {colours}.', { colours: s.avoidedColors.map((c) => cap(t(c))).join(', ') }) : s.likedColors.length ? '' : t('No preferences yet.')}</div>
-      <div class="stack" style=${{ gap: '8px' }}><span class="label">${t('Patterns to avoid')}</span><${ToggleGroup} multi label=${t('Patterns to avoid')} options=${PATTERNS.filter((p) => p !== 'solid').map((p) => [p, t(cap(p))])} value=${s.avoidedPatterns} onChange=${(v) => save({ style: { avoidedPatterns: v } })} /></div>
-    </${Section}>
-    <${Section} title=${t('Never suggest')} blurb=${t('Anything here is ruled out completely, in every look and recommendation.')}>
-      <${ToggleGroup} multi label=${t('Never suggest')} options=${Object.entries(NEVER_TAGS).map(([id, x]) => [id, t(x)])} value=${s.never} onChange=${(v) => save({ style: { never: v } })} />
-    </${Section}>
-    <${Section} title=${t('Brands and stores')} blurb=${t('Pick stores you like to shop at (or none, and we’ll choose). Avoided brands never appear.')}>
-      <div class="store-grid">${stores.filter((r) => dept === 'unisex' || r.departments.includes(dept)).map((r) => html`<button key=${r.id} class="opt" aria-pressed=${s.stores.includes(r.id) ? 'true' : 'false'} onClick=${() => save({ style: { stores: s.stores.includes(r.id) ? s.stores.filter((x) => x !== r.id) : [...s.stores, r.id] } })}><b>${r.name}</b><span>${{ value: '$', mid: '$$', premium: '$$$' }[r.tier]}</span></button>`)}</div>
-      <div class="spread"><div><div class="label">${t('Mix brands in one look')}</div><div class="hint">${t('Off keeps each look to a single store')}</div></div><${Switch} label=${t('Mix brands')} checked=${s.mixStores} onChange=${(v) => save({ style: { mixStores: v } })} /></div>
-      <div class="size-row">
-        <div class="field"><span class="label">${t('Brands you love')}</span><${TagInput} label=${t('Brands you love')} values=${s.brands.love} placeholder=${t('Type a brand, press Enter')} onChange=${(v) => save({ style: { brands: { love: v } } })} /></div>
-        <div class="field"><span class="label">${t('Brands to avoid')}</span><${TagInput} label=${t('Brands to avoid')} values=${s.brands.avoid} placeholder=${t('Type a brand, press Enter')} onChange=${(v) => save({ style: { brands: { avoid: v } } })} /></div>
-      </div>
-    </${Section}>
-    <${Section} title=${t('A note for your stylist')} blurb=${t('Anything that helps: fabrics you can’t stand, an event coming up, what you wish you wore more.')}>
-      <${NoteField} value=${s.notes} onSave=${(notes) => save({ style: { notes } })} />
-    </${Section}>
+    <${ColoursSection} profile=${profile} />
+    <${NeverSection} profile=${profile} />
+    <${BrandsStoresSection} profile=${profile} />
+    <${NotesSection} profile=${profile} />
   </div>`;
 }
 
@@ -173,7 +208,7 @@ function NoteField({ value, onSave }) {
   return html`<div class="field"><textarea class="textarea" aria-label=${t('Note for your stylist')} maxlength="600" placeholder=${t('e.g. Wool makes me itch. I have a wedding in November.')} value=${v} onInput=${(e) => setV(e.target.value)} onBlur=${() => v !== value && onSave(v)}></textarea><span class="hint">${v.length}/600</span></div>`;
 }
 
-function AboutSection({ profile }) {
+export function AboutSection({ profile }) {
   const [status, save] = useSaver();
   const [loc, setLoc] = useState(false);
   const days = [0, 1, 2, 3, 4, 5, 6].map(weekdayShort);
@@ -201,7 +236,7 @@ const SIZE_HINTS = {
   outerwear: ['S', 'M', 'L', 'XL']
 };
 
-function SizesFitSection({ profile }) {
+export function SizesFitSection({ profile }) {
   const [status, save] = useSaver();
   const [sizes, setSizes] = useState(profile.sizes || {});
   const areas = BODY_AREAS;
@@ -223,7 +258,7 @@ function SizesFitSection({ profile }) {
   </div>`;
 }
 
-function LifestyleBudget({ profile }) {
+export function LifestyleBudget({ profile }) {
   const [status, save] = useSaver();
   const labels = { top: L('Tops'), bottom: L('Bottoms'), dress: L('Dresses'), outerwear: L('Outerwear'), shoes: L('Shoes') };
   const max = { top: 250, bottom: 350, dress: 500, outerwear: 800, shoes: 400 };
