@@ -69,7 +69,7 @@ describe('API', () => {
 
     test('session cookie is HttpOnly and SameSite=Lax', async () => {
       const c = t.client();
-      const res = await c.post('/api/auth/register', { email: 'cookie@example.com', password: 'correct horse battery' });
+      const res = await c.post('/api/auth/register', { email: 'cookie@example.com', password: 'correct horse battery', acceptTerms: true });
       const cookie = res.headers.get('set-cookie');
       assert.match(cookie, /HttpOnly/i);
       assert.match(cookie, /SameSite=Lax/i);
@@ -77,11 +77,11 @@ describe('API', () => {
 
     test('rejects weak passwords, duplicates and bad emails', async () => {
       const c = t.client();
-      assert.equal((await c.post('/api/auth/register', { email: 'a@example.com', password: 'short' })).status, 400);
-      assert.equal((await c.post('/api/auth/register', { email: 'a@example.com', password: 'password123' })).status, 400);
-      assert.equal((await c.post('/api/auth/register', { email: 'not-an-email', password: 'correct horse battery' })).status, 400);
-      assert.equal((await c.post('/api/auth/register', { email: 'dup@example.com', password: 'correct horse battery' })).status, 201);
-      const dup = await t.client().post('/api/auth/register', { email: 'DUP@example.com', password: 'correct horse battery' });
+      assert.equal((await c.post('/api/auth/register', { email: 'a@example.com', password: 'short', acceptTerms: true })).status, 400);
+      assert.equal((await c.post('/api/auth/register', { email: 'a@example.com', password: 'password123', acceptTerms: true })).status, 400);
+      assert.equal((await c.post('/api/auth/register', { email: 'not-an-email', password: 'correct horse battery', acceptTerms: true })).status, 400);
+      assert.equal((await c.post('/api/auth/register', { email: 'dup@example.com', password: 'correct horse battery', acceptTerms: true })).status, 201);
+      const dup = await t.client().post('/api/auth/register', { email: 'DUP@example.com', password: 'correct horse battery', acceptTerms: true });
       assert.equal(dup.status, 409);
     });
 
@@ -127,21 +127,21 @@ describe('API', () => {
 
   describe('CSRF and origin protection', () => {
     test('state-changing calls without the custom header are refused', async () => {
-      const res = await fetch(t.base + '/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'x@example.com', password: 'correct horse battery' }) });
+      const res = await fetch(t.base + '/api/auth/register', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email: 'x@example.com', password: 'correct horse battery', acceptTerms: true }) });
       assert.equal(res.status, 403);
     });
 
     test('a foreign Origin is refused even with the header', async () => {
       const c = t.client();
-      const res = await c.raw('POST', '/api/auth/register', { email: 'csrf@example.com', password: 'correct horse battery' }, { origin: 'https://evil.example' });
+      const res = await c.raw('POST', '/api/auth/register', { email: 'csrf@example.com', password: 'correct horse battery', acceptTerms: true }, { origin: 'https://evil.example' });
       assert.equal(res.status, 403);
     });
 
     test('same-origin and configured-app-host origins pass', async () => {
       const c = t.client();
-      const ok = await c.raw('POST', '/api/auth/register', { email: 'origin1@example.com', password: 'correct horse battery' }, { origin: t.base });
+      const ok = await c.raw('POST', '/api/auth/register', { email: 'origin1@example.com', password: 'correct horse battery', acceptTerms: true }, { origin: t.base });
       assert.equal(ok.status, 201);
-      const ok2 = await t.client().raw('POST', '/api/auth/register', { email: 'origin2@example.com', password: 'correct horse battery' }, { origin: 'https://app.example.com' });
+      const ok2 = await t.client().raw('POST', '/api/auth/register', { email: 'origin2@example.com', password: 'correct horse battery', acceptTerms: true }, { origin: 'https://app.example.com' });
       assert.equal(ok2.status, 201);
     });
 

@@ -4,7 +4,7 @@ import { L } from '/shared/i18n.js';
 import { useStore, boot, set, toast, state } from '/js/store.js';
 import { usePath, navigate, Link } from '/js/router.js';
 import { Icon, Logo } from '/js/icons.js';
-import { Toasts, UpgradeSheet, ProBadge } from '/js/components/common.js';
+import { Toasts, UpgradeSheet, ProBadge, TermsGate } from '/js/components/common.js';
 import { initials } from '/js/format.js';
 import { TodayView } from '/js/views/today.js';
 import { WeekView } from '/js/views/week.js';
@@ -141,5 +141,5 @@ export function App() {
       : html`<${Shell} path=${path}><div class="empty"><h1 class="display h-l">${t('Nothing here')}</h1><${Link} href="/" class="btn btn-primary">${t('Back to today')}</${Link}></div></${Shell}>`;
   }
 
-  return html`<a class="sr-only skip-link" href="#main">${t('Skip to content')}</a>${page}<${UpgradeSheet} /><${Toasts} />`;
+  return html`<a class="sr-only skip-link" href="#main">${t('Skip to content')}</a>${page}<${TermsGate} /><${UpgradeSheet} /><${Toasts} />`;
 }

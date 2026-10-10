@@ -1,8 +1,8 @@
 import { html, useEffect, useRef, useState } from '/js/ui.js';
-import { t, getLocale, LOCALES, ENABLED_LOCALES } from '/js/i18n.js';
+import { t, tx, getLocale, LOCALES, ENABLED_LOCALES } from '/js/i18n.js';
 import { L } from '/shared/i18n.js';
 import { Icon, Logo } from '/js/icons.js';
-import { useStore, dismissToast, closeUpgrade, toast, fail, state, setLocale } from '/js/store.js';
+import { useStore, dismissToast, closeUpgrade, toast, fail, state, setLocale, acceptTerms } from '/js/store.js';
 import { api } from '/js/api.js';
 import { navigate } from '/js/router.js';
 
@@ -212,3 +212,40 @@ export function go(path) {
   navigate(path);
 }
 export { state };
+
+
+/**
+ * The agreement people tick to sign up: age, the Terms, the Privacy Policy, and that suggestions are
+ * guidance. The links open in a new tab so nothing already typed is lost.
+ */
+export function Consent({ checked, onChange, id = 'consent' }) {
+  const link = (href, label) => html`<a href=${href} target="_blank" rel="noopener">${label}</a>`;
+  return html`<label class="consent" for=${id}>
+    <input id=${id} type="checkbox" checked=${checked} onChange=${(e) => onChange(e.target.checked)} />
+    <span>${tx(t('I am at least 16, I agree to the {terms} and the {privacy}, and I understand that ModaWard’s suggestions are style guidance only: I decide what I wear and buy.'), { terms: link('/terms', t('Terms')), privacy: link('/privacy', t('Privacy Policy')) })}</span>
+  </label>`;
+}
+
+/** Shown once to people who signed up before the agreement existed, or when it changes. They cannot continue without it. */
+export function TermsGate() {
+  const { user, legal } = useStore();
+  const [ok, setOk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  if (!user || !legal || legal.accepted) return null;
+  const go = async () => {
+    setBusy(true);
+    try {
+      await acceptTerms();
+    } catch (e) {
+      fail(e);
+      setBusy(false);
+    }
+  };
+  return html`<${Sheet} title=${t('We’ve updated our terms')} onClose=${() => {}} label=${t('We’ve updated our terms')}
+    footer=${html`<button class="btn btn-primary grow" disabled=${!ok || busy} onClick=${go}>${busy ? html`<${Spinner} />` : null}${t('Continue')}</button>`}>
+    <div class="stack">
+      <p>${tx(t('Please review the {terms} and the {privacy} and confirm to keep using ModaWard.'), { terms: html`<a href="/terms" target="_blank" rel="noopener">${t('Terms')}</a>`, privacy: html`<a href="/privacy" target="_blank" rel="noopener">${t('Privacy Policy')}</a>` })}</p>
+      <${Consent} id="consent-gate" checked=${ok} onChange=${setOk} />
+    </div>
+  </${Sheet}>`;
+}

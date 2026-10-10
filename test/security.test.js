@@ -17,6 +17,32 @@ describe('security hardening', () => {
   });
   after(() => t.close());
 
+  test('signing up needs an explicit, recorded agreement, and older accounts are asked once', async () => {
+    const c = t.client();
+    const body = { email: 'terms@example.com', password: 'correct horse battery', name: 'T' };
+    for (const extra of [{}, { acceptTerms: false }]) {
+      const refused = await c.post('/api/auth/register', { ...body, ...extra });
+      assert.equal(refused.status, 400);
+      assert.match(refused.json.error.message, /at least 16/);
+    }
+    assert.equal(t.deps.repos.users.byEmail('terms@example.com'), undefined, 'no account without the agreement');
+    const ok = await c.post('/api/auth/register', { ...body, acceptTerms: true });
+    assert.equal(ok.status, 201);
+    assert.equal(ok.json.legal.accepted, true);
+    const row = t.deps.repos.users.byEmail('terms@example.com');
+    assert.equal(row.terms_version, ok.json.legal.version);
+    assert.ok(row.terms_accepted_at > 0);
+    assert.equal((await c.get('/api/account/export')).json.termsAcceptance.version, row.terms_version);
+
+    // an account from before the agreement existed is asked once, and cannot "accept" with accept: false
+    t.deps.db.run('UPDATE users SET terms_version = NULL, terms_accepted_at = NULL WHERE id = ?', row.id);
+    assert.equal((await c.get('/api/auth/me')).json.legal.accepted, false);
+    assert.equal((await c.post('/api/auth/accept-terms', { accept: false })).status, 400);
+    assert.equal((await t.client().post('/api/auth/accept-terms', { accept: true })).status, 401);
+    const again = await c.post('/api/auth/accept-terms', { accept: true });
+    assert.equal(again.json.legal.accepted, true);
+  });
+
   test('reset emails cannot carry HTML from a name', async () => {
     const c = t.client();
     const { email } = await registerUser(c, { name: '<a href="https://evil.test">Confirm here</a>' });
@@ -46,7 +72,7 @@ describe('security hardening', () => {
       const c = small.client();
       for (let i = 0; i < 4; i++) await c.post('/api/auth/login', { email: `nobody${i}@example.com`, password: 'x'.repeat(12) });
       assert.equal((await c.post('/api/auth/login', { email: 'n@example.com', password: 'x'.repeat(12) })).status, 429, 'login is limited');
-      const fresh = await c.post('/api/auth/register', { email: 'new@example.com', password: 'correct horse battery', name: 'N' });
+      const fresh = await c.post('/api/auth/register', { email: 'new@example.com', password: 'correct horse battery', acceptTerms: true, name: 'N' });
       assert.equal(fresh.status, 201, 'but registering is not blocked by failed logins');
     } finally {
       await small.close();
@@ -170,7 +196,7 @@ describe('security hardening', () => {
   test('the session cookie is Secure in production even when the proxy hides HTTPS', async () => {
     const s = await startTestServer({ env: { NODE_ENV: 'production', APP_URL: 'https://x.example.com', TRUST_PROXY: '1' } });
     try {
-      const res = await fetch(`${s.base}/api/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-requested-with': 'modaward', 'x-forwarded-proto': 'http' }, body: JSON.stringify({ email: 'sec@example.com', password: 'correct horse battery', name: 'S' }) });
+      const res = await fetch(`${s.base}/api/auth/register`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-requested-with': 'modaward', 'x-forwarded-proto': 'http' }, body: JSON.stringify({ email: 'sec@example.com', password: 'correct horse battery', acceptTerms: true, name: 'S' }) });
       assert.equal(res.status, 201);
       assert.match(res.headers.get('set-cookie'), /;\s*Secure/i);
     } finally {

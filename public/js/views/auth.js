@@ -5,7 +5,7 @@ import { api } from '/js/api.js';
 import { authenticate, fail, toast } from '/js/store.js';
 import { Icon, Logo } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
-import { Spinner, LanguagePicker } from '/js/components/common.js';
+import { Spinner, LanguagePicker, Consent } from '/js/components/common.js';
 import { Link, navigate, useQuery } from '/js/router.js';
 
 const BOARD_A = [
@@ -45,6 +45,7 @@ export function AuthView({ mode }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [sent, setSent] = useState(false);
+  const [accept, setAccept] = useState(false);
   const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
   useEffect(() => { setError(''); setSent(false); }, [mode]);
 
@@ -57,7 +58,12 @@ export function AuthView({ mode }) {
         await authenticate('login', { email: form.email, password: form.password });
         navigate('/', { replace: true });
       } else if (mode === 'register') {
-        await authenticate('register', { email: form.email, password: form.password, name: form.name });
+        if (!accept) {
+          setError(t('Please confirm you are at least 16 and accept the Terms and Privacy Policy.'));
+          setBusy(false);
+          return;
+        }
+        await authenticate('register', { email: form.email, password: form.password, name: form.name, acceptTerms: true });
         navigate('/welcome', { replace: true });
       } else if (mode === 'forgot') {
         await api.post('/auth/forgot', { email: form.email });
@@ -94,7 +100,7 @@ export function AuthView({ mode }) {
               ${error ? html`<div class="banner" role="alert"><${Icon} name="info" />${error}</div>` : null}
               <button class="btn btn-primary btn-l btn-block" disabled=${busy}>${busy ? html`<${Spinner} />` : null}${{ login: t('Sign in'), register: t('Create account'), forgot: t('Send reset link'), reset: t('Save new password') }[mode]}</button>
               ${mode === 'login' ? html`<div class="spread small"><${Link} href="/forgot" class="muted">${t('Forgot password?')}</${Link}><${Link} href="/register" style=${{ fontWeight: 600 }}>${t('Create an account')}</${Link}></div>` : null}
-              ${mode === 'register' ? html`<p class="footnote">${tx(t('By creating an account you agree to our {terms} and {privacy}.'), { terms: html`<${Link} href="/terms">${t('Terms')}</${Link}>`, privacy: html`<${Link} href="/privacy">${t('Privacy Policy')}</${Link}>` })}</p><div class="small center">${t('Already have an account?')} <${Link} href="/login" style=${{ fontWeight: 600 }}>${t('Sign in')}</${Link}></div>` : null}
+              ${mode === 'register' ? html`<${Consent} checked=${accept} onChange=${setAccept} /><div class="small center">${t('Already have an account?')} <${Link} href="/login" style=${{ fontWeight: 600 }}>${t('Sign in')}</${Link}></div>` : null}
               ${mode === 'forgot' || mode === 'reset' ? html`<div class="small center"><${Link} href="/login" style=${{ fontWeight: 600 }}>${t('Back to sign in')}</${Link}></div>` : null}
             </form>`}
       </div>

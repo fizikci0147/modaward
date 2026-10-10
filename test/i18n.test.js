@@ -53,7 +53,7 @@ describe('server speaks the requested language', () => {
     assert.equal(accept.json.error.message, 'E-mail o password errate.');
     const unknown = await c.raw('POST', '/api/auth/login', { email: 'nobody@example.com', password: 'whatever password' }, { 'x-locale': 'xx' });
     assert.equal(unknown.json.error.message, 'Incorrect email or password.', 'unsupported languages fall back to English');
-    const invalid = await c.raw('POST', '/api/auth/register', { email: 'not-an-email', password: 'correct horse battery' }, { 'x-locale': 'fr' });
+    const invalid = await c.raw('POST', '/api/auth/register', { email: 'not-an-email', password: 'correct horse battery', acceptTerms: true }, { 'x-locale': 'fr' });
     assert.equal(invalid.status, 400);
     assert.match(invalid.json.error.message, /doit être une adresse e-mail valide/);
   });

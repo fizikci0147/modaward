@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import { rateLimit, clientKey, setSessionCookie, clearSessionCookie } from '../middleware.js';
-import { object, string, email as emailRule, optional } from '../../util/validate.js';
-import { HttpError, conflict, forbidden, unauthorized } from '../../util/errors.js';
+import { object, string, boolean, email as emailRule, optional } from '../../util/validate.js';
+import { HttpError, badRequest, conflict, forbidden, unauthorized } from '../../util/errors.js';
 import { hashPassword, verifyPassword, verifyAgainstDummy, assertStrongPassword, needsRehash } from '../../services/passwords.js';
 import { publicUser } from '../../repo/index.js';
 import { entitlements } from '../../services/plans.js';
 import { baseUrl } from '../base-url.js';
+import { TERMS_VERSION } from '../../shared/legal.js';
 
-const registerSchema = object({ email: emailRule(), password: string({ min: 1, max: 200, trim: false }), name: optional(string({ max: 60 }), '') });
+const registerSchema = object({ email: emailRule(), password: string({ min: 1, max: 200, trim: false }), name: optional(string({ max: 60 }), ''), acceptTerms: optional(boolean(), false) });
+const acceptSchema = object({ accept: boolean() });
 const loginSchema = object({ email: emailRule(), password: string({ min: 1, max: 200, trim: false }) });
 const forgotSchema = object({ email: emailRule() });
 const resetSchema = object({ token: string({ min: 64, max: 64 }), password: string({ min: 1, max: 200, trim: false }) });
@@ -37,6 +39,8 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
     profile: user ? repos.profiles.get(user.id) : null,
     capabilities,
     entitlements: user ? entitlements(user, config) : null,
+    // whether this person has accepted the current Terms and Privacy Policy (older accounts are asked once)
+    legal: user ? { version: TERMS_VERSION, accepted: user.terms_version === TERMS_VERSION } : null,
     app: { version: config.version, build: config.build.id }
   });
 
@@ -44,13 +48,15 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
 
   r.post('/register', registerLimit, async (req, res) => {
     if (!config.registrationOpen) throw forbidden('Sign-ups are closed right now.');
-    const { email, password, name } = registerSchema(req.body);
+    const { email, password, name, acceptTerms } = registerSchema(req.body);
+    // an explicit, recorded agreement: age (16+), the Terms, the Privacy Policy and that suggestions are guidance only
+    if (acceptTerms !== true) throw badRequest('Please confirm you are at least 16 and accept the Terms and Privacy Policy.');
     assertStrongPassword(password, email);
     if (repos.users.byEmail(email)) throw conflict('An account with that email already exists. Try signing in.');
     const passwordHash = await hashPassword(password);
     let user;
     try {
-      user = repos.users.create({ email, passwordHash, name });
+      user = repos.users.create({ email, passwordHash, name, termsVersion: TERMS_VERSION });
     } catch (e) {
       if (/UNIQUE/i.test(String(e?.message))) throw conflict('An account with that email already exists. Try signing in.');
       throw e;
@@ -58,6 +64,15 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
     setSessionCookie(req, res, repos.sessions.create(user.id, req.get('user-agent'), config.sessionDays), config.sessionDays);
     log.info('auth.register', { user: user.id });
     res.status(201).json(me(user));
+  });
+
+  // people who signed up before the agreement existed (or when it changed) accept it once, signed in
+  r.post('/accept-terms', (req, res) => {
+    if (!req.user) throw unauthorized('Please sign in first.');
+    const { accept } = acceptSchema(req.body);
+    if (accept !== true) throw badRequest('Please confirm you are at least 16 and accept the Terms and Privacy Policy.');
+    repos.users.acceptTerms(req.user.id, TERMS_VERSION);
+    res.json(me(repos.users.byId(req.user.id)));
   });
 
   r.post('/login', loginLimit, perAccount, async (req, res) => {

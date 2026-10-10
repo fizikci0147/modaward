@@ -59,6 +59,10 @@ async function run(label, contextOptions) {
   await page.getByLabel('Email').fill(`ada-${label}-${Date.now()}@example.com`);
   await page.getByLabel('Password').fill('correct horse battery');
   await shot('02-register');
+  // the agreement is required: without the box ticked nothing is created
+  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.getByText('Please confirm you are at least 16').waitFor();
+  await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Create account' }).click();
   await page.waitForURL('**/welcome');
   ok(`${label}: registration reaches onboarding`);
@@ -344,6 +348,18 @@ async function run(label, contextOptions) {
 
   // ── the language is remembered on the account ──
   await page.getByRole('button', { name: 'About you' }).click();
+  // a very long place name must stay inside its own box: nothing in this form may run under its neighbour
+  await page.evaluate(() => fetch('/api/profile', { method: 'PATCH', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'modaward' }, body: JSON.stringify({ location: { name: 'Philadelphia, Pennsylvania, United States of America', lat: 39.95, lon: -75.16, timezone: 'America/New_York' } }) }));
+  await page.reload();
+  await page.getByRole('button', { name: 'About you' }).click();
+  await page.locator('.loc-btn').waitFor();
+  const crowded = await page.evaluate(() => {
+    const cells = [...document.querySelectorAll('.size-row > .field')].map((el) => el.getBoundingClientRect());
+    for (let i = 0; i < cells.length; i++) for (let j = i + 1; j < cells.length; j++) if (cells[i].left < cells[j].right - 1 && cells[j].left < cells[i].right - 1 && cells[i].top < cells[j].bottom - 1 && cells[j].top < cells[i].bottom - 1) return true;
+    const btn = document.querySelector('.loc-btn');
+    return btn.scrollWidth > btn.clientWidth + 1 || document.documentElement.scrollWidth > innerWidth;
+  });
+  if (crowded) fail(`${label}: the About you form has fields running under one another`);
   await page.locator('.lang-picker select').selectOption('de');
   await page.getByRole('link', { name: 'Heute' }).first().waitFor();
   await page.waitForTimeout(500); // let the profile save finish
@@ -386,7 +402,7 @@ async function runAdmin() {
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  const reg = await page.request.post('/api/auth/register', { data: { email: 'boss@example.com', password: 'correct horse battery', name: 'Boss' }, headers: { 'x-requested-with': 'modaward' } });
+  const reg = await page.request.post('/api/auth/register', { data: { email: 'boss@example.com', password: 'correct horse battery', acceptTerms: true, name: 'Boss' }, headers: { 'x-requested-with': 'modaward' } });
   if (!reg.ok()) fail(`admin: could not register (${reg.status()})`);
   await page.goto('/admin');
   await page.getByRole('heading', { name: 'Business' }).waitFor();

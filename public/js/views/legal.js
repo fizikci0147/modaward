@@ -69,6 +69,8 @@ export function TermsView() {
     <p>By using ModaWard you agree to these terms.</p>
     <h2>The service</h2>
     <p>ModaWard suggests outfits and shopping ideas. Suggestions are guidance, not guarantees: forecasts can be wrong, products change, and fit and fabric are your call.</p>
+    <h2>Style guidance, weather and AI</h2>
+    <p>ModaWard’s suggestions, including those based on the weather, are guidance for fun and convenience. They are not medical, safety or professional advice. Forecasts can be wrong and everyone feels temperature differently: dress for the conditions you will actually face. Descriptions, colour matches, sizes and fit are approximate. Some suggestions are written or chosen with the help of artificial intelligence, which can make mistakes. You decide what you wear and what you buy, and you are responsible for those choices.</p>
     <h2>Your account</h2>
     <p>Keep your password safe and use accurate information. You are responsible for activity on your account. By creating an account you confirm you are at least 16 years old.</p>
     <h2>Your content</h2>
@@ -79,8 +81,10 @@ export function TermsView() {
     <p>Pro renews automatically at the period you choose until you cancel from your profile. Cancelling stops the next renewal; you keep Pro until the paid period ends. Taxes may apply.</p>
     <h2>Acceptable use</h2>
     <p>Do not misuse the service, attempt to access other people’s data, upload unlawful content, or overload our systems.</p>
+    <h2>Agreeing to these terms</h2>
+    <p>When you create an account you confirm that you are at least 16, that you have read and agree to these Terms and the Privacy Policy, and that you understand the points above. We keep a record of which version you agreed to and when. If we change these terms in a way that matters we will ask you to agree again the next time you open the app; if you do not agree you can export your data and delete your account.</p>
     <h2>Liability</h2>
-    <p>The service is provided “as is”. To the extent the law allows, we are not liable for indirect or consequential loss arising from your use of ModaWard.</p>
+    <p>The service is provided “as is”. To the extent the law allows, we are not liable for indirect or consequential loss arising from your use of ModaWard, for decisions you make based on its suggestions, or for the content, prices or availability of anything sold by others. Nothing in these terms limits liability that cannot be limited by law, such as for death or personal injury caused by negligence, or for fraud. These terms are governed by the laws of the country where the operator of this site is based, and the courts there decide disputes, except where the law of your country gives you the right to use its courts.</p>
     <p class="footnote"><${Link} href="/">Back to ModaWard</${Link}></p>
   </article>`;
 }

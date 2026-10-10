@@ -35,6 +35,7 @@ export function accountRoutes({ repos, images, billing, log, reminders }) {
     const data = {
       exportedAt: new Date().toISOString(),
       account: publicUser(req.user),
+      termsAcceptance: { version: req.user.terms_version ?? null, acceptedAt: req.user.terms_accepted_at ? new Date(req.user.terms_accepted_at * 1000).toISOString() : null },
       profile: repos.profiles.get(id),
       tasteModel: repos.profiles.getTaste(id),
       garments: repos.garments.list(id, { includeArchived: true }),

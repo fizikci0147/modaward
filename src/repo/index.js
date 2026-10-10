@@ -70,15 +70,16 @@ const GARMENT_SELECT = `
 /** @param {import('../db/index.js').Db} db */
 export function createRepos(db) {
   const users = {
-    create({ email, passwordHash, name = '' }) {
+    create({ email, passwordHash, name = '', termsVersion = null }) {
       const id = uuid();
       db.transaction(() => {
-        db.run('INSERT INTO users (id,email,password_hash,name,created_at) VALUES (?,?,?,?,?)', id, email, passwordHash, name, now());
+        db.run('INSERT INTO users (id,email,password_hash,name,created_at,terms_version,terms_accepted_at) VALUES (?,?,?,?,?,?,?)', id, email, passwordHash, name, now(), termsVersion, termsVersion ? now() : null);
         db.run('INSERT INTO profiles (user_id,data,taste,updated_at) VALUES (?,?,?,?)', id, JSON.stringify(DEFAULT_PROFILE), '{}', now());
       });
       return users.byId(id);
     },
     byId: (id) => db.get('SELECT * FROM users WHERE id = ?', id),
+    acceptTerms: (id, version) => db.run('UPDATE users SET terms_version = ?, terms_accepted_at = ? WHERE id = ?', version, now(), id),
     byEmail: (email) => db.get('SELECT * FROM users WHERE email = ?', email),
     byStripeCustomer: (customerId) => db.get('SELECT * FROM users WHERE stripe_customer_id = ?', customerId),
     setPassword: (id, hash) => db.run('UPDATE users SET password_hash = ? WHERE id = ?', hash, id),

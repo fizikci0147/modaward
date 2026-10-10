@@ -445,6 +445,14 @@ ul { margin: 0; padding: 0; list-style: none; }
 .piece-form { display: grid; gap: 18px; grid-template-columns: minmax(0, 220px) minmax(0, 1fr); align-items: start; }
 @media (max-width: 559px) { .piece-form { grid-template-columns: minmax(0, 1fr); } .piece-form .drop { max-width: 260px; margin-inline: auto; width: 100%; } }
 .size-row { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+/* a long place name or language must stay inside its own cell instead of running under the next field */
+.size-row > .field { min-width: 0; }
+.size-row > .field-wide { grid-column: span 2; }
+@media (max-width: 559px) { .size-row > .field-wide { grid-column: 1 / -1; } }
+.truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.loc-btn { justify-content: space-between; width: 100%; min-width: 0; gap: 8px; }
+.size-row .lang-picker { width: 100%; }
+.size-row .lang-picker select { flex: 1; min-width: 0; width: 100%; height: 46px; }
 .tags { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 6px 5px 12px; border-radius: 999px; background: var(--surface-2); font-size: 13px; }
 .tag button { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-3); }
@@ -705,3 +713,8 @@ main:focus { outline: none; }
 .chip-menu button { text-align: left; padding: 10px 12px; border-radius: 8px; font-size: 14px; }
 .chip-menu button:hover, .chip-menu button:focus-visible { background: color-mix(in srgb, var(--ink) 7%, transparent); }
 .not-suggested { position: absolute; left: 8px; top: 8px; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; background: var(--surface); color: var(--ink-2); box-shadow: var(--shadow-s); }
+
+/* the sign-up agreement */
+.consent { display: flex; gap: 12px; align-items: flex-start; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); cursor: pointer; }
+.consent input { flex: none; width: 22px; height: 22px; margin-top: 1px; accent-color: var(--ink); cursor: pointer; }
+.consent a { text-decoration: underline; text-underline-offset: 3px; color: var(--ink); }

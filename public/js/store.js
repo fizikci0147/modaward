@@ -19,6 +19,7 @@ export const state = {
   upgrade: null, // { reason, message } while the upgrade sheet is open
   installPrompt: null,
   locale: 'en', // bumps re-renders when the language changes
+  legal: null, // { version, accepted }: has this person accepted the current Terms and Privacy Policy
   bootError: false, // the server could not be reached when the app opened (not the same as signed out)
   app: null // { version, build } of the server this page is talking to
 };
@@ -68,7 +69,7 @@ async function applyMe(me) {
   // a saved language on the account wins over this browser's guess
   const saved = me.profile?.locale;
   if (saved && saved !== getLocale()) await loadLocale(saved);
-  set({ user: me.user, profile: me.profile, entitlements: me.entitlements, capabilities: me.capabilities || {}, locale: getLocale(), app: me.app || null });
+  set({ user: me.user, profile: me.profile, entitlements: me.entitlements, capabilities: me.capabilities || {}, locale: getLocale(), app: me.app || null, legal: me.legal || null });
 }
 
 /** Switch language now, remember it in this browser and, when signed in, on the account. */
@@ -132,6 +133,12 @@ export async function logout() {
   await api.post('/auth/logout').catch(() => {});
   set({ user: null, profile: null, garments: null, entitlements: null });
   navigate('/login', { replace: true });
+}
+
+/** Record that the signed-in person accepted the current Terms and Privacy Policy. */
+export async function acceptTerms() {
+  const me = await api.post('/auth/accept-terms', { accept: true });
+  set({ legal: me.legal || null });
 }
 
 export async function refreshMe() {

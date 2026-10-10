@@ -79,7 +79,7 @@ let counter = 0;
 export async function registerUser(c, overrides = {}) {
   counter += 1;
   const email = overrides.email || `user${counter}-${Date.now()}@example.com`;
-  const res = await c.post('/api/auth/register', { email, password: 'correct horse battery', name: 'Test User', ...overrides });
+  const res = await c.post('/api/auth/register', { email, password: 'correct horse battery', name: 'Test User', acceptTerms: true, ...overrides });
   if (res.status !== 201) throw new Error(`register failed: ${res.status} ${res.text}`);
   return { email, password: overrides.password ?? 'correct horse battery', user: res.json.user };
 }

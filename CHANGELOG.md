@@ -4,6 +4,11 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.10.1] · 2026-10-13
+
+### Fixed
+- **You → About you: the Language box ran over the Location box** when the place name was long (for example "Philadelphia, Pennsylvania"). The location now gets a wider box, a long name is shortened with "…" instead of spilling out, and Language and Currency sit in their own cells. A browser check now fails the build if any field in that form overlaps another.
+
 ## [5.10.0] · 2026-10-13
 
 ### Changed
