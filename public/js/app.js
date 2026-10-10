@@ -1,4 +1,4 @@
-import { html, useEffect } from '/js/ui.js';
+import { html, useEffect, useErrorBoundary } from '/js/ui.js';
 import { t } from '/js/i18n.js';
 import { L } from '/shared/i18n.js';
 import { useStore, boot, set, toast, state } from '/js/store.js';
@@ -16,6 +16,7 @@ import { WelcomeView } from '/js/views/welcome.js';
 import { ProView } from '/js/views/pro.js';
 import { PrivacyView, TermsView } from '/js/views/legal.js';
 import { UnsubscribeView } from '/js/views/unsubscribe.js';
+import { reportError } from '/js/errors.js';
 import { TripView } from '/js/views/trip.js';
 import { AdminView } from '/js/views/admin.js';
 
@@ -59,7 +60,7 @@ function Shell({ path, children }) {
       <${Link} href="/" class="brand"><${Logo} size=${24} />ModaWard</${Link}>
       <div class="row">${!pro ? html`<${Link} href="/pro" class="chip chip-s" aria-label=${t('Upgrade to Pro')}><${Icon} name="crown" />${t('Pro')}</${Link}>` : html`<${ProBadge} />`}</div>
     </header>
-    <main class="main" id="main">${children}</main>
+    <main class="main" id="main" tabindex="-1">${children}</main>
     <nav class="tabbar" aria-label=${t('Main')}>
       ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="tab" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${t(label)}</${Link}>`)}
     </nav>
@@ -70,11 +71,13 @@ function PublicPage({ children }) {
   const { user } = useStore();
   return html`<div style=${{ minHeight: '100dvh' }}>
     <header class="topbar" style=${{ position: 'static' }}><${Link} href=${user ? '/' : '/login'} class="brand"><${Logo} size=${24} />ModaWard</${Link}><${Link} href=${user ? '/' : '/login'} class="btn btn-ghost btn-s">${user ? t('Open app') : t('Sign in')}</${Link}></header>
-    <main class="main" style=${{ paddingBottom: '80px' }}>${children}</main>
+    <main class="main" id="main" tabindex="-1" style=${{ paddingBottom: '80px' }}>${children}</main>
   </div>`;
 }
 
 export function App() {
+  // a screen that breaks shows a way out instead of a blank page, and is reported
+  const [crash, clearCrash] = useErrorBoundary(reportError);
   const { ready, user, locale } = useStore();
   const path = usePath();
 
@@ -101,6 +104,7 @@ export function App() {
     else if (user && ['/login', '/register', '/forgot'].includes(here)) navigate('/', { replace: true });
   }, [ready, user, path]);
 
+  if (crash) return html`<main class="main" style=${{ display: 'grid', placeItems: 'center', minHeight: '100dvh' }}><div class="card card-pad stack center enter" role="alert" style=${{ maxWidth: '440px' }}><h1 class="display h-m">${t('Something went wrong. Please try again.')}</h1><div><button class="btn btn-primary" onClick=${() => { clearCrash(); navigate('/'); }}>${t('Try again')}</button></div></div></main>`;
   if (!ready) return html`<${Splash} />`;
 
   let page;
@@ -124,5 +128,5 @@ export function App() {
       : html`<${Shell} path=${path}><div class="empty"><h1 class="display h-l">${t('Nothing here')}</h1><${Link} href="/" class="btn btn-primary">${t('Back to today')}</${Link}></div></${Shell}>`;
   }
 
-  return html`<a class="sr-only" href="#main">${t('Skip to content')}</a>${page}<${UpgradeSheet} /><${Toasts} />`;
+  return html`<a class="sr-only skip-link" href="#main">${t('Skip to content')}</a>${page}<${UpgradeSheet} /><${Toasts} />`;
 }

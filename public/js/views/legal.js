@@ -27,6 +27,7 @@ export function PrivacyView() {
     <h2>Your choices</h2>
     <p>Download everything we hold, or delete your account and every photo and record, from <b>Profile → Account & plan</b>. Deleting is immediate and permanent.</p>
     <h2>Security</h2>
+    <p>When the app itself hits an error in your browser, it sends us a short technical report (what failed, which page, which version and browser type) so we can fix it. Reports contain no photos or closet contents and are deleted after 30 days.</p>
     <p>Connections use HTTPS, passwords are hashed with scrypt, sessions use secure HttpOnly cookies, and uploaded photos are only served to their owner.</p>
     <h2>Contact</h2>
     <p>Questions about privacy? Contact the site operator using the details on the site where ModaWard is hosted.</p>

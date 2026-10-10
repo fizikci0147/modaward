@@ -113,6 +113,15 @@ A 503 from Hostinger means the platform could not reach a running Node process. 
 | A new version is uploaded and `/health` shows it, but the screens look the same | Since 5.5.1 each release uses its own file addresses, so a cache cannot hold old screens. If you still see old ones, open the site in a private window; if that is fine, clear the site data in your browser. The version in *You → Account* tells you which build the page is running. |
 | Photos disappear after a deploy | `DATA_DIR` was inside the app folder. Move it out (see step 3) and restore from backup. |
 
+## Restoring from a backup
+
+1. Stop the app (hPanel → Node.js app → Stop).
+2. In `DATA_DIR`, move `modaward.db` (and any `modaward.db-wal` / `modaward.db-shm`) out of the way, then copy the backup you want from `DATA_DIR/backups/` to `DATA_DIR/modaward.db`.
+3. Photos live in `DATA_DIR/uploads` and are **not** part of the database backup: restore that folder from your own copy or Hostinger's backups too, or pieces will show their drawings instead of photos.
+4. Start the app and open `/health`. Sign in and check your closet.
+
+A backup is only proven when it has been restored once. Do a trial restore into a spare folder before you need it.
+
 ## Running on a VPS instead
 
 ```bash

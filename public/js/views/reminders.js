@@ -39,12 +39,18 @@ export function RemindersSection() {
   const [device, setDevice] = useState(false); // this browser holds a push subscription
   const [busy, setBusy] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [loadError, setLoadError] = useState(null);
 
+  const load = () => {
+    setLoadError(null);
+    api.get('/reminders').then(setS).catch(setLoadError);
+  };
   useEffect(() => {
-    api.get('/reminders').then(setS).catch(fail);
+    load();
     thisDevice().then((sub) => setDevice(Boolean(sub))).catch(() => {});
   }, []);
 
+  if (loadError) return html`<div class="card card-pad stack center"><p>${loadError.message}</p><div><button class="btn btn-outline" onClick=${load}>${t('Try again')}</button></div></div>`;
   if (!s) return html`<div class="skel" style=${{ height: '260px', borderRadius: '20px' }}></div>`;
   const { prefs } = s;
 

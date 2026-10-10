@@ -61,7 +61,9 @@ export function createBilling(config, repos, log, doFetch = globalThis.fetch) {
     const json = await res.json().catch(() => ({}));
     if (!res.ok) {
       log.error('stripe.error', { path, status: res.status, type: json.error?.type, code: json.error?.code, message: json.error?.message });
-      throw new HttpError(502, 'payment_error', 'We could not reach the payment provider. You have not been charged.');
+      const err = new HttpError(502, 'payment_error', 'We could not reach the payment provider. You have not been charged.');
+      err.upstreamStatus = res.status;
+      throw err;
     }
     return json;
   }
@@ -163,7 +165,12 @@ export function createBilling(config, repos, log, doFetch = globalThis.fetch) {
 
     /** Called when an account is deleted: stop billing immediately. */
     async cancelForUser(user) {
-      if (user.stripe_subscription_id) await call('DELETE', `/subscriptions/${encodeURIComponent(user.stripe_subscription_id)}`);
+      if (!user.stripe_subscription_id) return;
+      try {
+        await call('DELETE', `/subscriptions/${encodeURIComponent(user.stripe_subscription_id)}`);
+      } catch (e) {
+        if (e.upstreamStatus !== 404) throw e; // a subscription Stripe no longer has is already cancelled
+      }
     }
   };
 }

@@ -27,6 +27,11 @@ const server = app.listen(config.port, config.host, () => {
   });
 });
 
+// an admin address nobody has registered yet could be claimed by a stranger: say so loudly
+for (const adminEmail of config.adminEmails) {
+  if (!deps.repos.users.byEmail(adminEmail)) log.warn('admin.email_unclaimed', { email: adminEmail, action: 'Register this address yourself now: anyone who signs up with it first becomes an admin.' });
+}
+
 deps.reminders.start();
 
 // housekeeping: expired sessions and AI cache
@@ -35,6 +40,8 @@ const sweep = setInterval(() => {
     deps.repos.sessions.purgeExpired();
     deps.codes.sweep();
     deps.repos.users.purgeActivity();
+    deps.db.run('DELETE FROM click_events WHERE created_at < ?', Math.floor(Date.now() / 1000) - 400 * 86400);
+    deps.db.run('DELETE FROM client_errors WHERE created_at < ?', Math.floor(Date.now() / 1000) - 30 * 86400);
     deps.repos.plans.purgeBefore(new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10));
     deps.db.run('DELETE FROM ai_cache WHERE expires_at < ?', Math.floor(Date.now() / 1000));
   } catch (e) {

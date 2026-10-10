@@ -77,6 +77,7 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
     adminEmails: str(env.ADMIN_EMAILS).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
     registrationOpen: bool(env.ALLOW_REGISTRATION, true),
     sessionDays: int(env.SESSION_DAYS, 30),
+    logMailBodies: bool(env.LOG_MAIL_BODIES, !production),
 
     weather: {
       provider: str(env.WEATHER_PROVIDER, 'openmeteo'),

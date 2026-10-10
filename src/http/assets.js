@@ -43,6 +43,14 @@ export function createAssets(config) {
     }
   }
 
+  const decode = (s) => {
+    try {
+      return decodeURIComponent(s);
+    } catch {
+      return null;
+    }
+  };
+
   function send(res, file, cacheable) {
     res.setHeader('Cache-Control', cacheable && immutable ? 'public, max-age=31536000, immutable' : 'no-cache');
     if (file.endsWith('.js')) {
@@ -57,29 +65,54 @@ export function createAssets(config) {
     return res.sendFile(file);
   }
 
+  /** Every module reachable through static imports from main.js, as /js/... and /shared/... paths. */
+  function startupModules() {
+    const seen = new Set();
+    const queue = ['/js/main.js'];
+    const IMPORT = /(?:\bfrom\s*|\bimport\s*)(['"])(\/(?:js|shared|vendor)\/[^'"]+\.js)\1/g;
+    while (queue.length) {
+      const url = queue.shift();
+      if (seen.has(url)) continue;
+      const [, root, ...rest] = url.split('/');
+      const file = locate(root, rest.join('/'));
+      if (!file) continue;
+      seen.add(url);
+      for (const m of fs.readFileSync(file, 'utf8').matchAll(IMPORT)) queue.push(m[2]);
+    }
+    return [...seen];
+  }
+
   return {
     prefix,
     version,
     /** /v/<any build>/<root>/<file>: always the current files, imports pointing at the current build. */
     versioned(req, res, next) {
       const m = /^\/v\/[^/]+\/(js|css|vendor|shared)\/(.+)$/.exec(req.path);
-      const file = m && locate(m[1], decodeURIComponent(m[2]));
+      const file = m && locate(m[1], decode(m[2]));
       return file ? send(res, file, true) : next();
     },
     /** The plain /js/… and /shared/… addresses, served with versioned imports but never cached for long. */
     plain(req, res, next) {
       const m = /^\/(js|shared)\/(.+\.js)$/.exec(req.path);
-      const file = m && locate(m[1], decodeURIComponent(m[2]));
+      const file = m && locate(m[1], decode(m[2]));
       return file ? send(res, file, false) : next();
     },
-    /** index.html pointing at this build's script and stylesheet. */
+    /**
+     * index.html pointing at this build's script and stylesheet, with every module the app needs at
+     * start-up preloaded in one go. Without that, the browser discovers imports level by level and
+     * pays a network round trip per level, which is what makes a slow phone connection feel slow.
+     */
     indexHtml: (() => {
       let html = null;
       return () => {
-        html ??= fs
-          .readFileSync(path.join(config.publicDir, 'index.html'), 'utf8')
-          .replace('href="/css/app.css"', `href="${prefix}/css/app.css"`)
-          .replace('src="/js/main.js"', `src="${prefix}/js/main.js"`);
+        if (html === null) {
+          const preload = startupModules().map((u) => `<link rel="modulepreload" href="${prefix}${u}" />`).join('\n  ');
+          html = fs
+            .readFileSync(path.join(config.publicDir, 'index.html'), 'utf8')
+            .replace('href="/css/app.css"', `href="${prefix}/css/app.css"`)
+            .replace('<link rel="stylesheet"', `${preload}\n  <link rel="stylesheet"`)
+            .replace('src="/js/main.js"', `src="${prefix}/js/main.js"`);
+        }
         return html;
       };
     })(),

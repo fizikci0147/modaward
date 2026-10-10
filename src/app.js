@@ -37,6 +37,7 @@ export function createApp(deps) {
   app.disable('x-powered-by');
   app.set('trust proxy', config.trustProxy);
   app.set('etag', 'strong');
+  app.locals.production = config.production;
 
   app.use(requestContext(log));
   app.use(securityHeaders(config));
@@ -80,7 +81,7 @@ export function createApp(deps) {
 
   // ── authenticated files and redirects ──
   app.get('/uploads/:name', sessionAuth(repos), uploadsRoute(deps));
-  if (deps.linker) app.get('/go', sessionAuth(repos), goRoute(deps));
+  if (deps.linker) app.get('/go', rateLimit({ windowMs: 60_000, max: 120, message: 'Too many requests. Please slow down.' }), sessionAuth(repos), goRoute(deps));
 
   // ── API ──
   const api = express.Router();
@@ -95,7 +96,14 @@ export function createApp(deps) {
   const big = express.json({ limit: '5mb' });
   const small = express.json({ limit: '100kb' });
   const huge = express.json({ limit: '12mb' }); // admin feed imports only
-  api.use((req, res, next) => (req.path === '/admin/products/import' ? huge : /^\/(garments|ai|photos)(\/|$)/.test(req.path) ? big : small)(req, res, next));
+  // big bodies are only read for signed-in people (and the 12 MB feed import only for admins), so an
+  // anonymous visitor cannot make the server buffer megabytes before being told to sign in
+  const parserFor = (req) => {
+    if (!req.user) return small;
+    if (req.path === '/admin/products/import') return config.adminEmails.includes(req.user.email.toLowerCase()) ? huge : small;
+    return /^\/(garments|ai|photos)(\/|$)/.test(req.path) ? big : small;
+  };
+  api.use((req, res, next) => parserFor(req)(req, res, next));
   api.use(csrf(config));
 
   api.use('/auth', authRoutes({ ...deps, capabilities: deps.capabilities ?? {} }));

@@ -5,7 +5,7 @@ import { object, partial, string, number, boolean, oneOf, arrayOf, hexColor, opt
 import { TYPE_IDS, TYPES, PATTERNS, ARCHETYPE_IDS } from '../../shared/taxonomy.js';
 import { colorName } from '../../shared/color.js';
 import { notFound, badRequest } from '../../util/errors.js';
-import { assertCanAddGarments } from '../../services/plans.js';
+import { assertCanAddGarments, assertWithinStorageCap } from '../../services/plans.js';
 import { starterWardrobe } from '../../services/starter.js';
 import { daysBetween } from '../../shared/dormancy.js';
 
@@ -66,6 +66,7 @@ export function garmentRoutes({ config, repos, images }) {
   r.post('/garments', (req, res) => {
     const input = createSchema(req.body);
     assertCanAddGarments(req.user, config, repos.garments.count(req.user.id));
+    assertWithinStorageCap(req.user, repos.garments.countAll(req.user.id));
     const { image, ...data } = withPriceCents(input);
     data.name ||= req.t('{color} {type}', { color: req.t(colorName(data.color)), type: req.t(TYPES[data.type].label).toLowerCase() }).replace(/^./, (c) => c.toUpperCase());
     let saved = null;
@@ -84,6 +85,7 @@ export function garmentRoutes({ config, repos, images }) {
     const dept = department || repos.profiles.get(req.user.id).department;
     const items = starterWardrobe(dept, req.t);
     assertCanAddGarments(req.user, config, repos.garments.count(req.user.id), items.length);
+    assertWithinStorageCap(req.user, repos.garments.countAll(req.user.id), items.length);
     const created = repos.db.transaction(() => items.map((item) => repos.garments.create(req.user.id, item)));
     res.status(201).json({ garments: created });
   });

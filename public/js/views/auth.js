@@ -80,7 +80,7 @@ export function AuthView({ mode }) {
 
   return html`<div class="auth">
     <${Side} />
-    <main class="auth-form">
+    <main class="auth-form" id="main" tabindex="-1">
       <div class="auth-card enter">
         <div class="brand" style=${{ fontSize: '26px' }}><${Logo} size=${26} />ModaWard</div>
         <div class="stack" style=${{ gap: '8px' }}><h1 class="display h-l">${title}</h1><p class="muted">${sub}</p></div>

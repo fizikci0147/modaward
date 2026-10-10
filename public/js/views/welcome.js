@@ -32,7 +32,7 @@ export function WelcomeView() {
     }
   };
 
-  return html`<main class="welcome">
+  return html`<main class="welcome" id="main" tabindex="-1">
     <div class="spread"><span class="brand"><${Logo} size=${26} />ModaWard</span><${LanguagePicker} /><button class="btn btn-ghost btn-s" onClick=${() => navigate('/', { replace: true })}>${t('Skip for now')}</button></div>
     <div class="steps" aria-hidden="true">${[0, 1, 2].map((i) => html`<i key=${i} class=${i <= step ? 'on' : ''}></i>`)}</div>
 

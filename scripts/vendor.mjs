@@ -14,10 +14,10 @@ fs.mkdirSync(path.join(pub, 'fonts'), { recursive: true });
 // one ESM bundle: Preact + hooks + htm (bound to h)
 const entry = `
 import { h, render, Fragment, createContext, createRef } from 'preact';
-import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useContext, useReducer } from 'preact/hooks';
+import { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useContext, useReducer, useErrorBoundary } from 'preact/hooks';
 import htm from 'htm';
 const html = htm.bind(h);
-export { h, render, Fragment, createContext, createRef, useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useContext, useReducer, html };
+export { h, render, Fragment, createContext, createRef, useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, useContext, useReducer, useErrorBoundary, html };
 `;
 await build({
   stdin: { contents: entry, resolveDir: root, loader: 'js' },

@@ -48,7 +48,7 @@ describe('reminders', () => {
     for (const ok of ['https://fcm.googleapis.com/fcm/send/x'.padEnd(40, 'x'), 'https://updates.push.services.mozilla.com/wpush/v2/abc', 'https://web.push.apple.com/QAbc', 'https://wns2-par02p.notify.windows.com/w/?token=abc']) {
       assert.equal(isPushEndpoint(ok), true, ok);
     }
-    for (const bad of ['http://fcm.googleapis.com/fcm/send/x', 'https://169.254.169.254/latest/meta-data', 'https://localhost/x', 'https://evil.example.com/fcm.googleapis.com', 'https://fcm.googleapis.com.evil.com/x', 'https://user:pw@fcm.googleapis.com/x', 'https://fcm.googleapis.com:8443/x', 'not a url']) {
+    for (const bad of ['http://fcm.googleapis.com/fcm/send/x', 'https://169.254.169.254/latest/meta-data', 'https://localhost/x', 'https://storage.googleapis.com/x', 'https://evil.example.com/fcm.googleapis.com', 'https://fcm.googleapis.com.evil.com/x', 'https://user:pw@fcm.googleapis.com/x', 'https://fcm.googleapis.com:8443/x', 'not a url']) {
       assert.equal(isPushEndpoint(bad), false, bad);
     }
   });

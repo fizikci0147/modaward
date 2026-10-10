@@ -14,7 +14,15 @@ const resetSchema = object({ token: string({ min: 64, max: 64 }), password: stri
 
 export function authRoutes({ config, repos, mailer, log, capabilities }) {
   const r = Router();
-  const strict = rateLimit({ windowMs: 15 * 60_000, max: config.limits.auth, message: 'Too many attempts. Please wait a few minutes.' });
+  // one bucket per action, so people behind a shared address cannot lock each other out of everything
+  const bucket = () => rateLimit({ windowMs: 15 * 60_000, max: config.limits.auth, message: 'Too many attempts. Please wait a few minutes.' });
+  const registerLimit = bucket();
+  const loginLimit = bucket();
+  const forgotLimit = bucket();
+  const resetLimit = bucket();
+  // a reset email goes to someone else's inbox, so cap it per recipient whoever asks
+  const forgotPerEmail = rateLimit({ windowMs: 3_600_000, max: 3, key: (req) => `forgot|${String(req.body?.email || '').toLowerCase()}`, message: 'Too many attempts. Please wait a few minutes.' });
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
   const perAccount = rateLimit({
     windowMs: 15 * 60_000,
     max: 10,
@@ -32,7 +40,7 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
 
   r.get('/me', (req, res) => res.json(me(req.user)));
 
-  r.post('/register', strict, async (req, res) => {
+  r.post('/register', registerLimit, async (req, res) => {
     if (!config.registrationOpen) throw forbidden('Sign-ups are closed right now.');
     const { email, password, name } = registerSchema(req.body);
     assertStrongPassword(password, email);
@@ -50,7 +58,7 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
     res.status(201).json(me(user));
   });
 
-  r.post('/login', strict, perAccount, async (req, res) => {
+  r.post('/login', loginLimit, perAccount, async (req, res) => {
     const { email, password } = loginSchema(req.body);
     const user = repos.users.byEmail(email);
     if (!user) {
@@ -71,7 +79,7 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
   });
 
   // Always answers the same way so the endpoint cannot be used to discover registered emails.
-  r.post('/forgot', strict, async (req, res) => {
+  r.post('/forgot', forgotLimit, forgotPerEmail, async (req, res) => {
     const { email } = forgotSchema(req.body);
     const user = repos.users.byEmail(email);
     const base = baseUrl(config, req);
@@ -80,23 +88,22 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
       const link = `${base}/reset?token=${token}`;
       const t = req.t;
       const hello = user.name ? t('Hi {name},', { name: user.name }) : t('Hi,');
-      try {
-        await mailer.send({
+      // not awaited: how long the mail server takes must not reveal that the address has an account
+      mailer
+        .send({
           to: user.email,
           subject: t('Reset your ModaWard password'),
           text: `${hello}\n\n${t('Use this link within one hour to choose a new password:')}\n${link}\n\n${t('If you did not ask for this, you can ignore this email.')}\n\nModaWard`,
-          html: `<p>${hello}</p><p><a href="${link}">${t('Choose a new password')}</a>. ${t('The link works for one hour.')}</p><p>${t('If you did not ask for this, you can ignore this email.')}</p>`
-        });
-      } catch (e) {
-        log.error('auth.reset_mail_failed', { user: user.id, message: e.message });
-      }
+          html: `<p>${esc(hello)}</p><p><a href="${esc(link)}">${t('Choose a new password')}</a>. ${t('The link works for one hour.')}</p><p>${t('If you did not ask for this, you can ignore this email.')}</p>`
+        })
+        .catch((e) => log.error('auth.reset_mail_failed', { user: user.id, message: e.message }));
     } else if (user && !base) {
       log.error('auth.reset_needs_app_url', {});
     }
     res.json({ ok: true });
   });
 
-  r.post('/reset', strict, async (req, res) => {
+  r.post('/reset', resetLimit, async (req, res) => {
     const { token, password } = resetSchema(req.body);
     // check the password first so a weak one does not burn the single-use token
     assertStrongPassword(password);

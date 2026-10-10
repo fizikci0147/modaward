@@ -23,7 +23,8 @@ const unsubscribeSchema = object({ u: string({ min: 36, max: 36 }), t: string({ 
 
 export function reminderRoutes({ reminders, push, mailer, config }) {
   const r = Router();
-  const limit = rateLimit({ windowMs: 60_000, max: 6, key: (req) => req.user?.id || req.ip });
+  // a test sends a real email to the account's address, so keep it to a few an hour
+  const limit = rateLimit({ windowMs: 3_600_000, max: 5, key: (req) => req.user?.id || req.ip, message: 'Too many tests for now. Please try again in a while.' });
 
   // the one route that needs no sign-in: the unsubscribe link in an email
   r.post('/reminders/unsubscribe', rateLimit({ windowMs: 60_000, max: 20, message: 'Too many attempts. Please try again in a minute.' }), (req, res) => {

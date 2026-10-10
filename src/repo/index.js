@@ -173,6 +173,7 @@ export function createRepos(db) {
       return row ? garmentFromRow(row) : null;
     },
     count: (userId) => db.get('SELECT COUNT(*) AS n FROM garments WHERE user_id = ? AND archived = 0', userId).n,
+    countAll: (userId) => db.get('SELECT COUNT(*) AS n FROM garments WHERE user_id = ?', userId).n,
     /** @param {object} g validated input (type, color, name …) */
     create(userId, g) {
       const full = withDefaults(g);

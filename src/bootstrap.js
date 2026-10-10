@@ -20,6 +20,7 @@ import { createStylist } from './ai/stylist.js';
 import { createPush } from './services/push.js';
 import { createReminders } from './services/reminders.js';
 import { reminderRoutes } from './http/routes/reminders.js';
+import { clientErrorRoutes } from './http/routes/client-errors.js';
 import { shopRoutes } from './http/routes/shop.js';
 import { photoRoutes } from './http/routes/photos.js';
 import { billingRoutes } from './http/routes/billing.js';
@@ -66,7 +67,7 @@ export async function createDeps(config, overrides = {}) {
   deps.push = overrides.push === undefined ? await createPush(config, db, log, overrides.pushSender) : overrides.push;
   deps.reminders = createReminders({ db, repos, outfits: deps.outfits, push: deps.push, mailer, config, log, secret: persistentSecret(config.dataDir, 'reminders') });
   capabilities.push = Boolean(deps.push);
-  for (const routes of [shopRoutes, photoRoutes, billingRoutes, aiRoutes, insightsRoutes, adminRoutes, reminderRoutes]) deps.extraApiRoutes.push((api) => api.use(routes(deps)));
+  for (const routes of [shopRoutes, photoRoutes, billingRoutes, aiRoutes, insightsRoutes, adminRoutes, reminderRoutes, clientErrorRoutes]) deps.extraApiRoutes.push((api) => api.use(routes(deps)));
   return deps;
 }
 

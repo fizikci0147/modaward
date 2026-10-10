@@ -1,4 +1,4 @@
-import { paymentRequired } from '../util/errors.js';
+import { paymentRequired, conflict } from '../util/errors.js';
 
 /**
  * Entitlements. Free is generous enough to fall in love with the app (full daily outfits, the
@@ -16,6 +16,13 @@ export function entitlements(user, config) {
     photoTagging: pro,
     savedLooks: pro ? null : 10
   };
+}
+
+/** Every row counts, archived or not, so archiving cannot be used to dodge the closet limit. */
+export const hardGarmentCap = (user) => (user?.plan === 'pro' ? 2000 : 100);
+
+export function assertWithinStorageCap(user, totalNow, adding = 1) {
+  if (totalNow + adding > hardGarmentCap(user)) throw conflict('Your closet has reached its storage limit. Delete some pieces and try again.');
 }
 
 export function assertCanAddGarments(user, config, currentCount, adding = 1) {

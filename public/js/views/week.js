@@ -119,7 +119,7 @@ export function WeekView() {
           <span class="dow">${i === 0 ? t('Today') : dow(d.date)}</span>
           <span class="dnum">${dayNum(d.date)}</span>
           <${Icon} name=${d.locked ? 'lock' : weatherIcon(c.condition)} />
-          <span class="hl num">${tempStr(d.weather.tMaxC, units)} <span style=${{ opacity: 0.6 }}>${tempStr(d.weather.tMinC, units)}</span></span>
+          <span class="hl num">${tempStr(d.weather.tMaxC, units)} <span class="lo">${tempStr(d.weather.tMinC, units)}</span></span>
         </button>`;
       })}
     </div>

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { requireUser } from '../middleware.js';
 import { object, string, optional } from '../../util/validate.js';
-import { unauthorized } from '../../util/errors.js';
+import { unauthorized, HttpError } from '../../util/errors.js';
 import { hashPassword, verifyPassword, assertStrongPassword } from '../../services/passwords.js';
 import { publicUser } from '../../repo/index.js';
 import { clearSessionCookie } from '../middleware.js';
@@ -51,7 +51,13 @@ export function accountRoutes({ repos, images, billing, log, reminders }) {
     const { password } = deleteSchema(req.body);
     if (!(await verifyPassword(password, req.user.password_hash))) throw unauthorized('That password is not correct.');
     const files = repos.garments.allImageNames(req.user.id);
-    await billing?.cancelForUser(req.user).catch((e) => log.error('billing.cancel_failed', { user: req.user.id, message: e.message }));
+    // if the subscription cannot be cancelled, keep the account: deleting it would leave the person being charged
+    try {
+      await billing?.cancelForUser(req.user);
+    } catch (e) {
+      log.error('billing.cancel_failed', { user: req.user.id, message: e.message });
+      throw new HttpError(502, 'cancel_failed', 'We could not cancel your subscription, so your account was not deleted. Please try again in a few minutes.');
+    }
     repos.users.remove(req.user.id); // cascades to every table
     for (const f of files) images.remove(f);
     clearSessionCookie(req, res);

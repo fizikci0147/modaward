@@ -4,6 +4,33 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.6.0] · 2026-10-11
+
+A quality and security pass: automated accessibility checks on every screen, an independent security review, failure testing and a load test.
+
+### Fixed: security
+- **A closet limit loophole.** Archiving pieces let a free account keep adding more. Every piece now counts toward a hard storage cap (100 free, 2,000 Pro).
+- **Reset emails could carry someone else's HTML** through a person's name. Names are now escaped.
+- **Reset emails** are capped to 3 an hour per address, whoever asks; "send me a test" to 5 an hour; sending a reset no longer reveals through timing whether an address has an account.
+- **Sign-in, sign-up, forgot and reset each have their own attempt limit**, so people behind one network address cannot lock each other out.
+- **Reset links are no longer written to the server log in production** (set `LOG_MAIL_BODIES=1` to bring that back if you have no email set up).
+- **Deleting an account now stops if the subscription cannot be cancelled**, instead of deleting the account and leaving the person being charged.
+- Session cookies are always `Secure` in production; a malformed cookie or file path no longer causes a server error; anonymous visitors can no longer make the server read multi-megabyte bodies; push notifications only go to Google's FCM service (not any Google host) and a person is limited to 10 devices; `/go` and city search are rate limited; old click records are purged.
+- The server warns at startup if an `ADMIN_EMAILS` address has no account yet.
+
+### Fixed: accessibility and polish
+- Small grey text now meets WCAG AA contrast in light and dark mode (previously about 3.6:1).
+- Skip-to-content links work on every page; heading levels no longer skip; faded temperatures on the Week days are readable.
+- Small buttons (swap, favourite, remove, chips) have bigger tap areas on touch screens.
+- The Welcome screens no longer sit 12px off-centre on phones; the Week row respects its padding.
+- Admin sections and Reminders show an error and a retry button, instead of a loading placeholder forever, when the server cannot be reached.
+
+### Added
+- **Problems in people's browsers** (Business → System): errors in the app's own code are reported and grouped, so bugs are found before anyone writes in. A broken screen shows "Something went wrong" with a way out instead of a blank page.
+- Business → System shows the visitor address as the app sees it, so you can check the proxy setting.
+- Start-up files are preloaded together, and colour maths is cached.
+- Data export includes planned days and reminder settings.
+
 ## [5.5.1] · 2026-10-11
 
 ### Fixed

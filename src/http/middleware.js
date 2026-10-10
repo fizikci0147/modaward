@@ -110,7 +110,13 @@ function readCookie(req, name) {
   if (!header) return '';
   for (const part of header.split(';')) {
     const i = part.indexOf('=');
-    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+    if (i > 0 && part.slice(0, i).trim() === name) {
+      try {
+        return decodeURIComponent(part.slice(i + 1).trim());
+      } catch {
+        return null; // a malformed cookie is simply "no cookie", never a server error
+      }
+    }
   }
   return '';
 }
@@ -148,10 +154,10 @@ export const requirePro = (req, _res, next) => {
 };
 
 export function setSessionCookie(req, res, token, days) {
-  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: req.secure, path: '/', maxAge: days * 86_400_000 });
+  res.cookie(COOKIE, token, { httpOnly: true, sameSite: 'lax', secure: Boolean(req.secure || req.app.locals.production), path: '/', maxAge: days * 86_400_000 });
 }
 
-export const clearSessionCookie = (req, res) => res.clearCookie(COOKIE, { httpOnly: true, sameSite: 'lax', secure: req.secure, path: '/' });
+export const clearSessionCookie = (req, res) => res.clearCookie(COOKIE, { httpOnly: true, sameSite: 'lax', secure: Boolean(req.secure || req.app.locals.production), path: '/' });
 
 /** Last-resort error handler: stable JSON shape, no internals leaked. */
 export function errorHandler(log) {

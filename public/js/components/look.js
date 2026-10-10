@@ -96,7 +96,7 @@ export function LookCard({ look, saved, onSaved, onUnsave, onHide, readOnly = fa
     <div class="look-body">
       <div class="stack" style=${{ gap: '6px' }}>
         <span class="eyebrow">${look.archetypeLabel}</span>
-        <h3 class="look-title">${look.title}</h3>
+        <h2 class="look-title">${look.title}</h2>
       </div>
       ${look.note ? html`<p class="stylist-note"><${Icon} name="sparkle" size="15" /><span><b>${t('Your stylist:')}</b> ${look.note}</span></p>` : null}
       <ul class="reasons">${look.reasons.slice(0, 3).map((r) => html`<li key=${r}><${Icon} name="check" /><span>${r}</span></li>`)}</ul>
@@ -122,7 +122,7 @@ export function GapCard({ gap }) {
   return html`<article class="card gap-card enter">
     <div class="stack" style=${{ gap: '6px' }}>
       <div class="row"><span class=${`badge ${gap.severity === 'high' ? 'badge-clay' : ''}`}>${gap.severity === 'high' ? t('Worth getting soon') : gap.severity === 'medium' ? t('Good to have') : t('Nice to have')}</span></div>
-      <h3 class="display h-s">${gap.title}</h3>
+      <h2 class="display h-s">${gap.title}</h2>
       <p class="muted small">${gap.why}</p>
     </div>
     <div class="gap-pieces">

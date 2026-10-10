@@ -57,6 +57,10 @@ Classical, in-browser, private: model the backdrop from the photo's border in CI
 
 Scripts, styles and the UI bundle are served under `/v/<build>/…` and the absolute imports inside them are rewritten to the same prefix, so every release has brand-new addresses and no browser, service worker or host cache can show an old screen. Versioned files are `immutable` for a year (development builds are `no-cache`). The plain `/js/…` and `/shared/…` addresses still work and serve the current code, so a stale page repairs itself. `index.html` and `/sw.js` are generated per build and are never cached.
 
+## Quality checks
+
+`npm run check` and the test suite gate every release. Beyond them, the release audit ran: axe-core accessibility checks over every screen in light and dark at phone and desktop sizes; a tap-target and overflow scan in all languages; failure simulation (500s, no connection, weather down) on every screen; a throttled-network load test; a concurrency test; a backup restore; and an independent read-only security review. The app reports its own errors to `client_errors`, shown in Business → System.
+
 ## Insights, events and trips
 
 `src/shared/wardrobe-stats.js` is a pure function from the closet and the wear log to the numbers on *Closet → Insights* (it is unit-tested without a server). Planned days live in `day_plans` (`repos.plans`): `forDay` and `week` read them, so a planned occasion decides the outfits unless the person picks one explicitly, and the morning reminder reads the same row. `src/engine/trip.js` packs a trip: for each day and occasion it asks the normal engine for six candidates, then chooses greedily, hardest weather first, preferring outfits that reuse what is already in the bag and capping shoes and outer layers at two each. Free plans may pack up to the same number of days they may plan (3); Pro gets the whole forecast window.

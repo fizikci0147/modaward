@@ -95,7 +95,7 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
   });
 
   /** One-click health check of everything the live site depends on, with the exact failure reasons. */
-  r.get('/admin/system', async (_req, res) => {
+  r.get('/admin/system', async (req, res) => {
     const probe = await weather.probe();
     res.json({
       checkedAt: new Date().toISOString(),
@@ -106,8 +106,24 @@ export function adminRoutes({ db, config, usage, catalog, codes, weather, capabi
       production: config.production,
       appUrl: config.appUrl || null,
       trustProxy: config.trustProxy ?? null,
+      network: { clientIp: req.ip, forwardedFor: req.get('x-forwarded-for') || null, protocol: req.protocol },
       weather: { provider: weather.provider, probe, lastError: weather.lastError },
       integrations: { ai: Boolean(capabilities?.ai), stripe: Boolean(capabilities?.billing), email: Boolean(mailer?.configured), push: Boolean(capabilities?.push), backgroundRemovalService: Boolean(capabilities?.cutoutService) }
+    });
+  });
+
+  // what is going wrong in people's browsers: grouped by message, newest first
+  r.get('/admin/errors', (_req, res) => {
+    const since = Math.floor(Date.now() / 1000) - 7 * 86400;
+    res.json({
+      since,
+      total: db.get('SELECT COUNT(*) AS n FROM client_errors WHERE created_at > ?', since).n,
+      groups: db.all(
+        `SELECT message, path, build, COUNT(*) AS count, COUNT(DISTINCT COALESCE(user_id, agent)) AS people, MAX(created_at) AS last_at,
+           (SELECT stack FROM client_errors e2 WHERE e2.message = e.message ORDER BY id DESC LIMIT 1) AS stack
+         FROM client_errors e WHERE created_at > ? GROUP BY message ORDER BY last_at DESC LIMIT 25`,
+        since
+      )
     });
   });
 

@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { now } from '../db/index.js';
 
-const PUSH_HOSTS = /^(?:[a-z0-9-]+\.)*(?:googleapis\.com|push\.apple\.com|push\.services\.mozilla\.com|notify\.windows\.com|push\.microsoft\.com)$/i;
+const PUSH_HOSTS = /^(?:[a-z0-9-]+\.)*(?:fcm\.googleapis\.com|push\.apple\.com|push\.services\.mozilla\.com|notify\.windows\.com|push\.microsoft\.com)$/i;
 
 /** True for an https URL on one of the browser vendors' push services. */
 export function isPushEndpoint(endpoint) {
@@ -21,6 +21,8 @@ export function isPushEndpoint(endpoint) {
     return false;
   }
 }
+
+const MAX_DEVICES = 10;
 
 function loadKeys(config, webpush) {
   if (config.push.publicKey && config.push.privateKey) return { publicKey: config.push.publicKey, privateKey: config.push.privateKey };
@@ -68,6 +70,9 @@ export async function createPush(config, db, log, sender) {
     publicKey: keys.publicKey,
 
     subscribe(userId, { endpoint, keys: k }, userAgent = '') {
+      // a person has a handful of devices: keep the newest ones so the list (and a test send) stays small
+      const mine = db.all('SELECT id FROM push_subscriptions WHERE user_id = ? AND endpoint <> ? ORDER BY id DESC', userId, endpoint);
+      for (const old of mine.slice(MAX_DEVICES - 1)) db.run('DELETE FROM push_subscriptions WHERE id = ?', old.id);
       db.run(
         `INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, user_agent, created_at) VALUES (?,?,?,?,?,?)
          ON CONFLICT(endpoint) DO UPDATE SET user_id = excluded.user_id, p256dh = excluded.p256dh, auth = excluded.auth, user_agent = excluded.user_agent, failures = 0`,

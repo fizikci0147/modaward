@@ -20,7 +20,8 @@ export function createMailer(config, log, transportOverride) {
     configured: configured || Boolean(transportOverride),
     async send({ to, subject, text, html, headers }) {
       if (!transport) {
-        log.warn('mail.not_configured', { to, subject, preview: text.slice(0, 500) });
+        // the body holds reset links, so it is only logged where that is wanted (development, or LOG_MAIL_BODIES=1)
+        log.warn('mail.not_configured', config.logMailBodies ? { to, subject, preview: text.slice(0, 500) } : { to, subject });
         return { delivered: false };
       }
       await transport.sendMail({ from: smtp.from, to, subject, text, html, headers });

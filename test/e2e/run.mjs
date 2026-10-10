@@ -379,6 +379,12 @@ async function runAdmin() {
   await page.getByRole('button', { name: /^Import 1 products$/ }).click();
   await page.locator('.toast').filter({ hasText: /1 added/ }).first().waitFor();
   await page.locator('.prod-row').filter({ hasText: 'Slim Navy Chinos' }).waitFor();
+  // a real error in the page is reported and shows up for the admin
+  await page.evaluate(() => setTimeout(() => { throw new Error('e2e boom'); }, 0));
+  await page.waitForTimeout(800);
+  const reported = await (await page.request.get('/api/admin/errors')).json();
+  if (!reported.groups.some((g) => g.message === 'e2e boom')) fail('admin: a browser error was not reported');
+  errors.length = 0;
   if (errors.length) fail(`admin: ${errors.join('; ')}`);
   ok('admin: a product can be added by hand, and a feed can be previewed and imported');
   await ctx.close();

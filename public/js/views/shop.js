@@ -80,7 +80,7 @@ function ForYou({ profile, entitlements }) {
       ? html`<div class="looks" style=${{ opacity: loading ? 0.5 : 1, transition: 'opacity .2s' }}>
           ${looks.map((l) => html`<${LookCard} key=${l.id} look=${l} saved=${savedMap[l.id]} onHide=${(x) => setHidden((h) => [...h, x.id])} onSaved=${(x, id) => setSavedMap((m) => ({ ...m, [x.id]: id }))} onUnsave=${async (x, id) => { try { await api.del(`/shop/saved/${id}`); setSavedMap((m) => { const n = { ...m }; delete n[x.id]; return n; }); toast(t('Removed from your list')); } catch (e) { fail(e); } }} />`)}
           ${data.locked > 0
-            ? html`<div class="card locked-card"><${Icon} name="lock" size="28" /><h3 class="display h-m">${t('{n}+ more looks in Pro', { n: data.locked })}</h3><p class="muted" style=${{ maxWidth: '36ch' }}>${t('The full feed mixes more brands, more occasions and gets sharper as you tell us what you love.')}</p><button class="btn btn-primary" onClick=${() => openUpgrade('pro')}>${t('Unlock all looks')}</button></div>`
+            ? html`<div class="card locked-card"><${Icon} name="lock" size="28" /><h2 class="display h-m">${t('{n}+ more looks in Pro', { n: data.locked })}</h2><p class="muted" style=${{ maxWidth: '36ch' }}>${t('The full feed mixes more brands, more occasions and gets sharper as you tell us what you love.')}</p><button class="btn btn-primary" onClick=${() => openUpgrade('pro')}>${t('Unlock all looks')}</button></div>`
             : null}
         </div>`
       : null}

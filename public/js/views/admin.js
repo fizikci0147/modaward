@@ -2,6 +2,9 @@ import { html, useState, useEffect, useRef } from '/js/ui.js';
 import { api } from '/js/api.js';
 import { fail, toast } from '/js/store.js';
 
+/** A section that failed to load says so and offers a retry, instead of showing a loading placeholder forever. */
+const Failed = ({ error, onRetry }) => html`<div class="card card-pad stack center"><p>${error?.message || 'This could not be loaded.'}</p><div><button class="btn btn-outline" onClick=${onRetry}>Try again</button></div></div>`;
+
 const Stat = ({ label, value, sub }) => html`<div class="card stat"><span class="eyebrow">${label}</span><b class="num">${value}</b>${sub ? html`<span class="small muted">${sub}</span>` : null}</div>`;
 
 function Access() {
@@ -69,9 +72,10 @@ const hourLabel = (h) => `${h % 12 || 12}${h < 12 ? 'am' : 'pm'}`;
 /** When people use the app: a weekday-by-hour heatmap plus the headline engagement numbers. */
 function UsageTimes() {
   const [a, setA] = useState(null);
-  useEffect(() => {
-    api.get(`/admin/activity?tz=${-new Date().getTimezoneOffset()}`).then(setA).catch(fail);
-  }, []);
+  const [err, setErr] = useState(null);
+  const loadA = () => { setErr(null); api.get(`/admin/activity?tz=${-new Date().getTimezoneOffset()}`).then(setA).catch(setErr); };
+  useEffect(() => { loadA(); }, []);
+  if (err) return html`<${Failed} error=${err} onRetry=${loadA} />`;
   if (!a) return html`<div class="skel" style=${{ height: '220px' }}></div>`;
   const peak = Math.max(1, ...a.heat.flat());
   const maxHour = Math.max(1, ...a.byHour);
@@ -106,7 +110,10 @@ function UsageTimes() {
 
 function Overview() {
   const [m, setM] = useState(null);
-  useEffect(() => { api.get('/admin/metrics').then(setM).catch(fail); }, []);
+  const [err, setErr] = useState(null);
+  const loadM = () => { setErr(null); api.get('/admin/metrics').then(setM).catch(setErr); };
+  useEffect(() => { loadM(); }, []);
+  if (err) return html`<${Failed} error=${err} onRetry=${loadM} />`;
   if (!m) return html`<div class="skel" style=${{ height: '300px' }}></div>`;
   const max = Math.max(1, ...m.clicks.byDay.map((d) => d.clicks));
   const maxSign = Math.max(1, ...m.signups.map((d) => d.n));
@@ -165,15 +172,18 @@ function Users() {
   const [sort, setSort] = useState('joined');
   const [page, setPage] = useState(0);
   const [data, setData] = useState(null);
+  const [err, setErr] = useState(null);
+  const [tick, setTick] = useState(0);
   const timer = useRef(0);
   useEffect(() => {
     clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       const qs = new URLSearchParams({ q, plan, sort, page: String(page) });
-      api.get(`/admin/users?${qs}`).then(setData).catch(fail);
+      setErr(null);
+      api.get(`/admin/users?${qs}`).then(setData).catch(setErr);
     }, q ? 250 : 0);
     return () => clearTimeout(timer.current);
-  }, [q, plan, sort, page]);
+  }, [q, plan, sort, page, tick]);
   const pages = data ? Math.max(1, Math.ceil(data.total / 25)) : 1;
   return html`<section class="card card-pad stack">
     <div class="row" style=${{ flexWrap: 'wrap', gap: '8px' }}>
@@ -181,7 +191,7 @@ function Users() {
       <select class="input" style=${{ width: '130px' }} aria-label="Plan" value=${plan} onChange=${(e) => { setPlan(e.target.value); setPage(0); }}><option value="">All plans</option><option value="pro">Pro</option><option value="free">Free</option></select>
       <select class="input" style=${{ width: '170px' }} aria-label="Sort" value=${sort} onChange=${(e) => { setSort(e.target.value); setPage(0); }}><option value="joined">Newest first</option><option value="active">Recently active</option><option value="closet">Biggest closet</option></select>
     </div>
-    ${!data ? html`<div class="skel" style=${{ height: '240px' }}></div>` : html`
+    ${err ? html`<${Failed} error=${err} onRetry=${() => setTick((x) => x + 1)} />` : !data ? html`<div class="skel" style=${{ height: '240px' }}></div>` : html`
       <p class="muted small">${data.total} ${data.total === 1 ? 'person' : 'people'}</p>
       ${data.users.length ? html`<div style=${{ overflowX: 'auto' }}><table class="table"><thead><tr><th>Person</th><th>Plan</th><th>Joined</th><th>Last seen</th><th class="num">Pieces</th><th class="num">Worn</th><th class="num">Saved</th><th class="num">Clicks</th><th>Where</th></tr></thead><tbody>${data.users.map((u) => html`<tr key=${u.id}>
         <td><b>${u.name || '(no name)'}</b><br /><span class="small muted">${u.email}</span></td>
@@ -200,20 +210,23 @@ function Users() {
 
 function System() {
   const [s, setS] = useState(null);
+  const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
   const run = async () => {
     setBusy(true);
-    try { setS(await api.get('/admin/system')); } catch (e) { fail(e); }
+    setErr(null);
+    try { setS(await api.get('/admin/system')); } catch (e) { setErr(e); }
     setBusy(false);
   };
   useEffect(() => { run(); }, []);
   const Row = ({ label, ok, detail }) => html`<tr><td>${label}</td><td>${ok === null ? html`<span class="faint">–</span>` : ok ? '✓ OK' : '✕ Problem'}</td><td class="small muted">${detail}</td></tr>`;
   return html`<section class="card card-pad stack"><div class="spread"><h2 class="display h-s">System check</h2><button class="btn btn-outline btn-s" onClick=${run} disabled=${busy}>${busy ? 'Checking…' : 'Run again'}</button></div>
-    ${!s ? html`<div class="skel" style=${{ height: '160px' }}></div>` : html`
+    ${err ? html`<${Failed} error=${err} onRetry=${run} />` : !s ? html`<div class="skel" style=${{ height: '160px' }}></div>` : html`
       <table class="table"><thead><tr><th>Check</th><th>Result</th><th>Details</th></tr></thead><tbody>
         <${Row} label="Weather service" ok=${s.weather.probe.ok} detail=${s.weather.probe.ok ? `${s.weather.provider} answered in ${s.weather.probe.ms} ms` : `${s.weather.probe.error}${s.weather.probe.status ? ` (HTTP ${s.weather.probe.status})` : ''}${s.weather.probe.reason ? `: ${s.weather.probe.reason}` : ''}`} />
         <${Row} label="Last weather error" ok=${s.weather.lastError ? false : null} detail=${s.weather.lastError ? `${s.weather.lastError.message} · ${new Date(s.weather.lastError.at).toLocaleString()}` : 'none since the app last started'} />
         <${Row} label="Web address (APP_URL)" ok=${Boolean(s.appUrl)} detail=${s.appUrl || 'Not set. Password-reset and payment links need it.'} />
+        <${Row} label="Your address, as the app sees it" ok=${null} detail=${`${s.network.clientIp} (forwarded: ${s.network.forwardedFor || 'none'}). This should be your own address. If it looks like a hosting server, or is the same for everyone, set TRUST_PROXY to the number of proxies in front of the app.`} />
         <${Row} label="Email (SMTP)" ok=${s.integrations.email} detail=${s.integrations.email ? 'configured' : 'Not configured: password-reset emails only go to the server log.'} />
         <${Row} label="Notifications (push)" ok=${s.integrations.push} detail=${s.integrations.push ? 'on: reminders reach installed apps' : 'Off: the web-push package is missing (run npm install) or PUSH_ENABLED=false.'} />
         <${Row} label="Payments (Stripe)" ok=${s.integrations.stripe} detail=${s.integrations.stripe ? 'configured' : 'Not switched on yet.'} />
@@ -353,12 +366,28 @@ function Products() {
   </div>`;
 }
 
+/** Errors in the app's own code, as people's browsers reported them. */
+function BrowserErrors() {
+  const [d, setD] = useState(null);
+  const [err, setErr] = useState(null);
+  const load = () => { setErr(null); api.get('/admin/errors').then(setD).catch(setErr); };
+  useEffect(() => { load(); }, []);
+  if (err) return html`<${Failed} error=${err} onRetry=${load} />`;
+  if (!d) return html`<div class="skel" style=${{ height: '100px' }}></div>`;
+  return html`<section class="card card-pad stack"><div class="spread"><h2 class="display h-s">Problems in people’s browsers</h2><button class="btn btn-outline" onClick=${load}>Refresh</button></div>
+    <p class="muted small">Errors in the app’s own code over the last 7 days, newest first. Network failures and problems the app already explains to people are not listed.</p>
+    ${d.groups.length
+      ? html`<table class="table"><thead><tr><th>What</th><th>Page</th><th class="num">Times</th><th class="num">People</th><th>Last</th></tr></thead><tbody>${d.groups.map((g) => html`<tr key=${g.message}><td><b>${g.message}</b>${g.stack ? html`<details><summary class="small muted">Details</summary><pre class="small" style=${{ whiteSpace: 'pre-wrap', maxWidth: '60ch' }}>${g.stack}\nbuild ${g.build}</pre></details>` : null}</td><td>${g.path}</td><td class="num">${g.count}</td><td class="num">${g.people}</td><td>${new Date(g.last_at * 1000).toLocaleString()}</td></tr>`)}</tbody></table>`
+      : html`<p>✓ Nothing reported in the last 7 days.</p>`}
+  </section>`;
+}
+
 export function AdminView() {
   const [tab, setTab] = useState('overview');
   return html`<div class="stack-l">
     <header class="stack"><h1 class="display h-xl">Business</h1>
       <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }} role="tablist">${[['overview', 'Overview'], ['users', 'Users'], ['access', 'Pro access'], ['products', 'Products'], ['system', 'System']].map(([id, label]) => html`<button key=${id} role="tab" class="chip" aria-selected=${tab === id} onClick=${() => setTab(id)}>${label}</button>`)}</div>
     </header>
-    ${tab === 'overview' ? html`<${Overview} />` : tab === 'users' ? html`<${Users} />` : tab === 'system' ? html`<${System} />` : tab === 'products' ? html`<${Products} />` : html`<${Access} />`}
+    ${tab === 'overview' ? html`<${Overview} />` : tab === 'users' ? html`<${Users} />` : tab === 'system' ? html`<div class="stack-l"><${System} /><${BrowserErrors} /></div>` : tab === 'products' ? html`<${Products} />` : html`<${Access} />`}
   </div>`;
 }

@@ -1,3 +1,4 @@
+import '/js/errors.js';
 import { html, render } from '/js/ui.js';
 import { App } from '/js/app.js';
 import { toast, set } from '/js/store.js';

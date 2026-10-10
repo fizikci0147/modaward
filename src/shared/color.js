@@ -8,10 +8,20 @@ const HEX_RE = /^#[0-9a-f]{6}$/i;
 
 export const isHex = (v) => typeof v === 'string' && HEX_RE.test(v);
 
-/** @param {string} hex @returns {[number, number, number]} */
+// The outfit engine converts the same few hundred colours thousands of times per request.
+const RGB = new Map();
+const HSL = new Map();
+
+/** @param {string} hex @returns {readonly [number, number, number]} */
 export function hexToRgb(hex) {
-  const n = parseInt(hex.slice(1), 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  let rgb = RGB.get(hex);
+  if (!rgb) {
+    const n = parseInt(hex.slice(1), 16);
+    rgb = Object.freeze([(n >> 16) & 255, (n >> 8) & 255, n & 255]);
+    if (RGB.size > 4000) RGB.clear();
+    RGB.set(hex, rgb);
+  }
+  return rgb;
 }
 
 export function rgbToHex(r, g, b) {
@@ -21,6 +31,16 @@ export function rgbToHex(r, g, b) {
 
 /** @returns {{h:number,s:number,l:number}} h in degrees 0–360, s and l in 0–1 */
 export function hexToHsl(hex) {
+  let hsl = HSL.get(hex);
+  if (!hsl) {
+    hsl = Object.freeze(computeHsl(hex));
+    if (HSL.size > 4000) HSL.clear();
+    HSL.set(hex, hsl);
+  }
+  return hsl;
+}
+
+function computeHsl(hex) {
   const [r, g, b] = hexToRgb(hex).map((v) => v / 255);
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
