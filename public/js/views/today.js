@@ -1,8 +1,7 @@
 import { html, useState, useEffect, useRef } from '/js/ui.js';
 import { t } from '/js/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, loadCloset, updateProfile, toast, fail, state, openUpgrade, upsertGarment } from '/js/store.js';
-import { canBuyProHere } from '/js/native.js';
+import { useStore, loadCloset, updateProfile, toast, fail, state, openUpgrade, upsertGarment, proOffered } from '/js/store.js';
 import { Icon } from '/js/icons.js';
 import { WeatherHero, Tips } from '/js/components/weather.js';
 import { OutfitCard } from '/js/components/outfit.js';
@@ -307,7 +306,7 @@ export function TodayView() {
     ${skipped.length && outfit
       ? html`<div class="row-wrap small muted" style=${{ alignItems: 'center' }}><span>${t('Not using today:')}</span>${skipped.map((p) => html`<button key=${p.id} class="chip chip-s" title=${t('Use it again')} onClick=${() => setSkipped((l) => l.filter((x) => x.id !== p.id))}>${p.name}<${Icon} name="x" size="12" /></button>`)}</div>`
       : null}
-    ${canBuyProHere && data?.stylistNote == null && state.entitlements?.plan === 'free' && outfit
+    ${proOffered() && data?.stylistNote == null && state.entitlements?.plan === 'free' && outfit
       ? html`<div class="upsell enter"><div class="grow"><b>${t('Plan the whole week')}</b><p>${t('Free plans see 3 days. Pro plans every day, with a stylist’s notes.')}</p></div><button class="btn btn-s" onClick=${() => openUpgrade('plan')}>${t('See Pro')}</button></div>`
       : null}
   </div>`;

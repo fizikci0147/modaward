@@ -236,13 +236,122 @@ const smoothstep = (a, b, v) => {
   return t * t * (3 - 2 * t);
 };
 
+
+// ── shape checks and repair ───────────────────────────────────────────────
+/** Convex hull (Andrew's monotone chain) of the garment's outline, as a polygon in pixel corners. */
+function hullOf(fg, w, h) {
+  const pts = [];
+  for (let y = 0; y < h; y++) {
+    let a = -1;
+    let b = -1;
+    for (let x = 0; x < w; x++) {
+      if (fg[y * w + x]) {
+        if (a < 0) a = x;
+        b = x;
+      }
+    }
+    if (a >= 0) pts.push([a, y], [b + 1, y + 1], [a, y + 1], [b + 1, y]);
+  }
+  if (pts.length < 3) return [];
+  pts.sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+  const cross = (o, a, b) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  return lower.slice(0, -1).concat(upper.slice(0, -1));
+}
+
+function polygonArea(poly) {
+  let a = 0;
+  for (let i = 0; i < poly.length; i++) {
+    const p = poly[i];
+    const q = poly[(i + 1) % poly.length];
+    a += p[0] * q[1] - q[0] * p[1];
+  }
+  return Math.abs(a) / 2;
+}
+
+/** How much of its own outline the garment fills: ~0.9 for a tee, low when it has been broken into pieces. */
+function solidity(fg, w, h, count) {
+  const area = polygonArea(hullOf(fg, w, h));
+  return area ? count / area : 1;
+}
+
+/** Everything inside the outline becomes garment (for patterned pieces whose light stripes read as backdrop). */
+function fillOutline(fg, w, h) {
+  const hull = hullOf(fg, w, h);
+  let added = 0;
+  for (let y = 0; y < h; y++) {
+    const yc = y + 0.5;
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let i = 0; i < hull.length; i++) {
+      const p = hull[i];
+      const q = hull[(i + 1) % hull.length];
+      if ((p[1] <= yc && q[1] > yc) || (q[1] <= yc && p[1] > yc)) {
+        const x = p[0] + ((yc - p[1]) / (q[1] - p[1])) * (q[0] - p[0]);
+        if (x < lo) lo = x;
+        if (x > hi) hi = x;
+      }
+    }
+    for (let x = Math.max(0, Math.ceil(lo)); x < Math.min(w, Math.floor(hi)); x++) {
+      if (!fg[y * w + x]) {
+        fg[y * w + x] = 1;
+        added += 1;
+      }
+    }
+  }
+  return added;
+}
+
+/** How far apart the garment and the backdrop are in colour, in units of how much each varies. */
+function separation(lab, fg, n) {
+  const mean = (want) => {
+    const m = [0, 0, 0];
+    let c = 0;
+    for (let i = 0; i < n; i++) {
+      if (!!fg[i] === want) {
+        m[0] += lab[i][0];
+        m[1] += lab[i][1];
+        m[2] += lab[i][2];
+        c += 1;
+      }
+    }
+    return c ? m.map((v) => v / c) : m;
+  };
+  const spread = (want, m) => {
+    let v = 0;
+    let c = 0;
+    for (let i = 0; i < n; i++) {
+      if (!!fg[i] === want) {
+        v += (lab[i][0] - m[0]) ** 2 + (lab[i][1] - m[1]) ** 2 + (lab[i][2] - m[2]) ** 2;
+        c += 1;
+      }
+    }
+    return Math.sqrt(v / Math.max(1, c) / 3);
+  };
+  const mF = mean(true);
+  const mB = mean(false);
+  const sF = spread(true, mF);
+  const sB = spread(false, mB);
+  return Math.hypot(mF[0] - mB[0], mF[1] - mB[1], mF[2] - mB[2]) / Math.sqrt((sF * sF + sB * sB) / 2 + 1);
+}
+
 /**
  * Segment the garment.
  * @param {{data: Uint8ClampedArray|number[], width: number, height: number}} img RGBA
  * @param {{maxWork?: number}} [opts]
  * @returns {{ok: boolean, reason?: string, mask?: Float32Array, width?: number, height?: number, fgFraction: number, borderContact: number, alreadyTransparent?: boolean}}
  */
-export function segment(img, { maxWork = 320 } = {}) {
+export function segment(img, { maxWork = 320, debug = false } = {}) {
   if (img.width < 24 || img.height < 24) return { ok: false, reason: 'too-small', fgFraction: 0, borderContact: 0 };
   const small = shrink(img, maxWork);
   const { width: w, height: h, data } = small;
@@ -327,6 +436,22 @@ export function segment(img, { maxWork = 320 } = {}) {
     }
   });
 
+  // A garment broken into pieces is either a patterned one (light stripes that look like backdrop: the pieces are
+  // clearly different from the surface, so fill its outline) or one too close to the surface in colour (the pieces
+  // are a guess: say so, so the person can touch it up). Two well-separated items (a pair of shoes) are left alone.
+  const keptParts = keep.filter(Boolean).length;
+  const filled = solidity(fg, w, h, fgCount);
+  let repaired = false;
+  if (filled < 0.62) {
+    const sep = separation(lab, fg, n);
+    if (keptParts >= 3 && sep >= 8) {
+      fgCount += fillOutline(fg, w, h);
+      repaired = true;
+    } else if (sep < 8) {
+      return { ok: false, reason: 'low-contrast', fgFraction: fgCount / n, borderContact: 0, solidity: filled };
+    }
+  }
+
   // does the result look plausible?
   let borderFg = 0;
   let borderTotal = 0;
@@ -349,7 +474,9 @@ export function segment(img, { maxWork = 320 } = {}) {
   const mask = new Float32Array(n);
   for (let i = 0; i < n; i++) mask[i] = smoothstep(0.3, 0.7, soft[i]);
 
-  return { ok: true, mask, width: w, height: h, fgFraction, borderContact };
+  const out = { ok: true, mask, width: w, height: h, fgFraction, borderContact, repaired, refine: { clusters, T } };
+  if (debug) out.debug = { lab, fg, w, h, parts: keptParts, bgClusters: clusters.length, T };
+  return out;
 }
 
 /**
@@ -360,6 +487,7 @@ export function segment(img, { maxWork = 320 } = {}) {
  */
 export function renderCutout(img, seg, { pad = 0.05, maxSide = 900 } = {}) {
   const { mask, width: mw, height: mh } = seg;
+  const { refine } = seg;
   const sample = (u, v) => {
     const x = Math.min(mw - 1, Math.max(0, u * mw - 0.5));
     const y = Math.min(mh - 1, Math.max(0, v * mh - 0.5));
@@ -409,14 +537,29 @@ export function renderCutout(img, seg, { pad = 0.05, maxSide = 900 } = {}) {
       const sx = Math.min(img.width - 1, srcX0 + Math.floor((x / outW) * srcW));
       const i = (sy * img.width + sx) * 4;
       const o = (y * outW + x) * 4;
-      const a = sample((sx + 0.5) / img.width, (sy + 0.5) / img.height);
-      out[o] = img.data[i];
-      out[o + 1] = img.data[i + 1];
-      out[o + 2] = img.data[i + 2];
+      let a = sample((sx + 0.5) / img.width, (sy + 0.5) / img.height);
+      // The mask is coarse (a few hundred pixels), so along the edge decide each full-resolution pixel by how
+      // far its own colour is from the backdrop. Only the soft edge band is touched; the inside and outside are kept.
+      let r = img.data[i];
+      let g = img.data[i + 1];
+      let b = img.data[i + 2];
+      if (refine && a > 0.02 && a < 0.98) {
+        const lab = rgbToLab(r, g, b);
+        let best = Infinity;
+        for (const c of refine.clusters) {
+          const d = distance(lab, c.color) / Math.max(c.spread * 2.5, 7);
+          if (d < best) best = d;
+        }
+        const t = smoothstep(refine.T * 0.85, refine.T * 1.3, best);
+        a = 0.25 * a + 0.75 * t;
+      }
+      out[o] = r;
+      out[o + 1] = g;
+      out[o + 2] = b;
       out[o + 3] = Math.round(a * 255);
     }
   }
-  return { data: out, width: outW, height: outH };
+  return { data: out, width: outW, height: outH, box: { x: srcX0, y: srcY0, w: srcW, h: srcH } };
 }
 
 export const CUTOUT_MESSAGES = {

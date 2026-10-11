@@ -11,7 +11,7 @@ import { navigate } from '/js/router.js';
 const openSheets = [];
 
 /** Bottom sheet on phones, centred dialog on desktop. Closes on Esc, scrim click and swipe-free. */
-export function Sheet({ title, onClose, children, footer, wide = false, label }) {
+export function Sheet({ title, onClose, children, footer, wide = false, label, bodyClass = '' }) {
   const ref = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose; // the latest handler, not the one from the first render
@@ -55,7 +55,7 @@ export function Sheet({ title, onClose, children, footer, wide = false, label })
         <h2 class="display h-s">${title}</h2>
         <button class="icon-btn" onClick=${onClose} aria-label=${t('Close')}><${Icon} name="x" /></button>
       </div>
-      <div class="sheet-body">${children}</div>
+      <div class=${`sheet-body ${bodyClass}`}>${children}</div>
       ${footer ? html`<div class="sheet-foot">${footer}</div>` : null}
     </div>
   </div>`;

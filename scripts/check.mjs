@@ -57,6 +57,28 @@ for (const f of js.filter((f) => browserRoots.some((r) => f.startsWith(r)) || f.
   }
 }
 
+// 2b. stylesheets are balanced: one stray brace makes the browser swallow every rule after it
+for (const f of files.filter((f) => f.endsWith('.css') && f.startsWith(path.join(root, 'public')))) {
+  const css = fs.readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+  let depth = 0;
+  let line = 1;
+  let openedAt = [];
+  for (const ch of css) {
+    if (ch === '\n') line += 1;
+    else if (ch === '{') (depth += 1, openedAt.push(line));
+    else if (ch === '}') {
+      depth -= 1;
+      openedAt.pop();
+      if (depth < 0) {
+        fail(`css: ${rel(f)} has an extra } near line ${line}`);
+        depth = 0;
+        openedAt = [];
+      }
+    }
+  }
+  if (depth !== 0) fail(`css: ${rel(f)} has an unclosed { (opened near line ${openedAt[openedAt.length - 1]})`);
+}
+
 // 3. HTML is CSP-clean and references real files
 for (const file of files.filter((f) => f.startsWith(path.join(root, 'public')) && f.endsWith('.html'))) {
   const html = fs.readFileSync(file, 'utf8');

@@ -2,7 +2,7 @@ import { html, useState, useEffect, useRef } from '/js/ui.js';
 import { t, tn, getLocale } from '/js/i18n.js';
 import { L } from '/shared/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, updateProfile, toast, fail, logout, refreshMe, loadCloset, profileCompleteness, state, set, forgetThisDevice } from '/js/store.js';
+import { useStore, updateProfile, toast, fail, logout, refreshMe, loadCloset, profileCompleteness, state, set, forgetThisDevice, proOffered } from '/js/store.js';
 import { Icon } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
 import { Sheet, Spinner, LocationPicker, Switch, ProBadge, LanguagePicker } from '/js/components/common.js';
@@ -12,7 +12,6 @@ import { AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CO
 import { cap, weekdayShort } from '/js/format.js';
 import { navigate, useSearch } from '/js/router.js';
 import { RemindersSection } from '/js/views/reminders.js';
-import { canBuyProHere } from '/js/native.js';
 
 /** Sample board for each style archetype: drawn, not photographed. */
 const SAMPLE = {
@@ -316,12 +315,12 @@ function AccountSection({ user, entitlements, capabilities }) {
   };
 
   return html`<div class="stack-l">
-    <${Section} title=${t('Your plan')}>
+    ${capabilities.pricing === 'free' ? null : html`<${Section} title=${t('Your plan')}>
       <div class="spread" style=${{ flexWrap: 'wrap' }}>
         <div class="stack" style=${{ gap: '4px' }}><div class="row">${pro ? html`<${ProBadge} />` : html`<span class="badge">${t('Free')}</span>`}<b>${pro ? t('ModaWard Pro') : t('ModaWard Free')}</b></div><p class="muted small">${pro ? (user.planRenewsAt && user.planStatus === 'granted' ? t('Free Pro until {date}', { date: new Date(user.planRenewsAt * 1000).toLocaleDateString(getLocale()) }) : user.planRenewsAt ? t('Renews {date}', { date: new Date(user.planRenewsAt * 1000).toLocaleDateString(getLocale()) }) : t('Thank you for supporting ModaWard.')) : t('{pieces} pieces · 3-day planning · {looks} looks at a time', { pieces: entitlements?.closetLimit, looks: entitlements?.shopLooks })}</p></div>
-        ${canBuyProHere ? (pro && !comped ? (capabilities.billing ? html`<button class="btn btn-outline" onClick=${portal} disabled=${busy === 'portal'}>${busy === 'portal' ? html`<${Spinner} />` : null}${t('Manage billing')}</button>` : null) : html`<button class="btn btn-primary" onClick=${() => navigate('/pro')}><${Icon} name="crown" />${t('See Pro')}</button>`) : null}
+        ${proOffered() ? (pro && !comped ? (capabilities.billing ? html`<button class="btn btn-outline" onClick=${portal} disabled=${busy === 'portal'}>${busy === 'portal' ? html`<${Spinner} />` : null}${t('Manage billing')}</button>` : null) : html`<button class="btn btn-primary" onClick=${() => navigate('/pro')}><${Icon} name="crown" />${t('See Pro')}</button>`) : null}
       </div>
-    </${Section}>
+    </${Section}>`}
     <${Section} title=${t('Account')}>
       <div class="size-row">
         <div class="field"><label for="acc-name">${t('Name')}</label><input id="acc-name" class="input" maxlength="60" value=${name} onInput=${(e) => setName(e.target.value)} onBlur=${saveName} /></div>

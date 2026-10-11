@@ -90,8 +90,9 @@ export function AuthView({ mode }) {
     }
   };
 
-  const titles = { login: [L('Welcome back'), L('Sign in to see what to wear today.')], register: [L('Create your account'), L('Free to start. No card needed.')], forgot: [L('Reset your password'), L('We’ll email you a link to choose a new one.')], reset: [L('Choose a new password'), L('Use at least 10 characters.')] };
-  const [title, sub] = titles[mode].map((x) => t(x));
+  const titles = { login: [L('Welcome back'), L('Sign in to see what to wear today.')], register: [L('Create your account'), L('Free to start. No card needed.'), L('Free, with no card needed.')], forgot: [L('Reset your password'), L('We’ll email you a link to choose a new one.')], reset: [L('Choose a new password'), L('Use at least 10 characters.')] };
+  const [title, sub0, subFree] = titles[mode].map((x) => (x ? t(x) : x));
+  const sub = subFree && capabilities?.pricing === 'free' ? subFree : sub0;
 
   return html`<div class="auth">
     <${Side} />

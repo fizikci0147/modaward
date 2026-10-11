@@ -1,9 +1,8 @@
 import { html, useState } from '/js/ui.js';
 import { t, getLocale } from '/js/i18n.js';
-import { useStore } from '/js/store.js';
+import { useStore, proOffered } from '/js/store.js';
 import { Icon } from '/js/icons.js';
 import { Link } from '/js/router.js';
-import { canBuyProHere } from '/js/native.js';
 
 const WINDOW_DAYS = 14;
 const key = (until) => `mw-trial-note-${until}`;
@@ -33,7 +32,7 @@ export function TrialNote() {
   return html`<div class="trial-note" role="status">
     <${Icon} name="sparkle" size="18" />
     <span>${t('Your free Pro ends on {date}.', { date: new Date(until * 1000).toLocaleDateString(getLocale(), { dateStyle: 'long' }) })}</span>
-    ${canBuyProHere ? html`<${Link} href="/pro" class="btn btn-primary btn-s">${t('Keep Pro')}</${Link}>` : null}
+    ${proOffered() ? html`<${Link} href="/pro" class="btn btn-primary btn-s">${t('Keep Pro')}</${Link}>` : null}
     <button class="icon-btn" onClick=${hide} aria-label=${t('Close')}><${Icon} name="x" size="16" /></button>
   </div>`;
 }

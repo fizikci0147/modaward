@@ -44,7 +44,7 @@ function cutoutInWorker(img) {
   });
 }
 
-const toPngDataUrl = (data, width, height, maxBytes = 2_600_000) => {
+export const toPngDataUrl = (data, width, height, maxBytes = 2_600_000) => {
   const c = document.createElement('canvas');
   c.width = width;
   c.height = height;

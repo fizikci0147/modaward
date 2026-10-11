@@ -18,7 +18,7 @@ It is an installable web app (PWA) with an Express server and a SQLite database.
 | **Profile** | A full styling profile: style quiz (visual), colours, patterns and "never suggest" rules, brands and stores, sizes, fit by body area, occasions, dress code, per-category budget, a note for the stylist. |
 | **Learns** | An on-device-style taste model (online logistic regression) trains on love / skip / wear / save signals. "Style DNA" shows what it learned. |
 | **AI stylist (optional)** | Claude orders the engine's candidates and writes a stylist's note; it can read a garment photo and pre-fill the form. It can only choose among weather-safe candidates and its output is validated. |
-| **Pro subscriptions** | Stripe Checkout + billing portal + signed webhooks. Free vs Pro limits are enforced on the server. |
+| **Pricing** | Free for everyone by default (`PRICING=free`: no billing, no Pro screens; the AI features need `FREE_AI=1`). `PRICING=paid` switches on Pro subscriptions: Stripe Checkout + billing portal + signed webhooks, with Free vs Pro limits enforced on the server. |
 | **Languages** | English, Spanish, French, German, Portuguese, Italian and Turkish: the screens, outfit explanations, weather tips, error messages, emails and the AI stylist's notes. Picked automatically from the browser, changeable any time, and saved on the account. See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md#languages). |
 | **Revenue** | Affiliate redirects with click tracking, retailer product-feed importer (real product photos and prices), admin metrics. |
 

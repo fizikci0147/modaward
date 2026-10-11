@@ -139,7 +139,6 @@ async function seedDemo(t) {
   const c = t.client();
   const reg = await c.post('/api/auth/register', { email: 'mia@example.com', password: 'correct horse battery', name: 'Mia', acceptTerms: true });
   if (reg.status !== 201) throw new Error(`could not create the demo account: ${reg.status} ${reg.text}`);
-  const id = reg.json.user.id;
   const must = (res, what) => {
     if (res.status >= 300) throw new Error(`demo setup failed at ${what}: ${res.status} ${res.text.slice(0, 200)}`);
     return res;
@@ -151,8 +150,6 @@ async function seedDemo(t) {
     lifestyle: { occasions: ['work', 'casual', 'date'] }
   }), 'the style profile');
   must(await c.post('/api/garments/starter', { department: 'women' }), 'the starter wardrobe');
-  // everything from Today to the Insights screen is open to a Pro member
-  t.deps.repos.users.setPlan(id, { plan: 'pro', status: 'active', renewsAt: Math.floor(Date.now() / 1000) + 200 * 86400 });
   const garments = (await c.get('/api/garments')).json.garments;
   const day = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
   const prices = [64, 38, 120, 89, 210, 45, 59, 150, 32, 95, 78, 180, 55, 110];
@@ -291,7 +288,8 @@ p{font-size:23px;line-height:1.35;color:rgba(246,243,237,.8);max-width:470px}
 
 // ─────────────────────────────────────────── go
 fs.mkdirSync(out, { recursive: true });
-const t = await startTestServer({ env: { SIGNUP_PRO_DAYS: '0' } });
+// the free version, as people will see it: everything unlocked and no Pro anywhere
+const t = await startTestServer({ env: { PRICING: 'free' } });
 const browser = await chromium.launch({ executablePath, args: ['--no-sandbox'] });
 try {
   await seedDemo(t);
@@ -325,13 +323,15 @@ try {
     }
     console.log(`✔ ${d.label}: ${SCREENS.length} screens`);
   }
-  // Google Play also wants a 1024×500 feature graphic
+  // Google Play also wants a 1024×500 feature graphic (needs the Android phone screens, so it is skipped when only one device is made)
+  if (cover) {
   await comp.setViewportSize({ width: 1024, height: 500 });
   await comp.setContent(featureGraphic(cover));
   await comp.evaluate(() => document.fonts.ready);
   fs.mkdirSync(path.join(out, 'Google'), { recursive: true });
   fs.writeFileSync(path.join(out, 'Google', 'feature-graphic-1024x500.png'), await comp.screenshot({ type: 'png' }));
   console.log('✔ Google Play feature graphic (1024×500)');
+  }
   console.log(`\n${made.length} screenshots in ${out}`);
 } finally {
   await browser.close();

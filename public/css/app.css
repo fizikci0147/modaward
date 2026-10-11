@@ -576,6 +576,8 @@ ul { margin: 0; padding: 0; list-style: none; }
 .look-top .badge-ok { background: color-mix(in srgb, var(--ok) 16%, var(--surface)); color: var(--ok); }
 
 .tile-art img.cutout, .drop img.cutout { object-fit: contain; padding: 9%; }
+/* a cut-out sits on the board with a soft contact shadow instead of looking pasted on */
+.tile-art img.cutout, .drop img.cutout, .forgotten-art img.cutout, .bulk-photo img.cutout, .collage-cell img.cutout { filter: drop-shadow(0 5px 6px rgb(40 30 20 / 0.2)) drop-shadow(0 1px 1.5px rgb(40 30 20 / 0.25)); }
 .drop-busy { position: absolute; inset: auto 12px 12px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-m); font-size: 12.5px; font-weight: 550; }
 .drop { background: var(--board); }
 .collage-cell img.cutout, .mini .ph img.cutout { object-fit: contain; padding: 8%; }
@@ -728,13 +730,8 @@ main:focus { outline: none; }
 .land-hero { display: grid; gap: 36px; align-items: center; padding: 28px 0 56px; }
 .land-copy { max-width: 560px; }
 .land-lead { font-size: 1.15rem; line-height: 1.55; color: var(--ink-2); max-width: 46ch; }
-.land-boards { display: flex; justify-content: center; align-items: center; gap: 16px; padding: 10px 0; }
-.land-boards > div { width: min(230px, 40vw); background: #f1ede3; border-radius: 22px; padding: 14px; box-shadow: var(--shadow-l); }
-.land-boards > div:nth-child(1) { transform: rotate(-3deg) translateY(-8px); }
-.land-boards > div:nth-child(2) { transform: rotate(2.5deg) translateY(14px); }
-.land-boards > div > svg { width: 100%; height: auto; }
 .land-section { display: grid; gap: 22px; padding: 40px 0; border-top: 1px solid var(--line); }
-.land-steps, .land-grid { display: grid; gap: 16px; list-style: none; margin: 0; padding: 0; }
+.land-steps, .land-grid, .land-more { display: grid; gap: 16px; list-style: none; margin: 0; padding: 0; }
 .land-grid { gap: 28px 24px; }
 .land-icon { display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--surface-2); color: var(--accent); }
 .land-h3 { font-size: 1.05rem; font-weight: 600; margin: 0; }
@@ -744,7 +741,6 @@ main:focus { outline: none; }
 .land-foot nav { gap: 18px; }
 @media (min-width: 760px) {
   .land-hero { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 56px; padding: 56px 0 80px; }
-  .land-steps { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .land-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
@@ -757,10 +753,6 @@ main:focus { outline: none; }
 .land-perks { display: flex; flex-wrap: wrap; gap: 8px 20px; list-style: none; margin: 0; padding: 0; color: var(--ink-2); font-size: 14px; }
 .land-perks li { display: inline-flex; align-items: center; gap: 6px; }
 .land-perks svg { color: var(--ok); flex: none; }
-.land-demo { margin: 0; display: grid; gap: 14px; justify-items: center; }
-.land-note { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 12px; padding: 10px 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-m); font-size: 14px; color: var(--ink-2); text-align: center; }
-.land-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--sky-soft); color: var(--sky); font-weight: 600; font-size: 13px; }
-@media (max-width: 759px) { .land-note { border-radius: 18px; } }
 
 .land-promo { display: inline-flex; align-items: center; gap: 8px; width: fit-content; padding: 6px 14px; border-radius: 999px; background: var(--clay-soft); color: var(--ink); font-weight: 600; font-size: 14px; margin: 0; }
 .land-promo svg { color: var(--clay); flex: none; }
@@ -771,3 +763,43 @@ main:focus { outline: none; }
 .trial-note span { flex: 1 1 0; min-width: 130px; font-weight: 500; }
 .trial-note .icon-btn { width: 32px; height: 32px; }
 .trial-note .icon-btn svg { width: 16px; height: 16px; }
+
+/* ── landing: real app screens, steps, questions ──── */
+.land-phone { width: min(280px, 72vw); justify-self: center; border-radius: 42px; background: #0c0c0c; padding: 8px; box-shadow: var(--shadow-l), inset 0 0 0 1.5px #2a2a2a; }
+.land-phone img { display: block; width: 100%; height: auto; aspect-ratio: 540 / 1173; border-radius: 34px; background: var(--surface); }
+.land-hero .land-phone { width: min(300px, 72vw); }
+.land-text { max-width: 58ch; font-size: 1.05rem; line-height: 1.6; }
+.land-steps { gap: 56px; }
+.land-step { display: grid; gap: 24px; align-items: center; }
+.land-more { gap: 40px 28px; }
+.land-more .land-phone { width: min(240px, 72vw); }
+.land-more li { justify-items: center; text-align: center; }
+.land-more p { max-width: 36ch; }
+.land-qa { display: grid; max-width: 760px; }
+.land-qa details { border-top: 1px solid var(--line); padding: 4px 0; }
+.land-qa details:last-child { border-bottom: 1px solid var(--line); }
+.land-qa summary { cursor: pointer; padding: 14px 28px 14px 0; font-weight: 600; list-style: none; position: relative; }
+.land-qa summary::-webkit-details-marker { display: none; }
+.land-qa summary::after { content: '+'; position: absolute; inset-inline-end: 4px; top: 50%; transform: translateY(-50%); font-size: 22px; font-weight: 400; color: var(--ink-2); }
+.land-qa details[open] summary::after { content: '–'; }
+.land-qa summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.land-qa p { padding: 0 0 16px; max-width: 62ch; }
+@media (min-width: 760px) {
+  .land-step { grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 64px; }
+  .land-step.rev { grid-template-columns: minmax(0, 1fr) minmax(0, 340px); }
+  .land-step.rev .land-phone { order: 2; }
+  .land-more { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1040px) {
+  .land-more { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* touch-up editor for a cut-out */
+.tu-body { grid-template-columns: minmax(0, 1fr); }
+.tu { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; max-width: 100%; }
+.tu > * { min-width: 0; }
+.tu-stage { position: relative; display: grid; place-items: center; min-height: 220px; border-radius: var(--r-m, 14px); overflow: hidden; background: conic-gradient(var(--board) 25%, var(--surface) 0 50%, var(--board) 0 75%, var(--surface) 0) 0 0 / 20px 20px; }
+.tu-canvas { display: block; max-width: 100%; max-height: min(50vh, 520px); width: auto; height: auto; touch-action: none; user-select: none; -webkit-user-select: none; cursor: crosshair; }
+.tu-tap { cursor: cell; }
+.tu-wait { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: var(--surface); box-shadow: var(--shadow-m); font-size: 12.5px; font-weight: 550; }
+@media (min-width: 880px) { .tu { grid-template-columns: minmax(0, 1fr) 250px; align-items: start; } .tu-canvas { max-height: min(62vh, 560px); } }

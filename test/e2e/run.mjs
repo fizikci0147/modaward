@@ -283,6 +283,34 @@ async function run(label, contextOptions) {
     return { corner: px(2, 2)[3], centre: px(c.width >> 1, c.height >> 1)[3], w: c.width, h: c.height };
   });
   if (alpha.corner !== 0 || alpha.centre !== 255) fail(`${label}: cut-out alpha wrong (corner ${alpha.corner}, centre ${alpha.centre})`);
+  // touch up by hand: erase a broad stripe across the middle of the tee, then tap the part above it to erase that part too
+  await dialog.getByRole('button', { name: 'Touch up' }).click();
+  const tu = page.getByRole('dialog', { name: 'Touch up' });
+  await tu.locator('canvas.tu-canvas').waitFor({ timeout: 20000 });
+  await tu.getByRole('button', { name: 'Large', exact: true }).click();
+  await tu.locator('canvas.tu-canvas').scrollIntoViewIfNeeded();
+  const cv = await tu.locator('canvas.tu-canvas').boundingBox();
+  await page.mouse.move(cv.x + cv.width * 0.2, cv.y + cv.height * 0.5);
+  await page.mouse.down();
+  await page.mouse.move(cv.x + cv.width * 0.8, cv.y + cv.height * 0.5, { steps: 8 });
+  await page.mouse.up();
+  await shot('10b2-touch-up');
+  await tu.getByRole('button', { name: 'Tap to erase' }).click();
+  await page.mouse.click(cv.x + cv.width * 0.5, cv.y + cv.height * 0.33);
+  await shot('10b3-touch-up-tapped');
+  await tu.getByRole('button', { name: 'Use this cut-out' }).click();
+  await tu.waitFor({ state: 'detached', timeout: 20000 });
+  const touched = await dialog.locator('img.cutout').evaluate(async (img) => {
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth;
+    c.height = img.naturalHeight;
+    const ctx = c.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(img, 0, 0);
+    return { h: c.height, centre: ctx.getImageData(c.width >> 1, c.height >> 1, 1, 1).data[3] };
+  });
+  if (touched.h > alpha.h * 0.6 || touched.centre < 200) fail(`${label}: touch-up did not leave just the lower part of the tee (height ${touched.h} of ${alpha.h}, centre alpha ${touched.centre})`);
+  ok(`${label}: Touch up erases by hand and by tap, and keeps the rest`);
   // the detected colour should be navy, not floor brown
   await dialog.getByRole('button', { name: 'T-shirt', exact: true }).click();
   await dialog.getByRole('button', { name: 'Add to closet' }).click();
@@ -577,11 +605,79 @@ async function runNative() {
   ok('native: the apps recognise themselves, offer no purchase anywhere, and everything else works as on the website');
   await ctx.close();
 }
+
+/** The free version (PRICING=free, the default): everything unlocked for everyone, and Pro appears nowhere. */
+async function runFree() {
+  const free = await startTestServer({ env: { PRICING: 'free', NODE_ENV: 'test' } });
+  const ctx = await browser.newContext({ baseURL: free.base, viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  const problems = [];
+  page.on('pageerror', (e) => problems.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && !/preloaded using link preload/.test(m.text()) && problems.push(m.text()));
+  const H = { 'x-requested-with': 'modaward' };
+
+  await page.goto('/');
+  await page.getByRole('heading', { name: /Dress for the day/ }).waitFor();
+  await page.getByText('Free, with no card needed.').first().waitFor();
+  const freeQ = page.locator('.land-qa details').filter({ hasText: 'Is it really free?' });
+  await freeQ.locator('summary').click();
+  await freeQ.getByText('ModaWard is free.').waitFor();
+  const shots = await page.locator('.land-phone img').evaluateAll((imgs) => imgs.map((i) => i.getAttribute('src')));
+  if (shots.length < 7) fail(`free: the front page shows ${shots.length} app screenshots, expected 7`);
+  for (const src of shots) {
+    const r = await page.request.get(src);
+    if (r.status() !== 200 || !/image\/webp/.test(r.headers()['content-type'] || '')) fail(`free: landing screenshot ${src} is ${r.status()} ${r.headers()['content-type']}`);
+  }
+  if (await page.getByText(/months? of Pro/).count()) fail('free: the front page still advertises Pro');
+  if ((await page.locator('a[href="/pro"]').count()) !== 0) fail('free: the front page links to Pro');
+  await page.goto('/register');
+  await page.getByText('Free, with no card needed.').waitFor();
+
+  const reg = await page.request.post('/api/auth/register', { headers: H, data: { email: 'free-user@example.com', password: 'correct horse battery', name: 'Ada', acceptTerms: true } });
+  if (!reg.ok()) fail(`free: could not register (${reg.status()})`);
+  await page.request.patch('/api/profile', { headers: H, data: { location: { name: 'New York, NY, US', lat: 40.7128, lon: -74.006, timezone: 'America/New_York' }, department: 'women', style: { archetypes: { minimal: 0.9 }, quizDone: true } } });
+  await page.request.post('/api/garments/starter', { headers: H, data: { department: 'women' } });
+  // a closet well past the old limit of 30 pieces
+  for (let i = 0; i < 25; i++) await page.request.post('/api/garments', { headers: H, data: { type: 'tee', color: '#aa3344', name: `Extra tee ${i}` } });
+
+  for (const url of ['/', '/week', '/closet', '/shop', '/style?section=account']) {
+    await page.goto(url);
+    await page.waitForSelector('.main');
+    await page.waitForTimeout(700);
+    const pro = await page.locator('a[href="/pro"], button:has-text("Go Pro"), button:has-text("See Pro"), button:has-text("Unlock"), button:has-text("Manage billing"), .badge:has-text("Pro")').count();
+    if (pro) fail(`free: ${url} still shows Pro (${pro} control${pro === 1 ? '' : 's'})`);
+  }
+  await page.goto('/closet');
+  await page.waitForSelector('.tile');
+  if (await page.getByText('Your closet is full').count()) fail('free: the closet says it is full');
+  await page.goto('/style?section=account');
+  await page.getByRole('heading', { name: 'Account', exact: true }).waitFor();
+  if (await page.getByText('Your plan').count()) fail('free: the account page shows a plan');
+
+  await page.goto('/week');
+  await page.waitForSelector('.day');
+  if ((await page.locator('.day.locked').count()) !== 0) fail('free: some days of the week are locked');
+  await page.goto('/pro');
+  await page.waitForURL((u) => new URL(u).pathname === '/');
+
+  await page.goto('/terms');
+  await page.getByRole('heading', { name: 'Free to use' }).waitFor();
+  if (await page.getByRole('heading', { name: 'Pro subscriptions' }).count()) fail('free: the Terms still describe Pro subscriptions');
+  await page.goto('/privacy');
+  await page.getByRole('heading', { name: 'Privacy Policy' }).waitFor();
+  if (await page.getByText('Payments (Stripe)').count()) fail('free: the Privacy Policy still mentions Stripe');
+
+  if (problems.length) fail(`free: ${problems.join('; ')}`);
+  ok('free: everything is unlocked, Pro appears nowhere, and the front page, Terms and Privacy Policy say it is free');
+  await ctx.close();
+  await free.close();
+}
 try {
   await run('mobile', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await run('desktop', { viewport: { width: 1366, height: 900 } });
   await runAdmin();
   await runNative();
+  await runFree();
 } catch (e) {
   fail(e.stack || e.message);
 } finally {

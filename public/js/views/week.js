@@ -1,8 +1,7 @@
 import { html, useState, useEffect } from '/js/ui.js';
 import { t } from '/js/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, fail, openUpgrade, toast } from '/js/store.js';
-import { canBuyProHere } from '/js/native.js';
+import { useStore, fail, openUpgrade, toast, proOffered } from '/js/store.js';
 import { Icon, weatherIcon } from '/js/icons.js';
 import { OutfitCard } from '/js/components/outfit.js';
 import { Tips } from '/js/components/weather.js';
@@ -65,7 +64,7 @@ function Locked({ day }) {
     <${Icon} name="lock" size="28" />
     <h2 class="display h-m">${t('{date} is part of Pro', { date: longDate(day.date) })}</h2>
     <p class="muted" style=${{ maxWidth: '42ch' }}>${t('Pro plans every day of the week against its own forecast, so you can pack, shop and decide ahead.')}</p>
-    ${canBuyProHere ? html`<button class="btn btn-primary" onClick=${() => openUpgrade('plan')}>${t('Unlock the full week')}</button>` : null}
+    ${proOffered() ? html`<button class="btn btn-primary" onClick=${() => openUpgrade('plan')}>${t('Unlock the full week')}</button>` : null}
   </div>`;
 }
 

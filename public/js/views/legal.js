@@ -31,7 +31,7 @@ export function PrivacyView() {
       <li><b>Retailers:</b> when you follow a link, the retailer sees that you came from ModaWard. We never send them your closet or profile. Product pictures in the Shop come straight from retailers’ image servers, so those servers can see your IP address when a picture loads.</li>
       <li><b>AI service (Anthropic):</b> if the AI stylist is on, the garments and preferences needed for that request go to Anthropic, which processes them in the United States. Photos you ask us to analyse are sent for that request only. Anthropic does not train its models on API inputs by default.</li>
       <li><b>Background removal (remove.bg), only if you use the high-accuracy option:</b> the photo you choose is sent to them to cut out the garment.</li>
-      <li><b>Payments (Stripe):</b> Stripe handles card details; we never see or store them. Stripe keeps its own records of your payments.</li>
+      ${state.capabilities?.pricing === 'free' ? null : html`<li><b>Payments (Stripe):</b> Stripe handles card details; we never see or store them. Stripe keeps its own records of your payments.</li>`}
       <li><b>Email and notification services:</b> emails go through the operator’s mail provider. Push notifications travel through Google, Apple or Mozilla, depending on your browser, and contain the reminder text.</li>
       <li><b>Hosting:</b> the site is hosted by the operator’s hosting company, which stores the data and backups.</li>
     </ul>
@@ -66,6 +66,7 @@ export function PrivacyView() {
 }
 
 export function TermsView() {
+  const free = state.capabilities?.pricing === 'free';
   return html`<article class="legal">
     <h1 class="display h-xl">Terms of Service</h1>
     <p class="faint small">Last updated ${UPDATED}</p>
@@ -80,9 +81,9 @@ export function TermsView() {
     <p>You own the photos and details you add. You give us permission to store and process them to provide the service. Only upload photos you have the right to use.</p>
     <h2>Shopping links and affiliate disclosure</h2>
     <p>Some links to retailers are affiliate links: we may earn a commission if you buy, at no extra cost to you. This never changes what we recommend. Prices, stock and delivery are the retailer’s responsibility, and any purchase is a contract between you and the retailer.</p>
-    <h2>Pro subscriptions</h2>
-    <p>Pro renews automatically at the period you choose until you cancel from your profile. Cancelling stops the next renewal; you keep Pro until the paid period ends. Taxes may apply.</p>
-    <p>New accounts may be given Pro for a limited time, free of charge and without a payment card. That time ends automatically on the date shown in your profile, after which your account continues on the free plan unless you subscribe. We may change or end this offer for future sign-ups at any time.</p>
+    ${free
+      ? html`<h2>Free to use</h2><p>ModaWard is free to use. We may earn a commission when you buy through a shop link (see above), which is how we pay for the service at no cost to you. If we add other ways to support ModaWard, such as advertising or optional paid features, we will update these terms first and tell you.</p>`
+      : html`<h2>Pro subscriptions</h2><p>Pro renews automatically at the period you choose until you cancel from your profile. Cancelling stops the next renewal; you keep Pro until the paid period ends. Taxes may apply.</p><p>New accounts may be given Pro for a limited time, free of charge and without a payment card. That time ends automatically on the date shown in your profile, after which your account continues on the free plan unless you subscribe. We may change or end this offer for future sign-ups at any time.</p>`}
     <h2>Acceptable use</h2>
     <p>Do not misuse the service, attempt to access other people’s data, upload unlawful content, or overload our systems.</p>
     <h2>Agreeing to these terms</h2>

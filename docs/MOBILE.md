@@ -25,7 +25,7 @@ Built, and checked here by browser tests and by reading the generated projects:
 
 Still to do before a public store release:
 
-1. **In-app purchase for Pro** (required by Apple and Google, see *Payments*).
+1. **In-app purchase for Pro** (only if you switch to `PRICING=paid`; required by Apple and Google, see *Payments*).
 2. **Native push notifications** (the website's web push does not work inside an app web view; email reminders work now). See *Notifications*.
 3. Store listings: screenshots, description, age rating, privacy answers (checklist below).
 
@@ -85,7 +85,7 @@ npm run android    # prepares the app, then opens Android Studio
 - Switch language (*You → About you*); turn the phone to dark mode (the app follows).
 - Airplane mode, then open the app: the offline screen shows, and *Try again* works after you turn the signal back on.
 - Android: the back button goes back inside the app and closes it only from the first screen.
-- Nothing anywhere says *Go Pro*, *Upgrade* or offers a price. (A new account does show *3 months of Pro, free for new members*, and its Pro features work.)
+- Nothing anywhere says *Go Pro*, *Upgrade* or offers a price. In the free version every feature simply works.
 - Sign out and back in; close the app fully and reopen (you should still be signed in).
 
 ## Releasing
@@ -96,6 +96,8 @@ npm run android    # prepares the app, then opens Android Studio
 4. **Android:** `npm run android` → *Build → Generate Signed App Bundle (AAB)*. Let Google **Play App Signing** hold the release key, and keep your upload keystore and its password somewhere safe (a password manager and a backup): losing it makes updates painful. Upload to Play Console → *Testing → Internal testing* first, then production.
 
 ## Payments: why the apps do not sell Pro (yet)
+
+> **In the free version (`PRICING=free`, the default) there is nothing to buy, so none of this applies**: no in-app purchase is needed and the apps show no Pro or price anywhere. Read on only if you switch to `PRICING=paid`.
 
 Apple (App Store Review Guideline 3.1.1) and Google (Play payments policy) require that subscriptions for digital features bought *inside an app* use **their** in-app purchase (they keep a commission, usually 15% to 30%), and they do not allow the app to link or point to another way of paying. Stripe checkout inside the apps would get the apps rejected or removed. So today:
 
@@ -116,7 +118,7 @@ Inside the apps, **email reminders work** (including "your free Pro is about to 
 - **Sign in with Apple** is only required if you add sign-in with Google/Facebook; the app uses email and password, so it is not needed.
 - **App Store privacy answers** (data linked to the person): contact info (email, name), user content (photos of clothes), location (approximate and precise, from "use my location", used for weather), identifiers and usage data (sign-in session, error reports). No tracking, no ads. Play Console "Data safety" asks the same.
 - **Age rating:** the sign-up requires age 16+; answer the questionnaires accordingly (no mature content).
-- **Review demo account:** create one with the 3 months of Pro active, and put its email and password in *App Review Information* and *App access*.
+- **Review demo account:** create one (all features are free) and put its email and password in *App Review Information* and *App access*.
 - **Affiliate links:** the Shop opens retailers outside the app and says so (see the Terms). Mention nothing about prices in the listing text that you cannot honour.
 - **Screenshots:** iPhone 6.9" and 6.5", iPad 13" (the apps support iPad); Android phone (and tablet if offered). I can produce clean screenshots from the real app on request.
 - **Export compliance:** already answered in the app (`ITSAppUsesNonExemptEncryption = false`: HTTPS only).

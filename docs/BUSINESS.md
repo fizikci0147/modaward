@@ -1,5 +1,7 @@
 # Making money with ModaWard
 
+> **The default is now the free version (`PRICING=free`)**: everything is free, with no billing and no Pro screens, and the money comes from **affiliate commissions** on the Shop (section 3), plus ads or sponsorship later if you choose. The Free vs Pro plan and Stripe (sections 1 to 2) apply only when you set `PRICING=paid`. The AI features are off in the free version unless you set `FREE_AI=1`.
+
 ModaWard has two revenue engines that reinforce each other: **Pro subscriptions** and **affiliate commissions** on the clothes it recommends. This page is the practical playbook: what to switch on, in what order, what it costs, and what to watch. Nothing here is a revenue forecast; the numbers are formulas you can fill in with your own data.
 
 ## 1. The product loop

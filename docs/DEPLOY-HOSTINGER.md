@@ -38,7 +38,7 @@ DATA_DIR=/home/<your-hostinger-user>/modaward-data
 ADMIN_EMAILS=you@yourdomain.com
 OPERATOR_NAME=Your name or company
 CONTACT_EMAIL=privacy@yourdomain.com
-SIGNUP_PRO_DAYS=90
+PRICING=free
 SMTP_HOST=smtp.hostinger.com
 SMTP_PORT=465
 SMTP_USER=no-reply@yourdomain.com
@@ -46,7 +46,9 @@ SMTP_PASS=<mailbox password>
 SMTP_FROM=ModaWard <no-reply@yourdomain.com>
 ```
 
-`SIGNUP_PRO_DAYS` is the welcome offer: every new account gets Pro free for that many days (90 = three months, 0 = no offer), with no card. It ends by itself, existing accounts are not changed, and it shows on the front page and sign-up screen. Free-Pro sign-ups still count against the AI limits (`AI_DAILY_LIMIT`, `AI_GLOBAL_DAILY_LIMIT`), so a flood of sign-ups cannot run up an unlimited AI bill.
+`PRICING=free` (the default) makes every feature free for everyone, with no billing and no Pro screens anywhere, and the Stripe step below is not needed. Add `FREE_AI=1` to also switch on the AI stylist and AI photo tagging for everyone (they cost money per call; `AI_DAILY_LIMIT` and `AI_GLOBAL_DAILY_LIMIT` cap the spend). Set `PRICING=paid` to go back to Free and Pro plans with Stripe; then add `SIGNUP_PRO_DAYS=90` for the welcome offer.
+
+In paid mode, `SIGNUP_PRO_DAYS` is the welcome offer: every new account gets Pro free for that many days (90 = three months, 0 = no offer), with no card. It ends by itself, existing accounts are not changed, and it shows on the front page and sign-up screen. Free-Pro sign-ups still count against the AI limits (`AI_DAILY_LIMIT`, `AI_GLOBAL_DAILY_LIMIT`), so a flood of sign-ups cannot run up an unlimited AI bill.
 
 **Do this straight after the first start: register your own account with the `ADMIN_EMAILS` address.** The app does not verify email addresses, so until that account exists anyone who signs up with that address first becomes an admin (the *Business → System check* page warns you while it is unclaimed). `OPERATOR_NAME` and `CONTACT_EMAIL` appear in the Privacy Policy as who is responsible and how to reach them; many countries require that. `APP_URL` is the plain address (`https://yourdomain.com`, no path); the app stops with a clear message if it cannot read it.
 
@@ -74,7 +76,7 @@ npm run live:check
 ## 5. Switch on the business, in this order
 
 1. **Weather licence.** Open-Meteo's free endpoint is non-commercial. Buy their commercial plan and set `OPEN_METEO_API_KEY` before charging users.
-2. **Stripe (Pro subscriptions).** In Stripe create one product with two recurring prices (monthly, yearly). Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`. Add a webhook endpoint `https://yourdomain.com/api/billing/webhook` for the events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and copy its signing secret into `STRIPE_WEBHOOK_SECRET`. Enable the Customer Portal in Stripe settings. Test in Stripe test mode first (`npm run live:check` prints TEST mode).
+2. **Stripe (Pro subscriptions; only when `PRICING=paid`, skip it otherwise).** In Stripe create one product with two recurring prices (monthly, yearly). Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`. Add a webhook endpoint `https://yourdomain.com/api/billing/webhook` for the events `checkout.session.completed`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, and copy its signing secret into `STRIPE_WEBHOOK_SECRET`. Enable the Customer Portal in Stripe settings. Test in Stripe test mode first (`npm run live:check` prints TEST mode).
 3. **Affiliate links and products.** See [BUSINESS.md](BUSINESS.md): join networks, set `AFFILIATE_CONFIG`, import product feeds.
 4. **AI stylist.** Set `ANTHROPIC_API_KEY`. Read the cost notes in BUSINESS.md first; the default per-user daily cap is 12 calls.
 5. **Reminders (push and email).** Nothing to set up for push: keys are generated into `DATA_DIR/secrets` on first start (keep that folder in your backups, because devices subscribed with these keys stop receiving notifications if the keys change). Email reminders need the `SMTP_*` settings and `APP_URL`. The reminder timer runs inside the Node process, so the app must stay running (Business Cloud Node apps do; if your plan sleeps idle apps, reminders only go out while it is awake). Open *You → Reminders* and press "Send me a test". On iPhone, notifications work only after the person adds the app to the Home Screen.

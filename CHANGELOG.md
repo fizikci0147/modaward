@@ -4,6 +4,16 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.16.0] · 2026-10-17
+
+### Added
+- **A free version, and it is the default** (`PRICING=free`). Every feature is free for everyone: no billing, no Pro screens, no welcome offer, no limits on the closet or planning, in the website and both apps. The AI stylist and AI photo tagging stay off unless you set `FREE_AI=1` (they cost money per call). Set `PRICING=paid` to get the earlier Free / Pro plans back exactly as they were. Terms and Privacy follow the mode (no Pro subscriptions or Stripe mentioned when free).
+- **Touch up** for cut-outs: when a photo's background is not removed well, or was left as it was, *Touch up* lets you erase what should go, restore what was cut by mistake, or tap a patch of backdrop to erase everything of that colour around it, with undo and start over. It works on the original photo, so it also rescues photos the automatic cut-out gave up on.
+- The front page now explains how ModaWard works with real screenshots from the app (the three steps, what goes into a look, week, trip, shop and insights), plus a questions section.
+
+### Improved
+- **Background removal** is more careful and sharper. A striped or patterned garment whose light stripes looked like backdrop used to come out in pieces; it now comes out whole. When a garment is too close in colour to the surface, it says so and keeps your photo instead of guessing a bad cut-out. Edges are decided at full resolution, so they are crisper. Cut-out pieces now sit on the board with a soft contact shadow instead of looking pasted on. A built-in set of synthetic test photos (four kinds of surface, six garment shapes, shadows, noise) now guards the quality.
+
 ## [5.15.4] · 2026-10-16
 
 ### Fixed

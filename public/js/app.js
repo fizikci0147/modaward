@@ -1,7 +1,7 @@
 import { html, useEffect, useErrorBoundary, useRef } from '/js/ui.js';
 import { t } from '/js/i18n.js';
 import { L } from '/shared/i18n.js';
-import { useStore, boot, set, toast, state } from '/js/store.js';
+import { useStore, boot, set, toast, state, proOffered } from '/js/store.js';
 import { usePath, navigate, Link } from '/js/router.js';
 import { Icon, Logo } from '/js/icons.js';
 import { Toasts, UpgradeSheet, ProBadge, TermsGate } from '/js/components/common.js';
@@ -18,7 +18,6 @@ import { ProView } from '/js/views/pro.js';
 import { PrivacyView, TermsView } from '/js/views/legal.js';
 import { UnsubscribeView } from '/js/views/unsubscribe.js';
 import { TrialNote } from '/js/components/trial-note.js';
-import { canBuyProHere, isNativeApp } from '/js/native.js';
 import { reportError } from '/js/errors.js';
 import { TripView } from '/js/views/trip.js';
 import { AdminView } from '/js/views/admin.js';
@@ -54,14 +53,14 @@ function Shell({ path, children }) {
       ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="rail-link" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${t(label)}</${Link}>`)}
       ${user?.isAdmin ? html`<${Link} href="/admin" class="rail-link" aria-current=${isCurrent('/admin') ? 'page' : undefined}><${Icon} name="shield" />${t('Business')}</${Link}>` : null}
       <div class="rail-foot">
-        ${!pro ? (canBuyProHere ? html`<${Link} href="/pro" class="btn btn-primary"><${Icon} name="crown" />${t('Go Pro')}</${Link}>` : null) : html`<div class="row" style=${{ padding: '0 12px' }}><${ProBadge} />${user?.planStatus === 'granted' ? (canBuyProHere ? html`<${Link} href="/pro" class="small muted">${t('See Pro')}</${Link}>` : null) : html`<span class="small muted">${t('Thank you')}</span>`}</div>`}
+        ${!pro ? (proOffered() ? html`<${Link} href="/pro" class="btn btn-primary"><${Icon} name="crown" />${t('Go Pro')}</${Link}>` : null) : html`<div class="row" style=${{ padding: '0 12px' }}><${ProBadge} />${user?.planStatus === 'granted' ? (proOffered() ? html`<${Link} href="/pro" class="small muted">${t('See Pro')}</${Link}>` : null) : html`<span class="small muted">${t('Thank you')}</span>`}</div>`}
         ${installPrompt ? html`<button class="btn btn-outline btn-s" onClick=${install}><${Icon} name="download" />${t('Install app')}</button>` : null}
         <${Link} href="/style?section=account" class="row small muted" style=${{ padding: '8px 12px' }}><span class="badge" style=${{ width: '30px', height: '30px', justifyContent: 'center' }}>${initials(user?.name || user?.email)}</span><span class="grow" style=${{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>${user?.name || user?.email}</span></${Link}>
       </div>
     </nav>
     <header class="topbar">
       <${Link} href="/" class="brand"><${Logo} size=${24} />ModaWard</${Link}>
-      <div class="row">${!pro ? (canBuyProHere ? html`<${Link} href="/pro" class="chip chip-s" aria-label=${t('Upgrade to Pro')}><${Icon} name="crown" />${t('Pro')}</${Link}>` : null) : html`<${ProBadge} />`}</div>
+      <div class="row">${!pro ? (proOffered() ? html`<${Link} href="/pro" class="chip chip-s" aria-label=${t('Upgrade to Pro')}><${Icon} name="crown" />${t('Pro')}</${Link}>` : null) : html`<${ProBadge} />`}</div>
     </header>
     <main class="main" id="main" tabindex="-1"><${TrialNote} />${children}</main>
     <nav class="tabbar" aria-label=${t('Main')}>
@@ -113,7 +112,7 @@ export function App() {
     if (!ready) return;
     // read the live location: `path` can be stale if a view navigated while this effect was queued
     const here = location.pathname.replace(/\/+$/, '') || '/';
-    if (isNativeApp && here === '/pro') navigate('/', { replace: true }); // nothing to buy in the apps (see native.js)
+    if (!proOffered() && here === '/pro') navigate('/', { replace: true }); // nothing to buy in the free version or in the apps
     else if (!user && !PUBLIC.has(here)) navigate('/login', { replace: true });
     else if (user && ['/login', '/register', '/forgot'].includes(here)) navigate('/', { replace: true });
   }, [ready, user, path]);

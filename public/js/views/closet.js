@@ -1,8 +1,7 @@
 import { html, useState, useEffect, useRef, useMemo } from '/js/ui.js';
 import { t, tn, getLocale } from '/js/i18n.js';
 import { api } from '/js/api.js';
-import { useStore, loadCloset, upsertGarment, removeGarment, toast, fail, openUpgrade } from '/js/store.js';
-import { canBuyProHere } from '/js/native.js';
+import { useStore, loadCloset, upsertGarment, removeGarment, toast, fail, openUpgrade, proOffered } from '/js/store.js';
 import { Icon } from '/js/icons.js';
 import { GarmentArt } from '/js/components/art.js';
 import { Sheet, Spinner, Empty, Switch } from '/js/components/common.js';
@@ -12,6 +11,7 @@ import { cap, money } from '/js/format.js';
 import { useQuery, navigate } from '/js/router.js';
 import { readPhoto } from '/js/photo.js';
 import { BulkAddSheet } from '/js/views/bulk.js';
+import { TouchUp } from '/js/views/touchup.js';
 import { ClosetInsights } from '/js/views/closet-insights.js';
 import { CUTOUT_MESSAGES } from '/shared/cutout.js';
 import { idleInfo, isDormant, dormantPieces, agoText } from '/shared/dormancy.js';
@@ -132,6 +132,7 @@ export function GarmentSheet({ garment, onClose, caps }) {
   const [photos, setPhotos] = useState(null); // { original, cutout, reason } for a newly chosen photo
   const [removeBg, setRemoveBg] = useState(true);
   const [working, setWorking] = useState(false);
+  const [touchUp, setTouchUp] = useState(false);
   const photo = photos ? (removeBg && photos.cutout ? photos.cutout : photos.original) : null;
   const [preview, setPreview] = useState(garment?.imageUrl || null);
   const [removePhoto, setRemovePhoto] = useState(false);
@@ -255,6 +256,7 @@ export function GarmentSheet({ garment, onClose, caps }) {
           ${(photo || preview) && !removePhoto ? html`<button class="btn btn-ghost btn-s" onClick=${() => { setPhotos(null); setPreview(null); setRemovePhoto(true); }}>${t('Remove')}</button>` : null}
         </div>
         ${photos && photos.cutout ? html`<div class="spread"><div><div class="label">${t('Remove background')}</div><div class="hint">${t('Shows just the garment')}</div></div><${Switch} label=${t('Remove background')} checked=${removeBg} onChange=${setRemoveBg} /></div>` : null}
+        ${photos ? html`<button class="btn btn-outline btn-s" onClick=${() => setTouchUp(true)} disabled=${working}><${Icon} name="edit" />${t('Touch up')}</button>` : null}
         ${photos && !photos.cutout && photos.reason && caps.cutoutService ? html`<button class="btn btn-outline btn-s" onClick=${cloudCutout} disabled=${working}><${Icon} name="sparkle" />${t('Try high-accuracy removal')}</button>` : null}
         ${photos && !photos.cutout && photos.reason && !caps.cutoutService ? html`<p class="hint">${t('Tip: lay the piece on a plain, contrasting surface for a clean cut-out.')}</p>` : null}
         ${photo && caps.vision ? html`<button class="btn btn-accent btn-s" onClick=${analyse} disabled=${analysing}>${analysing ? html`<${Spinner} />` : html`<${Icon} name="sparkle" />`}${t('Auto-fill from photo')}</button>` : null}
@@ -299,7 +301,8 @@ export function GarmentSheet({ garment, onClose, caps }) {
         </div>
       </div>
     </div>
-  </${Sheet}>`;
+  </${Sheet}>
+  ${touchUp && photos ? html`<${TouchUp} original=${photos.original} onClose=${() => setTouchUp(false)} onDone=${({ image, color }) => { setPhotos({ ...photos, cutout: image, reason: null }); setRemoveBg(true); setRemovePhoto(false); if (color && !editing) set({ color }); setTouchUp(false); }} />` : null}`;
 }
 
 export function ClosetView() {
@@ -410,7 +413,7 @@ export function ClosetView() {
 
     ${panel === 'insights' && garments.length ? html`<${ClosetInsights} onShowIdle=${() => { setPanel('pieces'); setCat('all'); setSearch(''); setIdleOnly(true); setSort('idle'); }} />` : null}
 
-    ${full ? html`<div class="upsell enter"><div class="grow"><b>${t('Your closet is full')}</b><p>${t('Pro has no limit, so every piece you own can be part of an outfit.')}</p></div>${canBuyProHere ? html`<button class="btn btn-s" onClick=${() => openUpgrade('closet')}>${t('See Pro')}</button>` : null}</div>` : null}
+    ${full ? html`<div class="upsell enter"><div class="grow"><b>${t('Your closet is full')}</b><p>${t('Pro has no limit, so every piece you own can be part of an outfit.')}</p></div>${proOffered() ? html`<button class="btn btn-s" onClick=${() => openUpgrade('closet')}>${t('See Pro')}</button>` : null}</div>` : null}
 
     ${panel === 'pieces' && dormant.length && garments.length ? html`<${Forgotten} pieces=${dormant} onWear=${wearToday} onStyle=${styleIt} onShow=${() => { setCat('all'); setSearch(''); setIdleOnly(true); setSort('idle'); }} />` : null}
 
