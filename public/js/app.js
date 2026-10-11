@@ -52,7 +52,7 @@ function Shell({ path, children }) {
       ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="rail-link" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${t(label)}</${Link}>`)}
       ${user?.isAdmin ? html`<${Link} href="/admin" class="rail-link" aria-current=${isCurrent('/admin') ? 'page' : undefined}><${Icon} name="shield" />${t('Business')}</${Link}>` : null}
       <div class="rail-foot">
-        ${!pro ? html`<${Link} href="/pro" class="btn btn-primary"><${Icon} name="crown" />${t('Go Pro')}</${Link}>` : html`<div class="row" style=${{ padding: '0 12px' }}><${ProBadge} /><span class="small muted">${t('Thank you')}</span></div>`}
+        ${!pro ? html`<${Link} href="/pro" class="btn btn-primary"><${Icon} name="crown" />${t('Go Pro')}</${Link}>` : html`<div class="row" style=${{ padding: '0 12px' }}><${ProBadge} />${user?.planStatus === 'granted' ? html`<${Link} href="/pro" class="small muted">${t('See Pro')}</${Link}>` : html`<span class="small muted">${t('Thank you')}</span>`}</div>`}
         ${installPrompt ? html`<button class="btn btn-outline btn-s" onClick=${install}><${Icon} name="download" />${t('Install app')}</button>` : null}
         <${Link} href="/style?section=account" class="row small muted" style=${{ padding: '8px 12px' }}><span class="badge" style=${{ width: '30px', height: '30px', justifyContent: 'center' }}>${initials(user?.name || user?.email)}</span><span class="grow" style=${{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>${user?.name || user?.email}</span></${Link}>
       </div>

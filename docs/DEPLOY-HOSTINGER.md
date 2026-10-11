@@ -38,12 +38,15 @@ DATA_DIR=/home/<your-hostinger-user>/modaward-data
 ADMIN_EMAILS=you@yourdomain.com
 OPERATOR_NAME=Your name or company
 CONTACT_EMAIL=privacy@yourdomain.com
+SIGNUP_PRO_DAYS=90
 SMTP_HOST=smtp.hostinger.com
 SMTP_PORT=465
 SMTP_USER=no-reply@yourdomain.com
 SMTP_PASS=<mailbox password>
 SMTP_FROM=ModaWard <no-reply@yourdomain.com>
 ```
+
+`SIGNUP_PRO_DAYS` is the welcome offer: every new account gets Pro free for that many days (90 = three months, 0 = no offer), with no card. It ends by itself, existing accounts are not changed, and it shows on the front page and sign-up screen. Free-Pro sign-ups still count against the AI limits (`AI_DAILY_LIMIT`, `AI_GLOBAL_DAILY_LIMIT`), so a flood of sign-ups cannot run up an unlimited AI bill.
 
 **Do this straight after the first start: register your own account with the `ADMIN_EMAILS` address.** The app does not verify email addresses, so until that account exists anyone who signs up with that address first becomes an admin (the *Business → System check* page warns you while it is unclaimed). `OPERATOR_NAME` and `CONTACT_EMAIL` appear in the Privacy Policy as who is responsible and how to reach them; many countries require that. `APP_URL` is the plain address (`https://yourdomain.com`, no path); the app stops with a clear message if it cannot read it.
 
@@ -58,7 +61,7 @@ Do **not** set `PORT` unless Hostinger tells you to: the platform provides it.
 
 Press **Start / Restart**, then open:
 
-- `https://yourdomain.com/health` → `{"ok":true,"version":"5.12.0","build":"5.12.0+abc1234",...}`. The version and build must match the name of the zip you uploaded (`modaward-5.12.0-abc1234.zip`); if they don't, the old code is still running
+- `https://yourdomain.com/health` → `{"ok":true,"version":"5.13.0","build":"5.13.0+abc1234",...}`. The version and build must match the name of the zip you uploaded (`modaward-5.13.0-abc1234.zip`); if they don't, the old code is still running
 - `https://yourdomain.com/` → the sign-in page. Create your account.
 
 On the server's SSH terminal you can also run the integration check once your keys are in place:

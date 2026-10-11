@@ -9,7 +9,7 @@ import { mockProvider } from '../src/services/weather.js';
 /** Boot the real app on an ephemeral port with an in-memory DB and deterministic weather. */
 export async function startTestServer({ env = {}, overrides = {} } = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mw-test-'));
-  const config = loadConfig({ DATA_DIR: dataDir, NODE_ENV: 'test', WEATHER_PROVIDER: 'mock', AUTH_RATE_MAX: '10000', API_RATE_MAX: '100000', ...env }, { dotenv: false });
+  const config = loadConfig({ DATA_DIR: dataDir, NODE_ENV: 'test', WEATHER_PROVIDER: 'mock', SIGNUP_PRO_DAYS: '0', AUTH_RATE_MAX: '10000', API_RATE_MAX: '100000', ...env }, { dotenv: false });
   const logs = [];
   const log = createLogger({ level: 'warn', sink: (l) => logs.push(JSON.parse(l)) });
   const clock = () => new Date('2026-10-06T10:00:00Z');

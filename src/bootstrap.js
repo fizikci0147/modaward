@@ -60,7 +60,9 @@ export async function createDeps(config, overrides = {}) {
     cutoutService: Boolean(cutoutService),
     billing: Boolean(billing && (config.stripe.priceMonthly || config.stripe.priceYearly)),
     // who runs this site, shown in the privacy policy (set OPERATOR_NAME and CONTACT_EMAIL)
-    operator: config.operator
+    operator: config.operator,
+    // the free Pro period new members get, so the sign-up screens can say so (0 = no offer)
+    promo: { proDays: config.plans.signupProDays }
   };
 
   // trend lists: the saved ones (written by the monthly refresh, or by hand: docs/TRENDS.md) override the built-in ones

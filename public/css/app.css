@@ -758,3 +758,6 @@ main:focus { outline: none; }
 .land-note { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px 12px; padding: 10px 16px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-m); font-size: 14px; color: var(--ink-2); text-align: center; }
 .land-pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 999px; background: var(--sky-soft); color: var(--sky); font-weight: 600; font-size: 13px; }
 @media (max-width: 759px) { .land-note { border-radius: 18px; } }
+
+.land-promo { display: inline-flex; align-items: center; gap: 8px; width: fit-content; padding: 6px 14px; border-radius: 999px; background: var(--clay-soft); color: var(--ink); font-weight: 600; font-size: 14px; margin: 0; }
+.land-promo svg { color: var(--clay); flex: none; }

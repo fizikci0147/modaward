@@ -1,4 +1,6 @@
 import { html } from '/js/ui.js';
+import { useStore } from '/js/store.js';
+import { promoLine } from '/js/promo.js';
 import { t } from '/js/i18n.js';
 import { Icon, Logo } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
@@ -8,6 +10,8 @@ import { BOARD_A, BOARD_B } from '/js/views/auth.js';
 
 /** What the app is and why you would want it, with a way in. This is what signed-out visitors see first. */
 export function LandingView() {
+  const { capabilities } = useStore();
+  const promo = promoLine(capabilities?.promo?.proDays);
   const steps = [
     [t('Tell us your style'), t('Take a one-minute quiz: the looks you love, your colours, sizes and budget.')],
     [t('Add your closet'), t('Start with a ready-made wardrobe, or photograph your own pieces. The background is removed for you.')],
@@ -26,7 +30,7 @@ export function LandingView() {
     <main id="main" tabindex="-1">
       <section class="land-hero" aria-labelledby="land-h">
         <div class="stack-l land-copy">
-          <span class="eyebrow">${t('Your daily stylist')}</span>
+          ${promo ? html`<span class="land-promo"><${Icon} name="sparkle" size="16" />${promo}</span>` : html`<span class="eyebrow">${t('Your daily stylist')}</span>`}
           <h1 id="land-h" class="display h-xl">${t('Dress for the day')} <span class="italic">${t('ahead.')}</span></h1>
           <p class="land-lead">${t('Open ModaWard each morning and know exactly what to wear: pieces from your own closet, matched to the hour-by-hour forecast and to your personal style.')}</p>
           <div class="row-wrap"><${Link} href="/register" class="btn btn-primary btn-l">${t('Get started free')}</${Link}><${Link} href="/login" class="btn btn-outline btn-l">${t('Sign in')}</${Link}></div>
@@ -55,6 +59,7 @@ export function LandingView() {
 
       <section class="land-cta" aria-labelledby="land-go">
         <h2 id="land-go" class="display h-xl">${t('Ready when you are.')}</h2>
+        ${promo ? html`<p class="muted">${promo}</p>` : null}
         <div class="row-wrap" style=${{ justifyContent: 'center' }}><${Link} href="/register" class="btn btn-primary btn-l">${t('Get started free')}</${Link}><${Link} href="/login" class="btn btn-outline btn-l">${t('Sign in')}</${Link}></div>
       </section>
     </main>

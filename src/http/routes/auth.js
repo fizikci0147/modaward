@@ -7,6 +7,7 @@ import { publicUser } from '../../repo/index.js';
 import { entitlements } from '../../services/plans.js';
 import { baseUrl } from '../base-url.js';
 import { TERMS_VERSION } from '../../shared/legal.js';
+import { now } from '../../db/index.js';
 
 const registerSchema = object({ email: emailRule(), password: string({ min: 1, max: 200, trim: false }), name: optional(string({ max: 60 }), ''), acceptTerms: optional(boolean(), false) });
 const acceptSchema = object({ accept: boolean() });
@@ -61,8 +62,14 @@ export function authRoutes({ config, repos, mailer, log, capabilities }) {
       if (/UNIQUE/i.test(String(e?.message))) throw conflict('An account with that email already exists. Try signing in.');
       throw e;
     }
+    // the welcome offer: Pro for a limited time, ending by itself (the same "granted" access that Pro codes give)
+    const trialDays = config.plans.signupProDays;
+    if (trialDays > 0) {
+      repos.users.setPlan(user.id, { plan: 'pro', status: 'granted', renewsAt: now() + trialDays * 86400 });
+      user = repos.users.byId(user.id);
+    }
     setSessionCookie(req, res, repos.sessions.create(user.id, req.get('user-agent'), config.sessionDays), config.sessionDays);
-    log.info('auth.register', { user: user.id });
+    log.info('auth.register', { user: user.id, trialDays });
     res.status(201).json(me(user));
   });
 

@@ -128,7 +128,9 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
 
     plans: {
       freeClosetLimit: int(env.FREE_CLOSET_LIMIT, 30),
-      freeLooksPerWeek: int(env.FREE_SHOP_LOOKS, 6)
+      freeLooksPerWeek: int(env.FREE_SHOP_LOOKS, 6),
+      // Pro, free of charge, for new sign-ups: this many days from the day they join (0 = off). No card is taken.
+      signupProDays: Math.max(0, Math.min(365, int(env.SIGNUP_PRO_DAYS, 90)))
     },
 
     stripe: {

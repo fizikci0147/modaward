@@ -79,6 +79,7 @@ export function TermsView() {
     <p>Some links to retailers are affiliate links: we may earn a commission if you buy, at no extra cost to you. This never changes what we recommend. Prices, stock and delivery are the retailer’s responsibility, and any purchase is a contract between you and the retailer.</p>
     <h2>Pro subscriptions</h2>
     <p>Pro renews automatically at the period you choose until you cancel from your profile. Cancelling stops the next renewal; you keep Pro until the paid period ends. Taxes may apply.</p>
+    <p>New accounts may be given Pro for a limited time, free of charge and without a payment card. That time ends automatically on the date shown in your profile, after which your account continues on the free plan unless you subscribe. We may change or end this offer for future sign-ups at any time.</p>
     <h2>Acceptable use</h2>
     <p>Do not misuse the service, attempt to access other people’s data, upload unlawful content, or overload our systems.</p>
     <h2>Agreeing to these terms</h2>

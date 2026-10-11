@@ -35,6 +35,8 @@ export function ProView() {
   const [interval, setInterval] = useState('year');
   const [busy, setBusy] = useState(false);
   const pro = entitlements?.plan === 'pro';
+  // free Pro time (a welcome offer or a code) is not a subscription: those members can still subscribe to keep it
+  const comped = pro && user?.planStatus === 'granted';
   const buy = async () => {
     if (!user) return navigate('/register');
     setBusy(true);
@@ -56,7 +58,8 @@ export function ProView() {
       <section class="card plan pro">
         <div class="stack" style=${{ gap: '6px' }}><span class="eyebrow" style=${{ color: 'inherit', opacity: 0.7 }}>${t('Pro')}</span><div class="price-big">${interval === 'year' ? '$59' : '$7.99'}<span class="small muted" style=${{ fontFamily: 'var(--font-ui)', letterSpacing: 0 }}> / ${interval === 'year' ? t('year') : t('month')}</span></div><p class="muted small">${interval === 'year' ? t('Just $4.92 a month.') : t('Cancel any time.')}</p></div>
         <ul>${PRO_FEATURES.map((f) => html`<li key=${f}><${Icon} name="check" />${t(f)}</li>`)}</ul>
-        ${pro ? html`<button class="btn" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} disabled>${t('You’re on Pro')}</button>` : capabilities.billing ? html`<button class="btn btn-l" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} onClick=${buy} disabled=${busy}>${busy ? html`<${Spinner} />` : null}${t('Go Pro')}</button>` : html`<button class="btn" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} disabled>${t('Coming soon')}</button>`}
+        ${comped ? html`<p class="small">${t('Your free Pro runs until {date}. Subscribe any time to keep it.', { date: new Date(user.planRenewsAt * 1000).toLocaleDateString(getLocale()) })}</p>` : null}
+        ${pro && !comped ? html`<button class="btn" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} disabled>${t('You’re on Pro')}</button>` : capabilities.billing ? html`<button class="btn btn-l" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} onClick=${buy} disabled=${busy}>${busy ? html`<${Spinner} />` : null}${t('Go Pro')}</button>` : html`<button class="btn" style=${{ background: 'var(--bg)', color: 'var(--ink)' }} disabled>${t('Coming soon')}</button>`}
       </section>
     </div>
     ${user && !pro ? html`<${RedeemCode} />` : null}

@@ -279,6 +279,7 @@ function AccountSection({ user, entitlements, capabilities }) {
   const [pw, setPw] = useState({ current: '', next: '' });
   const [busy, setBusy] = useState('');
   const pro = entitlements?.plan === 'pro';
+  const comped = pro && user.planStatus === 'granted'; // free Pro time has no Stripe subscription to manage
 
   const saveName = async () => {
     if (name.trim() === user.name) return;
@@ -316,8 +317,8 @@ function AccountSection({ user, entitlements, capabilities }) {
   return html`<div class="stack-l">
     <${Section} title=${t('Your plan')}>
       <div class="spread" style=${{ flexWrap: 'wrap' }}>
-        <div class="stack" style=${{ gap: '4px' }}><div class="row">${pro ? html`<${ProBadge} />` : html`<span class="badge">${t('Free')}</span>`}<b>${pro ? t('ModaWard Pro') : t('ModaWard Free')}</b></div><p class="muted small">${pro ? (user.planRenewsAt ? t('Renews {date}', { date: new Date(user.planRenewsAt * 1000).toLocaleDateString(getLocale()) }) : t('Thank you for supporting ModaWard.')) : t('{pieces} pieces · 3-day planning · {looks} looks at a time', { pieces: entitlements?.closetLimit, looks: entitlements?.shopLooks })}</p></div>
-        ${pro ? (capabilities.billing ? html`<button class="btn btn-outline" onClick=${portal} disabled=${busy === 'portal'}>${busy === 'portal' ? html`<${Spinner} />` : null}${t('Manage billing')}</button>` : null) : html`<button class="btn btn-primary" onClick=${() => navigate('/pro')}><${Icon} name="crown" />${t('See Pro')}</button>`}
+        <div class="stack" style=${{ gap: '4px' }}><div class="row">${pro ? html`<${ProBadge} />` : html`<span class="badge">${t('Free')}</span>`}<b>${pro ? t('ModaWard Pro') : t('ModaWard Free')}</b></div><p class="muted small">${pro ? (user.planRenewsAt && user.planStatus === 'granted' ? t('Free Pro until {date}', { date: new Date(user.planRenewsAt * 1000).toLocaleDateString(getLocale()) }) : user.planRenewsAt ? t('Renews {date}', { date: new Date(user.planRenewsAt * 1000).toLocaleDateString(getLocale()) }) : t('Thank you for supporting ModaWard.')) : t('{pieces} pieces · 3-day planning · {looks} looks at a time', { pieces: entitlements?.closetLimit, looks: entitlements?.shopLooks })}</p></div>
+        ${pro && !comped ? (capabilities.billing ? html`<button class="btn btn-outline" onClick=${portal} disabled=${busy === 'portal'}>${busy === 'portal' ? html`<${Spinner} />` : null}${t('Manage billing')}</button>` : null) : html`<button class="btn btn-primary" onClick=${() => navigate('/pro')}><${Icon} name="crown" />${t('See Pro')}</button>`}
       </div>
     </${Section}>
     <${Section} title=${t('Account')}>

@@ -4,6 +4,11 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.13.0] · 2026-10-14
+
+### Added
+- **Three months of Pro free for new members.** Every new account now gets Pro for 90 days, with no card. It shows on the front page, the sign-up screen and the Pro page, in all languages. It ends by itself (the account carries on as Free), existing accounts are not changed, and a member can subscribe at any time to keep Pro. *You → Account* now says "Free Pro until <date>" instead of "Renews", and offers *See Pro* rather than *Manage billing* (there is no subscription to manage yet). The length is the setting `SIGNUP_PRO_DAYS` (default 90; `0` switches the offer off; maximum 365). The Terms mention the offer.
+
 ## [5.12.0] · 2026-10-14
 
 ### Added

@@ -7,6 +7,8 @@ import { Icon, Logo } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
 import { Spinner, LanguagePicker, Consent } from '/js/components/common.js';
 import { Link, navigate, useQuery } from '/js/router.js';
+import { useStore } from '/js/store.js';
+import { promoLine } from '/js/promo.js';
 
 export const BOARD_A = [
   { type: 'shirt', color: '#8fa9c8', category: 'top' }, { type: 'chinos', color: '#a39a6a', category: 'bottom' },
@@ -45,6 +47,8 @@ function Field({ id, label, type = 'text', value, onInput, autocomplete, hint, e
 }
 
 export function AuthView({ mode }) {
+  const { capabilities } = useStore();
+  const promo = mode === 'register' ? promoLine(capabilities?.promo?.proDays) : '';
   const q = useQuery();
   const [form, setForm] = useState({ name: '', email: '', password: '' });
   const [busy, setBusy] = useState(false);
@@ -94,7 +98,7 @@ export function AuthView({ mode }) {
     <main class="auth-form" id="main" tabindex="-1">
       <div class="auth-card enter">
         <div class="brand" style=${{ fontSize: '26px' }}><${Logo} size=${26} />ModaWard</div>
-        <div class="stack" style=${{ gap: '8px' }}><h1 class="display h-l">${title}</h1><p class="muted">${sub}</p></div>
+        <div class="stack" style=${{ gap: '8px' }}><h1 class="display h-l">${title}</h1><p class="muted">${sub}</p>${promo ? html`<p class="land-promo"><${Icon} name="sparkle" size="16" />${promo}</p>` : null}</div>
         <${LanguagePicker} />
         ${sent
           ? html`<div class="banner" role="status"><${Icon} name="mail" />${t('If that email has an account, a reset link is on its way. It works for one hour.')}</div>`
