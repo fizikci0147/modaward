@@ -147,6 +147,7 @@ export default {
   "Today’s look": "Bugünün görünümü",
   "My outfit for today, picked by ModaWard": "ModaWard’ın seçtiği bugünkü kombinim",
   "Something went wrong.": "Bir şeyler ters gitti.",
+  "This is part of ModaWard Pro.": "Bu, ModaWard Pro’nun bir parçasıdır.",
   "Dress for the day": "Önündeki güne uygun",
   "ahead.": "giyin.",
   "Your closet, the hour-by-hour forecast and a stylist’s eye, in one calm place.": "Gardırobun, saat saat hava tahmini ve bir stilistin gözü, sakin tek bir yerde.",

@@ -2,6 +2,7 @@ import { html, useState, useEffect, useRef, useMemo } from '/js/ui.js';
 import { t, tn, getLocale } from '/js/i18n.js';
 import { api } from '/js/api.js';
 import { useStore, loadCloset, upsertGarment, removeGarment, toast, fail, openUpgrade } from '/js/store.js';
+import { canBuyProHere } from '/js/native.js';
 import { Icon } from '/js/icons.js';
 import { GarmentArt } from '/js/components/art.js';
 import { Sheet, Spinner, Empty, Switch } from '/js/components/common.js';
@@ -409,7 +410,7 @@ export function ClosetView() {
 
     ${panel === 'insights' && garments.length ? html`<${ClosetInsights} onShowIdle=${() => { setPanel('pieces'); setCat('all'); setSearch(''); setIdleOnly(true); setSort('idle'); }} />` : null}
 
-    ${full ? html`<div class="upsell enter"><div class="grow"><b>${t('Your closet is full')}</b><p>${t('Pro has no limit, so every piece you own can be part of an outfit.')}</p></div><button class="btn btn-s" onClick=${() => openUpgrade('closet')}>${t('See Pro')}</button></div>` : null}
+    ${full ? html`<div class="upsell enter"><div class="grow"><b>${t('Your closet is full')}</b><p>${t('Pro has no limit, so every piece you own can be part of an outfit.')}</p></div>${canBuyProHere ? html`<button class="btn btn-s" onClick=${() => openUpgrade('closet')}>${t('See Pro')}</button>` : null}</div>` : null}
 
     ${panel === 'pieces' && dormant.length && garments.length ? html`<${Forgotten} pieces=${dormant} onWear=${wearToday} onStyle=${styleIt} onShow=${() => { setCat('all'); setSearch(''); setIdleOnly(true); setSort('idle'); }} />` : null}
 

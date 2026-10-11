@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">ModaWard</string>
+    <string name="title_activity_main">ModaWard</string>
+    <string name="package_name">com.modaward.app</string>
+    <string name="custom_url_scheme">com.modaward.app</string>
+</resources>

@@ -12,6 +12,7 @@ import { AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CO
 import { cap, weekdayShort } from '/js/format.js';
 import { navigate, useSearch } from '/js/router.js';
 import { RemindersSection } from '/js/views/reminders.js';
+import { canBuyProHere } from '/js/native.js';
 
 /** Sample board for each style archetype: drawn, not photographed. */
 const SAMPLE = {
@@ -318,7 +319,7 @@ function AccountSection({ user, entitlements, capabilities }) {
     <${Section} title=${t('Your plan')}>
       <div class="spread" style=${{ flexWrap: 'wrap' }}>
         <div class="stack" style=${{ gap: '4px' }}><div class="row">${pro ? html`<${ProBadge} />` : html`<span class="badge">${t('Free')}</span>`}<b>${pro ? t('ModaWard Pro') : t('ModaWard Free')}</b></div><p class="muted small">${pro ? (user.planRenewsAt && user.planStatus === 'granted' ? t('Free Pro until {date}', { date: new Date(user.planRenewsAt * 1000).toLocaleDateString(getLocale()) }) : user.planRenewsAt ? t('Renews {date}', { date: new Date(user.planRenewsAt * 1000).toLocaleDateString(getLocale()) }) : t('Thank you for supporting ModaWard.')) : t('{pieces} pieces · 3-day planning · {looks} looks at a time', { pieces: entitlements?.closetLimit, looks: entitlements?.shopLooks })}</p></div>
-        ${pro && !comped ? (capabilities.billing ? html`<button class="btn btn-outline" onClick=${portal} disabled=${busy === 'portal'}>${busy === 'portal' ? html`<${Spinner} />` : null}${t('Manage billing')}</button>` : null) : html`<button class="btn btn-primary" onClick=${() => navigate('/pro')}><${Icon} name="crown" />${t('See Pro')}</button>`}
+        ${canBuyProHere ? (pro && !comped ? (capabilities.billing ? html`<button class="btn btn-outline" onClick=${portal} disabled=${busy === 'portal'}>${busy === 'portal' ? html`<${Spinner} />` : null}${t('Manage billing')}</button>` : null) : html`<button class="btn btn-primary" onClick=${() => navigate('/pro')}><${Icon} name="crown" />${t('See Pro')}</button>`) : null}
       </div>
     </${Section}>
     <${Section} title=${t('Account')}>

@@ -504,10 +504,60 @@ async function runAdmin() {
   ok('admin: a product can be added by hand, and a feed can be previewed and imported');
   await ctx.close();
 }
+
+/**
+ * The iOS and Android apps run this same web app and announce themselves in the user agent. In them nothing may offer or send
+ * people to a purchase (the stores require their own in-app purchase), and everything else must work exactly as on the website.
+ */
+async function runNative() {
+  const ctx = await browser.newContext({
+    baseURL: t.base,
+    viewport: { width: 390, height: 844 },
+    isMobile: true,
+    hasTouch: true,
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 ModaWardApp'
+  });
+  const page = await ctx.newPage();
+  const problems = [];
+  page.on('pageerror', (e) => problems.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && !/preloaded using link preload/.test(m.text()) && problems.push(m.text()));
+  const H = { 'x-requested-with': 'modaward' };
+
+  await page.goto('/');
+  await page.getByRole('heading', { name: /Dress for the day/ }).waitFor();
+  if ((await page.evaluate(() => document.documentElement.dataset.app)) !== 'native') fail('native: the page did not recognise the app');
+  if ((await page.locator('a[href="/pro"]').count()) !== 0) fail('native: the front page links to Pro');
+
+  const reg = await page.request.post('/api/auth/register', { headers: H, data: { email: 'app-user@example.com', password: 'correct horse battery', name: 'Ada', acceptTerms: true } });
+  if (!reg.ok()) fail(`native: could not register (${reg.status()})`);
+  await page.request.patch('/api/profile', { headers: H, data: { location: { name: 'New York, NY, US', lat: 40.7128, lon: -74.006, timezone: 'America/New_York' }, department: 'women', style: { archetypes: { minimal: 0.9 }, quizDone: true } } });
+  await page.request.post('/api/garments/starter', { headers: H, data: { department: 'women' } });
+
+  for (const url of ['/', '/week', '/closet', '/shop', '/style?section=account']) {
+    await page.goto(url);
+    await page.waitForSelector('.main');
+    await page.waitForTimeout(700);
+    const buy = await page.locator('a[href="/pro"], button:has-text("Go Pro"), button:has-text("See Pro"), button:has-text("Unlock"), button:has-text("Manage billing")').count();
+    if (buy) fail(`native: ${url} offers a purchase (${buy} control${buy === 1 ? '' : 's'})`);
+  }
+
+  // a day beyond the free plan explains itself, without a way to buy
+  await page.goto('/week');
+  await page.locator('.day.locked').first().click();
+  await page.getByText(/is part of Pro/).waitFor();
+  if (await page.getByRole('button', { name: 'Unlock the full week' }).count()) fail('native: the locked day offers a purchase');
+
+  await page.goto('/pro');
+  await page.waitForURL((u) => new URL(u).pathname === '/');
+  if (problems.length) fail(`native: ${problems.join('; ')}`);
+  ok('native: the apps recognise themselves, offer no purchase anywhere, and everything else works as on the website');
+  await ctx.close();
+}
 try {
   await run('mobile', { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
   await run('desktop', { viewport: { width: 1366, height: 900 } });
   await runAdmin();
+  await runNative();
 } catch (e) {
   fail(e.stack || e.message);
 } finally {

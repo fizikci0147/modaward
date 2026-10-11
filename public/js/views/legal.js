@@ -50,6 +50,9 @@ export function PrivacyView() {
     <h2>Cookies and device storage</h2>
     <p>We use one secure cookie to keep you signed in, and your browser’s storage for your language, theme and a few settings that make the app work. These are strictly necessary, so there is no cookie banner. We do not use advertising or tracking cookies.</p>
 
+    <h2>The iOS and Android apps</h2>
+    <p>The ModaWard apps show the same service as the website and use the same account and data; they do not collect anything extra. They ask your permission before using the camera (only to photograph a piece of clothing you choose to add) or your location (only to show the weather where you are). You can refuse either and still use the app, and you can change your choice in your phone’s settings.</p>
+
     <h2>Security</h2>
     <p>Connections use HTTPS, passwords are hashed with scrypt, sessions use secure HttpOnly cookies, and uploaded photos are only served to their owner. No system is perfectly secure; if something affecting you goes wrong we will tell you.</p>
 

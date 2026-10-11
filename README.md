@@ -45,7 +45,12 @@ Requires Node.js **20.19+** (22 or 24 recommended: they include SQLite built in;
 | `npm run package` | Build `dist/modaward-<version>.zip` for upload to a host. |
 | `npm run backup` | Consistent SQLite backup (safe while running). |
 | `npm run catalog:import -- --retailer hm --file feed.csv` | Load an affiliate product feed (see [docs/BUSINESS.md](docs/BUSINESS.md)). |
+| `npm run mobile:install` / `mobile:ios` / `mobile:android` | Set up the apps, or open them in Xcode / Android Studio (see [docs/MOBILE.md](docs/MOBILE.md)). |
 | `npm run vendor` / `npm run icons` | Rebuild the bundled frontend dependencies / PNG app icons. |
+
+## iOS and Android apps
+
+`mobile/` holds the iPhone and Android apps: native shells around **this same web app**, which they load from the live site. **Change the website and you have changed both apps**, with nothing to rebuild or resubmit; only changes inside `mobile/` (icon, permissions, native plugins) need a new app build. Setup, testing on your Mac and phone, store release and what is still to do (in-app purchase, native push): **[docs/MOBILE.md](docs/MOBILE.md)**.
 
 ## Releasing
 
@@ -60,6 +65,7 @@ Requires Node.js **20.19+** (22 or 24 recommended: they include SQLite built in;
 - **[docs/BUSINESS.md](docs/BUSINESS.md)**: how it makes money, what to switch on and in what order, costs, legal checklist.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**: how it works and why, including the outfit engine and security model.
 - **[docs/API.md](docs/API.md)**: HTTP API reference.
+- **[docs/MOBILE.md](docs/MOBILE.md)**: the iOS and Android apps: build, test, release.
 
 ## Project layout
 
@@ -75,6 +81,7 @@ src/
   repo/              all SQL, scoped by user
   shared/            code used by both server and browser (taxonomy, colour, cut-out, profile)
 public/              the PWA: js/ (Preact + htm modules), css/, icons, service worker
+mobile/              iOS and Android apps (Capacitor shells around the web app)
 test/                unit, integration, and e2e tests
 scripts/             packaging, backup, feed import, quality gate
 ```

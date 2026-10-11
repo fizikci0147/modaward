@@ -147,6 +147,7 @@ export default {
   "Today’s look": "Le look du jour",
   "My outfit for today, picked by ModaWard": "Ma tenue du jour, choisie par ModaWard",
   "Something went wrong.": "Une erreur s’est produite.",
+  "This is part of ModaWard Pro.": "Cela fait partie de ModaWard Pro.",
   "Dress for the day": "Habillez-vous pour la journée",
   "ahead.": "à venir.",
   "Your closet, the hour-by-hour forecast and a stylist’s eye, in one calm place.": "Votre garde-robe, les prévisions heure par heure et l’œil d’un styliste, réunis dans un lieu calme.",

@@ -3,7 +3,9 @@ import { html, render } from '/js/ui.js';
 import { App } from '/js/app.js';
 import { toast, set } from '/js/store.js';
 import { loadLocale, detectLocale, getLocale, t } from '/js/i18n.js';
+import { initNative } from '/js/native.js';
 
+initNative();
 // load the language first so the very first paint is already translated
 await loadLocale(detectLocale());
 set({ locale: getLocale() });

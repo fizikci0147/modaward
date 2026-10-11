@@ -1,6 +1,7 @@
 import { html } from '/js/ui.js';
 import { useStore } from '/js/store.js';
 import { promoLine } from '/js/promo.js';
+import { canBuyProHere } from '/js/native.js';
 import { t } from '/js/i18n.js';
 import { Icon, Logo } from '/js/icons.js';
 import { OutfitArt } from '/js/components/art.js';
@@ -63,6 +64,6 @@ export function LandingView() {
         <div class="row-wrap" style=${{ justifyContent: 'center' }}><${Link} href="/register" class="btn btn-primary btn-l">${t('Get started free')}</${Link}><${Link} href="/login" class="btn btn-outline btn-l">${t('Sign in')}</${Link}></div>
       </section>
     </main>
-    <footer class="land-foot"><span class="muted small">ModaWard</span><nav class="row-wrap"><${Link} href="/pro" class="muted small">${t('Pro')}</${Link}><${Link} href="/terms" class="muted small">${t('Terms')}</${Link}><${Link} href="/privacy" class="muted small">${t('Privacy Policy')}</${Link}></nav></footer>
+    <footer class="land-foot"><span class="muted small">ModaWard</span><nav class="row-wrap">${canBuyProHere ? html`<${Link} href="/pro" class="muted small">${t('Pro')}</${Link}>` : null}<${Link} href="/terms" class="muted small">${t('Terms')}</${Link}><${Link} href="/privacy" class="muted small">${t('Privacy Policy')}</${Link}></nav></footer>
   </div>`;
 }

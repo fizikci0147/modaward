@@ -3,6 +3,7 @@ import { api, onApiEvent } from '/js/api.js';
 import { navigate } from '/js/router.js';
 import { completeness } from '/shared/profile.js';
 import { loadLocale, getLocale, t } from '/js/i18n.js';
+import { isNativeApp } from '/js/native.js';
 
 /**
  * Tiny global store. State is one plain object; any change re-renders subscribed components.
@@ -54,7 +55,8 @@ export function fail(err) {
   toast(err?.message || t('Something went wrong.'), { kind: 'err', ms: 5000 });
 }
 
-export const openUpgrade = (reason = 'pro', message = '') => set({ upgrade: { reason, message } });
+// In the iOS and Android apps there is no Stripe checkout (see native.js): say what the feature is, and stop there.
+export const openUpgrade = (reason = 'pro', message = '') => (isNativeApp ? toast(message || t('This is part of ModaWard Pro.')) : set({ upgrade: { reason, message } }));
 export const closeUpgrade = () => set({ upgrade: null });
 
 onApiEvent((type, err) => {
