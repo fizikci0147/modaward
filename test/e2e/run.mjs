@@ -529,11 +529,23 @@ async function runNative() {
   await page.getByRole('heading', { name: /Dress for the day/ }).waitFor();
   if ((await page.evaluate(() => document.documentElement.dataset.app)) !== 'native') fail('native: the page did not recognise the app');
   if ((await page.locator('a[href="/pro"]').count()) !== 0) fail('native: the front page links to Pro');
+  // with a notch, the first screens a person sees start below the status bar
+  const clear = async (where, selector) => {
+    await page.waitForSelector(selector);
+    const top = await page.evaluate((s) => Math.round(document.querySelector(s).getBoundingClientRect().top), selector);
+    if (top < 54) fail(`native: ${where} starts at ${top}px, under the status bar`);
+  };
+  await clear('the front page', '.land-top .brand');
+  await page.goto('/login');
+  await clear('the sign-in page', '.auth-card .brand');
 
   const reg = await page.request.post('/api/auth/register', { headers: H, data: { email: 'app-user@example.com', password: 'correct horse battery', name: 'Ada', acceptTerms: true } });
   if (!reg.ok()) fail(`native: could not register (${reg.status()})`);
   await page.request.patch('/api/profile', { headers: H, data: { location: { name: 'New York, NY, US', lat: 40.7128, lon: -74.006, timezone: 'America/New_York' }, department: 'women', style: { archetypes: { minimal: 0.9 }, quizDone: true } } });
   await page.request.post('/api/garments/starter', { headers: H, data: { department: 'women' } });
+
+  await page.goto('/welcome');
+  await clear('the first-run quiz', '.welcome .brand');
 
   for (const url of ['/', '/week', '/closet', '/shop', '/style?section=account']) {
     await page.goto(url);

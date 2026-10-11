@@ -4,6 +4,12 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.15.4] · 2026-10-16
+
+### Fixed
+- **The first screens ignored the notch** in the apps: the front page, the sign-in and sign-up pages and the first-run style quiz started under the status bar (the clock and battery sat on top of the logo). They now start below it, and the bottom keeps clear of the home bar. Nothing changes in a normal browser. A browser test checks all three.
+- On shorter Android phone screenshots the phone frame covered a line of the headline; the layout now leaves room.
+
 ## [5.15.3] · 2026-10-16
 
 ### Fixed

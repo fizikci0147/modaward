@@ -230,7 +230,7 @@ async function capture(browser, base, state, d, screen) {
 function layout({ W, H, d, png, title, sub, dark, size }) {
   const a = d.css[1] / d.css[0];
   const phone = d.kind === 'phone';
-  const frameW = Math.min(W * (phone ? 0.84 : 0.8), (H * 0.79) / (0.944 * a + 0.056));
+  const frameW = Math.min(W * (phone ? 0.84 : 0.8), (H * (phone ? (a >= 2 ? 0.79 : 0.7) : 0.74)) / (0.944 * a + 0.056));
   const b = frameW * (phone ? 0.028 : 0.024);
   const screenW = frameW - 2 * b;
   const screenH = screenW * a;
