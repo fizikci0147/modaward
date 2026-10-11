@@ -64,7 +64,6 @@ const SCREENS = [
       });
     }
   },
-  },
   {
     id: 'week',
     title: 'Plan the week at a glance',
