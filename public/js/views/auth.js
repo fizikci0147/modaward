@@ -8,11 +8,11 @@ import { OutfitArt } from '/js/components/art.js';
 import { Spinner, LanguagePicker, Consent } from '/js/components/common.js';
 import { Link, navigate, useQuery } from '/js/router.js';
 
-const BOARD_A = [
+export const BOARD_A = [
   { type: 'shirt', color: '#8fa9c8', category: 'top' }, { type: 'chinos', color: '#a39a6a', category: 'bottom' },
   { type: 'trench', color: '#cdb89a', category: 'outerwear' }, { type: 'loafers', color: '#6b4a32', category: 'shoes' }, { type: 'watch', color: '#1c1c1e', category: 'accessory' }
 ];
-const BOARD_B = [
+export const BOARD_B = [
   { type: 'dress', color: '#6d1f35', category: 'dress' }, { type: 'wool-coat', color: '#b58750', category: 'outerwear' },
   { type: 'boots', color: '#1c1c1e', category: 'shoes' }, { type: 'scarf', color: '#8e9096', category: 'accessory' }
 ];
@@ -32,9 +32,14 @@ function Side() {
 }
 
 function Field({ id, label, type = 'text', value, onInput, autocomplete, hint, error, ...rest }) {
+  const [shown, setShown] = useState(false);
+  const secret = type === 'password';
+  const input = html`<input id=${id} class="input" type=${secret && shown ? 'text' : type} value=${value} onInput=${onInput} autocomplete=${autocomplete} autocapitalize=${secret ? 'none' : undefined} spellcheck=${secret ? false : undefined} aria-invalid=${error ? 'true' : undefined} aria-describedby=${error ? `${id}-e` : hint ? `${id}-h` : undefined} ...${rest} />`;
   return html`<div class="field">
     <label for=${id}>${label}</label>
-    <input id=${id} class="input" type=${type} value=${value} onInput=${onInput} autocomplete=${autocomplete} aria-invalid=${error ? 'true' : undefined} aria-describedby=${error ? `${id}-e` : hint ? `${id}-h` : undefined} ...${rest} />
+    ${secret
+      ? html`<div class="input-wrap">${input}<button type="button" class="reveal" aria-pressed=${shown ? 'true' : 'false'} aria-label=${shown ? t('Hide password') : t('Show password')} title=${shown ? t('Hide password') : t('Show password')} onClick=${() => setShown(!shown)}><${Icon} name=${shown ? 'eye-off' : 'eye'} size="20" /></button></div>`
+      : input}
     ${error ? html`<span id=${`${id}-e`} class="error-text" role="alert">${error}</span>` : hint ? html`<span id=${`${id}-h`} class="hint">${hint}</span>` : null}
   </div>`;
 }
@@ -98,9 +103,10 @@ export function AuthView({ mode }) {
               ${mode !== 'reset' ? html`<${Field} id="email" label=${t('Email')} type="email" value=${form.email} onInput=${set('email')} autocomplete="email" required autofocus />` : null}
               ${mode !== 'forgot' ? html`<${Field} id="password" label=${mode === 'reset' ? t('New password') : t('Password')} type="password" value=${form.password} onInput=${set('password')} autocomplete=${mode === 'login' ? 'current-password' : 'new-password'} required hint=${mode === 'login' ? undefined : t('At least 10 characters. A short phrase works well.')} />` : null}
               ${error ? html`<div class="banner" role="alert"><${Icon} name="info" />${error}</div>` : null}
+              ${mode === 'register' ? html`<${Consent} checked=${accept} onChange=${setAccept} />` : null}
               <button class="btn btn-primary btn-l btn-block" disabled=${busy}>${busy ? html`<${Spinner} />` : null}${{ login: t('Sign in'), register: t('Create account'), forgot: t('Send reset link'), reset: t('Save new password') }[mode]}</button>
               ${mode === 'login' ? html`<div class="spread small"><${Link} href="/forgot" class="muted">${t('Forgot password?')}</${Link}><${Link} href="/register" style=${{ fontWeight: 600 }}>${t('Create an account')}</${Link}></div>` : null}
-              ${mode === 'register' ? html`<${Consent} checked=${accept} onChange=${setAccept} /><div class="small center">${t('Already have an account?')} <${Link} href="/login" style=${{ fontWeight: 600 }}>${t('Sign in')}</${Link}></div>` : null}
+              ${mode === 'register' ? html`<div class="small center">${t('Already have an account?')} <${Link} href="/login" style=${{ fontWeight: 600 }}>${t('Sign in')}</${Link}></div>` : null}
               ${mode === 'forgot' || mode === 'reset' ? html`<div class="small center"><${Link} href="/login" style=${{ fontWeight: 600 }}>${t('Back to sign in')}</${Link}></div>` : null}
             </form>`}
       </div>

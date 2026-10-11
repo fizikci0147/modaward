@@ -13,6 +13,7 @@ import { ShopView } from '/js/views/shop.js';
 import { ProfileView } from '/js/views/profile.js';
 import { AuthView } from '/js/views/auth.js';
 import { WelcomeView } from '/js/views/welcome.js';
+import { LandingView } from '/js/views/landing.js';
 import { ProView } from '/js/views/pro.js';
 import { PrivacyView, TermsView } from '/js/views/legal.js';
 import { UnsubscribeView } from '/js/views/unsubscribe.js';
@@ -27,7 +28,7 @@ const NAV = [
   ['/shop', L('Shop'), 'bag'],
   ['/style', L('You'), 'user']
 ];
-const PUBLIC = new Set(['/login', '/register', '/forgot', '/reset', '/privacy', '/terms', '/pro', '/unsubscribe']);
+const PUBLIC = new Set(['/', '/login', '/register', '/forgot', '/reset', '/privacy', '/terms', '/pro', '/unsubscribe']);
 const TITLES = { '/': L('Today'), '/week': L('The week ahead'), '/closet': L('Your closet'), '/shop': L('Shop'), '/style': L('You'), '/pro': L('Pro'), '/privacy': L('Privacy'), '/terms': L('Terms'), '/login': L('Sign in'), '/register': L('Create account'), '/welcome': L('Welcome'), '/admin': L('Business'), '/trip': L('Pack for a trip') };
 
 function Splash() {
@@ -70,7 +71,7 @@ function Shell({ path, children }) {
 function PublicPage({ children }) {
   const { user } = useStore();
   return html`<div style=${{ minHeight: '100dvh' }}>
-    <header class="topbar" style=${{ position: 'static' }}><${Link} href=${user ? '/' : '/login'} class="brand"><${Logo} size=${24} />ModaWard</${Link}><${Link} href=${user ? '/' : '/login'} class="btn btn-ghost btn-s">${user ? t('Open app') : t('Sign in')}</${Link}></header>
+    <header class="topbar" style=${{ position: 'static' }}><${Link} href="/" class="brand"><${Logo} size=${24} />ModaWard</${Link}><${Link} href=${user ? '/' : '/login'} class="btn btn-ghost btn-s">${user ? t('Open app') : t('Sign in')}</${Link}></header>
     <main class="main" id="main" tabindex="-1" style=${{ paddingBottom: '80px' }}>${children}</main>
   </div>`;
 }
@@ -94,8 +95,8 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    document.title = `${TITLES[path] ? t(TITLES[path]) : 'ModaWard'} · ModaWard`;
-  }, [path, locale]);
+    document.title = !user && path === '/' ? `ModaWard · ${t('Dress for the day ahead')}` : `${TITLES[path] ? t(TITLES[path]) : 'ModaWard'} · ModaWard`;
+  }, [path, locale, user]);
 
   // a new screen starts at its top for keyboard and screen-reader users, as a page load would
   const firstPath = useRef(path);
@@ -128,6 +129,7 @@ export function App() {
   else if (path === '/privacy') page = html`<${PublicPage}><${PrivacyView} /></${PublicPage}>`;
   else if (path === '/terms') page = html`<${PublicPage}><${TermsView} /></${PublicPage}>`;
   else if (path === '/unsubscribe') page = html`<${PublicPage}><${UnsubscribeView} /></${PublicPage}>`;
+  else if (!user && path === '/') page = html`<${LandingView} />`;
   else if (!user) page = html`<${Splash} />`;
   else if (path === '/welcome') page = html`<${WelcomeView} />`;
   else if (path === '/trip') page = html`<${Shell} path=${path}><${TripView} /></${Shell}>`;

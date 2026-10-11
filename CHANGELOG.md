@@ -4,6 +4,16 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.12.0] · 2026-10-14
+
+### Added
+- **A proper front page.** Visitors who are not signed in now land on a page that explains the app before asking for anything: what it does, how it works in three steps, what you get, how your data is treated, an example of a day's look, and *Get started free* / *Sign in* buttons (also in every language). Signed-in people still open straight on Today.
+- **Show / hide password** on sign-up, sign-in and reset, so a password can be checked before it is submitted.
+
+### Fixed
+- **The sign-up agreement checkbox was below the *Create account* button**, easy to miss. It now sits above the button.
+- **Clothes overlapping in some outfit pictures.** A page style meant for one picture also resized the small garment cells inside others. It squeezed the pictures on the style-vote cards in *You → Style* and the first-run quiz, made the packing-list outfits in *Pack for a trip* oversized, and did the same to the sample boards on the sign-in page. The style is now limited to the outer picture. A browser check now fails the build if any garment cell is drawn larger than it was given, on the front page, quiz, Today and the trip list.
+
 ## [5.11.0] · 2026-10-13
 
 ### Added

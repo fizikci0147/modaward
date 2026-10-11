@@ -36,13 +36,46 @@ async function run(label, contextOptions) {
   });
   const shot = async (name) => shots && (await page.waitForTimeout(350), await page.screenshot({ path: path.join(shots, `${label}-${name}.png`), fullPage: name.startsWith('full-') }));
 
+  // Outfit pictures are drawn as small cells inside one board. A page style that resizes those cells
+  // (a stray `svg { width: 100% }`) makes clothes overlap, so every cell must keep the size it was given.
+  const artIntact = async (where) => {
+    const bad = await page.evaluate(() => {
+      const out = [];
+      for (const board of document.querySelectorAll('svg.art')) {
+        const r = board.getBoundingClientRect();
+        if (!r.width || !r.height) continue;
+        const vb = (board.getAttribute('viewBox') || '0 0 300 360').split(/\s+/).map(Number);
+        const scale = Math.min(r.width / vb[2], r.height / vb[3]);
+        for (const cell of board.querySelectorAll(':scope > svg[width]')) {
+          const c = cell.getBoundingClientRect();
+          const w = Number(cell.getAttribute('width')) * scale;
+          // the painted shape can be narrower than its cell, never wider
+          if (c.width > w + 3) out.push(`${Math.round(c.width)}px wide instead of at most ${Math.round(w)}px`);
+        }
+      }
+      return out;
+    });
+    if (bad.length) fail(`${label}: outfit pictures are resized by page styles on ${where}: ${bad.slice(0, 3).join('; ')}`);
+  };
+
   try {
   // ── signed out ──
   await page.goto('/');
+  await page.getByRole('heading', { name: /Dress for the day/ }).waitFor();
+  await page.getByRole('heading', { name: 'How it works' }).waitFor();
+  await shot('01-landing');
+  await artIntact('the front page');
+  if (new URL(page.url()).pathname !== '/') fail(`${label}: the front page redirected to ${page.url()}`);
+  await page.getByRole('link', { name: 'Get started free' }).first().click();
+  await page.waitForURL('**/register');
+  await page.getByRole('heading', { name: 'Create your account' }).waitFor();
+  await page.goBack();
+  await page.getByRole('heading', { name: 'How it works' }).waitFor();
+  await page.getByRole('link', { name: 'Sign in' }).first().click();
   await page.waitForURL('**/login');
   await page.getByRole('heading', { name: 'Welcome back' }).waitFor();
   await shot('01-login');
-  ok(`${label}: signed-out visitors land on the sign-in page`);
+  ok(`${label}: signed-out visitors land on an explanation of the app, with sign-up and sign-in`);
 
   // ── language picker on the sign-in screen ──
   const picker = page.locator('.lang-picker select');
@@ -57,7 +90,14 @@ async function run(label, contextOptions) {
   await page.getByRole('link', { name: 'Create an account' }).click();
   await page.getByLabel('Your name').fill('Ada Lovelace');
   await page.getByLabel('Email').fill(`ada-${label}-${Date.now()}@example.com`);
-  await page.getByLabel('Password').fill('correct horse battery');
+  await page.locator('#password').fill('correct horse battery');
+  // the password can be revealed to check it, and hidden again
+  const pw = page.locator('#password');
+  if ((await pw.getAttribute('type')) !== 'password') fail(`${label}: password is not hidden by default`);
+  await page.getByRole('button', { name: 'Show password' }).click();
+  if ((await pw.getAttribute('type')) !== 'text' || (await pw.inputValue()) !== 'correct horse battery') fail(`${label}: Show password did not reveal what was typed`);
+  await page.getByRole('button', { name: 'Hide password' }).click();
+  if ((await pw.getAttribute('type')) !== 'password') fail(`${label}: Hide password did not hide it again`);
   await shot('02-register');
   // the agreement is required: without the box ticked nothing is created
   await page.getByRole('button', { name: 'Create account' }).click();
@@ -77,6 +117,7 @@ async function run(label, contextOptions) {
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('heading', { name: /style\?/ }).waitFor();
   await shot('03-welcome-style');
+  await artIntact('the style quiz');
   if (!(await page.getByRole('button', { name: 'Continue' }).isDisabled())) fail(`${label}: quiz lets you skip the style votes`);
   for (const name of ['Classic', 'Minimalist']) await page.getByRole('group', { name: new RegExp(`feel about ${name}`) }).getByRole('button', { name: 'Love' }).click();
   for (const heading of ['Your colours', 'Fit and sizes', 'Your life and budget', 'Your rules and stores']) {
@@ -98,6 +139,7 @@ async function run(label, contextOptions) {
   await page.getByText(/% match|match$/).first().waitFor();
   await page.waitForSelector('.outfit-board svg.art');
   await shot('05-today');
+  await artIntact('Today');
   await page.screenshot({ path: shots ? path.join(shots, `${label}-05-today-full.png`) : undefined, fullPage: true }).catch(() => {});
   const items = await page.locator('.piece-chip').count();
   if (items < 3) fail(`${label}: outfit shows only ${items} pieces`);
@@ -202,6 +244,7 @@ async function run(label, contextOptions) {
   const pieces = await page.locator('.pack-row').count();
   if (pieces < 3 || pieces > 14) fail(`${label}: packing list has ${pieces} pieces`);
   await shot('08c-trip');
+  await artIntact('the trip list');
   await page.locator('#trip-days').selectOption('7');
   await page.getByRole('button', { name: 'Build my packing list' }).click();
   await page.getByRole('dialog').waitFor();
