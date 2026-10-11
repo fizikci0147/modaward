@@ -2,14 +2,14 @@
 /**
  * Draws the app icon and launch screen sources (assets/*.png) from the ModaWard hanger mark.
  * `npm run assets` then turns them into every size iOS and Android need.
- * Re-run both only if the logo changes.
+ * Run `npm run assets` (in mobile/) only if the logo changes; it installs its own tools first.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
-const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'); // the mobile/ folder
 const out = path.join(root, 'assets');
 fs.mkdirSync(out, { recursive: true });
 

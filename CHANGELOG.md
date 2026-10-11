@@ -4,6 +4,11 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.15.1] · 2026-10-15
+
+### Fixed
+- `npm install` in `mobile/` no longer pulls in the icon-generating tools (they came with 7 security warnings, one critical, in tools that never ship in the app). They now live in `mobile/tools/` and install only when you run `npm run assets`. A plain install is down to 3 low-severity notices that come from Capacitor's own command-line tool.
+
 ## [5.15.0] · 2026-10-15
 
 ### Added

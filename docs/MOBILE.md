@@ -128,4 +128,5 @@ Inside the apps, **email reminders work** (including "your free Pro is about to 
 - **`npm run android`: SDK not found**: open the project once in Android Studio so it creates `local.properties`, or install the SDK it asks for.
 - **Xcode: "Signing requires a development team"**: choose your Team under *Signing & Capabilities*.
 - **I changed the website and the app looks the same**: the app loads the live site; check the website itself first (`/health` shows the version), then force-quit and reopen the app.
-- **The icon or launch screen looks wrong**: edit `mobile/scripts/make-assets.mjs`, run `node scripts/make-assets.mjs && npm run assets && npm run sync` in `mobile/`.
+- **The icon or launch screen looks wrong**: edit `mobile/tools/make-assets.mjs`, then in `mobile/` run `npm run assets && npm run sync` (it installs its own small toolset the first time; a normal `npm install` stays minimal).
+- **`npm install` shows "deprecated" lines or "3 moderate vulnerabilities"**: normal. They come from Capacitor's own command-line tool, which only runs on your computer to build the app and is not part of the app you ship. There is no upstream fix yet; ignore them, and do not run `npm audit fix --force`.

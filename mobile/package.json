@@ -1,11 +1,11 @@
 {
   "name": "modaward-mobile",
-  "version": "5.15.0",
+  "version": "5.15.1",
   "private": true,
   "description": "ModaWard for iOS and Android: native shells around the same web app that runs on modaward.com.",
   "scripts": {
     "prepare-www": "node scripts/prepare-www.mjs",
-    "assets": "capacitor-assets generate --iconBackgroundColor '#1f3d33' --iconBackgroundColorDark '#1f3d33' --splashBackgroundColor '#f6f3ed' --splashBackgroundColorDark '#100f0d'",
+    "assets": "cd tools && npm install --no-audit --no-fund && node make-assets.mjs && cd .. && ./tools/node_modules/.bin/capacitor-assets generate --iconBackgroundColor '#1f3d33' --iconBackgroundColorDark '#1f3d33' --splashBackgroundColor '#f6f3ed' --splashBackgroundColorDark '#100f0d' && rm -rf icons www/manifest.json",
     "sync": "node scripts/prepare-www.mjs && cap sync && node scripts/set-native-version.mjs",
     "ios": "npm run sync && cap open ios",
     "android": "npm run sync && cap open android",
@@ -20,9 +20,7 @@
     "@capacitor/splash-screen": "^8.0.0"
   },
   "devDependencies": {
-    "@capacitor/assets": "^3.0.5",
-    "@capacitor/cli": "^8.0.0",
-    "sharp": "^0.34.0"
+    "@capacitor/cli": "^8.0.0"
   },
   "engines": {
     "node": ">=22"

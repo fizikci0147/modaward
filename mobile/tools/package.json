@@ -1,0 +1,10 @@
+{
+  "name": "modaward-mobile-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Only needed to regenerate the app icons and launch screens (npm run assets in mobile/). Kept apart so a normal install stays small and clean.",
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "sharp": "^0.34.0"
+  }
+}
