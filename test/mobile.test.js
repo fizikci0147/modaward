@@ -70,6 +70,17 @@ describe('iOS and Android apps', () => {
     assert.equal(icon.readUInt32BE(20), 1024);
   });
 
+  test('no stray image files sit in the iOS asset sets (Xcode warns about "unassigned children")', () => {
+    const sets = path.join(root, 'mobile/ios/App/App/Assets.xcassets');
+    for (const set of fs.readdirSync(sets).filter((d) => d.endsWith('.imageset') || d.endsWith('.appiconset'))) {
+      const dir = path.join(sets, set);
+      const used = new Set(JSON.parse(fs.readFileSync(path.join(dir, 'Contents.json'), 'utf8')).images.map((i) => i.filename).filter(Boolean));
+      const files = fs.readdirSync(dir).filter((f) => /\.(png|jpe?g|pdf|svg)$/i.test(f));
+      assert.deepEqual(files.filter((f) => !used.has(f)), [], `${set} has image files nothing refers to`);
+      assert.deepEqual([...used].filter((f) => !files.includes(f)), [], `${set} refers to missing files`);
+    }
+  });
+
   test('the fallback pages point at the server and are filled in by the build script', () => {
     for (const t of ['mobile/templates/index.html', 'mobile/templates/offline.html']) assert.ok(read(t).includes('__SERVER_URL__'), t);
     assert.match(read('mobile/scripts/prepare-www.mjs'), /MODAWARD_URL/);
