@@ -52,7 +52,18 @@ const SCREENS = [
       await page.goto('/');
       await page.waitForSelector('.outfit-board svg.art');
       await page.getByRole('region', { name: 'Weather' }).waitFor();
+    },
+    // the outfit is the point of this screen: bring it up under the status bar
+    async frame(page) {
+      await page.evaluate(() => {
+        const board = document.querySelector('.outfit-board');
+        const header = document.querySelector('.topbar');
+        const below = header ? header.getBoundingClientRect().bottom : 100;
+        // the occasion chips sit just above the outfit; leave them room under the header
+        window.scrollTo(0, board.getBoundingClientRect().top + window.scrollY - (below + 92));
+      });
     }
+  },
   },
   {
     id: 'week',
@@ -126,28 +137,31 @@ const SCREENS = [
 
 // ─────────────────────────────────────────── the demo account
 async function seedDemo(t) {
-  const H = { 'x-requested-with': 'modaward' };
   const c = t.client();
   const reg = await c.post('/api/auth/register', { email: 'mia@example.com', password: 'correct horse battery', name: 'Mia', acceptTerms: true });
   if (reg.status !== 201) throw new Error(`could not create the demo account: ${reg.status} ${reg.text}`);
   const id = reg.json.user.id;
-  await c.patch('/api/profile', {
+  const must = (res, what) => {
+    if (res.status >= 300) throw new Error(`demo setup failed at ${what}: ${res.status} ${res.text.slice(0, 200)}`);
+    return res;
+  };
+  must(await c.patch('/api/profile', {
     location: NYC,
     department: 'women',
     style: { archetypes: { minimal: 1, classic: 0.9, polished: 0.8, casual: 0.5 }, likedColors: ['navy', 'cream', 'camel', 'olive'], quizDone: true },
-    lifestyle: { occasions: ['work', 'casual', 'dinner'] }
-  });
-  await c.post('/api/garments/starter', { department: 'women' });
+    lifestyle: { occasions: ['work', 'casual', 'date'] }
+  }), 'the style profile');
+  must(await c.post('/api/garments/starter', { department: 'women' }), 'the starter wardrobe');
   // everything from Today to the Insights screen is open to a Pro member
   t.deps.repos.users.setPlan(id, { plan: 'pro', status: 'active', renewsAt: Math.floor(Date.now() / 1000) + 200 * 86400 });
   const garments = (await c.get('/api/garments')).json.garments;
   const day = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
   const prices = [64, 38, 120, 89, 210, 45, 59, 150, 32, 95, 78, 180, 55, 110];
   for (const [i, g] of garments.entries()) {
-    await c.patch(`/api/garments/${g.id}`, { price: prices[i % prices.length] });
+    must(await c.patch(`/api/garments/${g.id}`, { price: prices[i % prices.length] }), 'a price');
     // some pieces worn a lot, some a little, a few not for months (so the "forgotten" and cost-per-wear numbers are real)
     const times = [9, 7, 6, 5, 4, 3, 2, 2, 1, 1, 0, 0, 3, 5][i % 14];
-    for (let k = 0; k < times; k++) await c.post(`/api/garments/${g.id}/worn`, { date: day(1 + k * 3 + (i % 3)) }, H).catch(() => {});
+    for (let k = 0; k < times; k++) must(await c.post(`/api/garments/${g.id}/worn`, { date: day(1 + k * 3 + (i % 3)) }), 'a wear');
   }
   return c;
 }
@@ -166,7 +180,7 @@ const chrome = (d) => {
   const dark = false;
   const fg = dark ? '#fff' : '#111';
   const ios = d.os === 'ios';
-  const bar = `<div style="position:fixed;left:0;right:0;top:0;height:${d.top}px;z-index:99999;pointer-events:none;display:flex;align-items:${d.kind === 'phone' ? 'flex-end' : 'center'};justify-content:space-between;padding:0 ${d.kind === 'phone' ? 28 : 26}px ${d.kind === 'phone' ? 8 : 0}px;font:600 ${ios ? 16 : 13}px/1 -apple-system,'Segoe UI',Roboto,sans-serif;color:${fg}">
+  const bar = `<div style="position:fixed;left:0;right:0;top:0;height:${d.top}px;z-index:99999;pointer-events:none;background:${CREAM};display:flex;align-items:${d.kind === 'phone' ? 'flex-end' : 'center'};justify-content:space-between;padding:0 ${d.kind === 'phone' ? 28 : 26}px ${d.kind === 'phone' ? 8 : 0}px;font:600 ${ios ? 16 : 13}px/1 -apple-system,'Segoe UI',Roboto,sans-serif;color:${fg}">
     <span>${ios ? '9:41' : '9:41'}</span>
     <span style="display:flex;gap:6px;align-items:center">
       <svg width="18" height="12" viewBox="0 0 18 12" fill="${fg}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
@@ -187,19 +201,29 @@ async function capture(browser, base, d, screen) {
     userAgent: UA[d.os],
     locale: 'en-US',
     timezoneId: 'America/New_York',
-    colorScheme: 'light'
+    colorScheme: 'light',
+    bypassCSP: true // only so the status bar we draw over the capture can be styled
   });
   // sign in as the demo account
   const login = await ctx.request.post('/api/auth/login', { data: { email: 'mia@example.com', password: 'correct horse battery' }, headers: { 'x-requested-with': 'modaward' } });
   if (!login.ok()) throw new Error(`demo sign-in failed: ${login.status()}`);
   const page = await ctx.newPage();
+  await page.clock.setFixedTime(new Date('2026-10-06T14:30:00Z')); // 10:30 in New York, the day the sample forecast covers
   // the safe areas a real phone reports (the app reads these)
   await page.addInitScript(`document.addEventListener('DOMContentLoaded',()=>{const r=document.documentElement.style;r.setProperty('--safe-area-inset-top','${d.top}px');r.setProperty('--safe-area-inset-bottom','${d.bottom}px')})`);
   await page.addInitScript(`try{localStorage.setItem('mw-trial-note-dismissed','1')}catch(e){}`);
-  await screen.shoot(page);
+  try {
+    await screen.shoot(page);
+  } catch (e) {
+    fs.mkdirSync(out, { recursive: true });
+    await page.screenshot({ path: path.join(out, `_failed-${d.id}-${screen.id}.png`) }).catch(() => {});
+    throw new Error(`${d.id} / ${screen.id}: ${e.message.split('\n')[0]} (see _failed-${d.id}-${screen.id}.png)`);
+  }
   await page.waitForTimeout(700);
+  if (screen.frame) await screen.frame(page, d);
+  else await page.evaluate(() => window.scrollTo(0, 0));
+  await page.waitForTimeout(250);
   await page.evaluate((html) => document.body.insertAdjacentHTML('beforeend', html), chrome(d));
-  await page.evaluate(() => window.scrollTo(0, 0));
   const png = await page.screenshot({ type: 'png' });
   await ctx.close();
   return png;
@@ -209,7 +233,7 @@ async function capture(browser, base, d, screen) {
 function layout({ W, H, d, png, title, sub, dark, size }) {
   const a = d.css[1] / d.css[0];
   const phone = d.kind === 'phone';
-  const frameW = Math.min(W * (phone ? 0.84 : 0.8), (H * 0.74) / (0.944 * a + 0.056));
+  const frameW = Math.min(W * (phone ? 0.84 : 0.8), (H * 0.79) / (0.944 * a + 0.056));
   const b = frameW * (phone ? 0.028 : 0.024);
   const screenW = frameW - 2 * b;
   const screenH = screenW * a;
@@ -277,7 +301,7 @@ try {
   const comp = await browser.newPage();
   const made = [];
   let cover = null;
-  for (const d of DEVICES) {
+  for (const d of DEVICES.filter((x) => !process.env.ONLY_DEVICE || x.id === process.env.ONLY_DEVICE)) {
     const W = d.css[0] * d.scale;
     const H = d.css[1] * d.scale;
     const rawDir = path.join(out, d.store, d.id, 'screens-only');
@@ -285,6 +309,7 @@ try {
     fs.mkdirSync(rawDir, { recursive: true });
     fs.mkdirSync(styledDir, { recursive: true });
     for (const [i, screen] of SCREENS.entries()) {
+      if (process.env.ONLY_SCREEN && screen.id !== process.env.ONLY_SCREEN) continue;
       const png = await capture(browser, t.base, d, screen);
       const name = `${String(i + 1).padStart(2, '0')}-${screen.id}.png`;
       fs.writeFileSync(path.join(rawDir, name), png);
