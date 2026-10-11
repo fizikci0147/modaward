@@ -190,7 +190,7 @@ const chrome = (d) => {
   return bar + home;
 };
 
-async function capture(browser, base, d, screen) {
+async function capture(browser, base, state, d, screen) {
   const ctx = await browser.newContext({
     baseURL: base,
     viewport: { width: d.css[0], height: d.css[1] },
@@ -201,11 +201,9 @@ async function capture(browser, base, d, screen) {
     locale: 'en-US',
     timezoneId: 'America/New_York',
     colorScheme: 'light',
-    bypassCSP: true // only so the status bar we draw over the capture can be styled
+    bypassCSP: true, // only so the status bar we draw over the capture can be styled
+    storageState: state // already signed in as the demo account
   });
-  // sign in as the demo account
-  const login = await ctx.request.post('/api/auth/login', { data: { email: 'mia@example.com', password: 'correct horse battery' }, headers: { 'x-requested-with': 'modaward' } });
-  if (!login.ok()) throw new Error(`demo sign-in failed: ${login.status()}`);
   const page = await ctx.newPage();
   await page.clock.setFixedTime(new Date('2026-10-06T14:30:00Z')); // 10:30 in New York, the day the sample forecast covers
   // the safe areas a real phone reports (the app reads these)
@@ -297,6 +295,12 @@ const t = await startTestServer({ env: { SIGNUP_PRO_DAYS: '0' } });
 const browser = await chromium.launch({ executablePath, args: ['--no-sandbox'] });
 try {
   await seedDemo(t);
+  // sign in once (the app limits sign-in attempts) and reuse the session for every capture
+  const boot = await browser.newContext({ baseURL: t.base });
+  const login = await boot.request.post('/api/auth/login', { data: { email: 'mia@example.com', password: 'correct horse battery' }, headers: { 'x-requested-with': 'modaward' } });
+  if (!login.ok()) throw new Error(`demo sign-in failed: ${login.status()}`);
+  const state = await boot.storageState();
+  await boot.close();
   const comp = await browser.newPage();
   const made = [];
   let cover = null;
@@ -309,7 +313,7 @@ try {
     fs.mkdirSync(styledDir, { recursive: true });
     for (const [i, screen] of SCREENS.entries()) {
       if (process.env.ONLY_SCREEN && screen.id !== process.env.ONLY_SCREEN) continue;
-      const png = await capture(browser, t.base, d, screen);
+      const png = await capture(browser, t.base, state, d, screen);
       const name = `${String(i + 1).padStart(2, '0')}-${screen.id}.png`;
       fs.writeFileSync(path.join(rawDir, name), png);
       await comp.setViewportSize({ width: W, height: H });
