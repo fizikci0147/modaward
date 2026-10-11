@@ -4,6 +4,11 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.14.0] · 2026-10-15
+
+### Added
+- **A reminder before free Pro ends.** In the last two weeks a notice in the app says when it ends, with *Keep Pro*; it can be put away and comes back for the next end date. By email (and push, for people who use it) a notice goes out a week before and another the day before, in the person's language, only during the daytime and only once each. It covers time-limited free Pro only, never paying subscribers. Every email has a one-tap *Turn off emails* link, which also stops these notices. If the mail server is down the notice is retried on the next pass instead of being lost.
+
 ## [5.13.0] · 2026-10-14
 
 ### Added

@@ -17,6 +17,7 @@ import { LandingView } from '/js/views/landing.js';
 import { ProView } from '/js/views/pro.js';
 import { PrivacyView, TermsView } from '/js/views/legal.js';
 import { UnsubscribeView } from '/js/views/unsubscribe.js';
+import { TrialNote } from '/js/components/trial-note.js';
 import { reportError } from '/js/errors.js';
 import { TripView } from '/js/views/trip.js';
 import { AdminView } from '/js/views/admin.js';
@@ -61,7 +62,7 @@ function Shell({ path, children }) {
       <${Link} href="/" class="brand"><${Logo} size=${24} />ModaWard</${Link}>
       <div class="row">${!pro ? html`<${Link} href="/pro" class="chip chip-s" aria-label=${t('Upgrade to Pro')}><${Icon} name="crown" />${t('Pro')}</${Link}>` : html`<${ProBadge} />`}</div>
     </header>
-    <main class="main" id="main" tabindex="-1">${children}</main>
+    <main class="main" id="main" tabindex="-1"><${TrialNote} />${children}</main>
     <nav class="tabbar" aria-label=${t('Main')}>
       ${NAV.map(([href, label, icon]) => html`<${Link} key=${href} href=${href} class="tab" aria-current=${isCurrent(href) ? 'page' : undefined}><${Icon} name=${icon} />${t(label)}</${Link}>`)}
     </nav>

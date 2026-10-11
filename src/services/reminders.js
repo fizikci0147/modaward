@@ -132,7 +132,7 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
     const link = `${config.appUrl}${msg.url}`;
     const unsub = unsubscribeUrl(user.id);
     const { t } = translatorFor(localeOf(repos.profiles.get(user.id)));
-    const footer = t('You get this because you turned on reminders in ModaWard.');
+    const footer = msg.footer || t('You get this because you turned on reminders in ModaWard.');
     return {
       subject: msg.title,
       text: `${msg.greeting},\n\n${msg.title}\n${msg.body}\n\n${msg.cta}: ${link}\n\n--\n${footer}\n${t('Turn off emails')}: ${unsub}\n`,
@@ -203,10 +203,11 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
       return true;
     },
 
-    /** Turn email reminders off from the link in an email. */
+    /** Turn email reminders (and account notices) off from the link in an email. */
     unsubscribe(userId, token) {
       if (!safeEqual(token || '', tokenFor(userId))) return false;
       db.run('UPDATE reminder_prefs SET email_on = 0, updated_at = ? WHERE user_id = ?', now(), userId);
+      db.run('UPDATE users SET email_notices = 0 WHERE id = ?', userId);
       return true;
     },
 
@@ -217,6 +218,67 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
       const msg = await build(kind, user, local);
       if (!msg) return { skipped: true, delivered: { push: 0, email: false } };
       return { skipped: false, message: { title: msg.title, body: msg.body }, delivered: await deliver(user, row, msg) };
+    },
+
+    /**
+     * "Your free Pro is about to end": one notice a week before and one the day before, for time-limited
+     * (granted) Pro only, in the person's language, during their daytime. Each goes out once per end date.
+     * Delivered as a push notification if they use those, and by email unless they switched account emails off.
+     */
+    async tickNotices(at = new Date()) {
+      const t0 = Math.floor(at.getTime() / 1000);
+      const rows = db.all("SELECT id FROM users WHERE plan = 'pro' AND plan_status = 'granted' AND plan_renews_at > ? AND plan_renews_at <= ?", t0, t0 + 7 * 86400);
+      let sent = 0;
+      for (const { id } of rows) {
+        try {
+          const user = repos.users.byId(id);
+          const left = user.plan_renews_at - t0;
+          // more than two days left: the week-ahead notice; under one day: the last call; in between: nothing
+          const kind = left <= 86400 ? 'trial1' : left > 2 * 86400 ? 'trial7' : null;
+          if (!kind) continue;
+          const prefs = prefsOf(id);
+          const tz = prefs?.tz || 'UTC';
+          const local = localParts(at, tz);
+          if (local.hour < 9 || local.hour > 20) continue; // never at night
+          const day = `end-${user.plan_renews_at}`;
+          if (!claim(id, kind, day)) continue;
+          const profile = repos.profiles.get(id);
+          const locale = localeOf(profile);
+          const { t } = translatorFor(locale);
+          const first = (user.name || '').split(' ')[0];
+          const date = new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeZone: isTimeZone(tz) ? tz : 'UTC' }).format(new Date(user.plan_renews_at * 1000));
+          const msg =
+            kind === 'trial7'
+              ? {
+                  title: t('Your free Pro ends on {date}', { date }),
+                  body: t('Pro keeps your closet unlimited, plans every day of the week and unlocks the full shopping feed and the AI stylist. After {date} you carry on with the free plan. Nothing is charged.', { date })
+                }
+              : {
+                  title: t('Your free Pro ends tomorrow'),
+                  body: t('After that you carry on with the free plan: up to {n} pieces in your closet and 3-day planning. Nothing is charged. Subscribe any time to keep everything.', { n: config.plans.freeClosetLimit })
+                };
+          Object.assign(msg, { url: '/pro', cta: t('Keep Pro'), greeting: first ? t('Hi {name}', { name: first }) : t('Hi'), footer: t('You get this because your free Pro is about to end.') });
+          let reached = false;
+          let failed = false;
+          if ((prefs ? prefs.push_on : 1) && push) reached = (await push.notify(id, { title: msg.title, body: msg.body, url: msg.url, tag: 'trial' })) > 0;
+          if (user.email_notices !== 0 && mailer?.configured && config.appUrl) {
+            try {
+              const r = await mailer.send({ to: user.email, ...emailFor(msg, user) });
+              if (r.delivered !== false) reached = true;
+            } catch (e) {
+              failed = true;
+              log.warn('reminder.notice_email_failed', { message: String(e?.message || '').slice(0, 160) });
+            }
+          }
+          if (reached) {
+            markDelivered(id, kind, day);
+            sent += 1;
+          } else if (failed) release(id, kind, day); // try again on the next pass
+        } catch (e) {
+          log.warn('reminder.notice_failed', { message: String(e?.message || '').slice(0, 160) });
+        }
+      }
+      return { checked: rows.length, sent };
     },
 
     /** One scheduler pass. @returns {Promise<{checked:number, sent:number}>} */
@@ -267,6 +329,7 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
       running = true;
       try {
         await api.tick();
+        await api.tickNotices();
       } catch (e) {
         log.warn('reminder.tick_failed', { message: String(e?.message || '').slice(0, 160) });
       } finally {
