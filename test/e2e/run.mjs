@@ -522,6 +522,8 @@ async function runNative() {
   page.on('pageerror', (e) => problems.push(e.message));
   page.on('console', (m) => m.type() === 'error' && !/preloaded using link preload/.test(m.text()) && problems.push(m.text()));
   const H = { 'x-requested-with': 'modaward' };
+  // a phone with a notch reports a top inset (the app supplies it as --safe-area-inset-top on Android)
+  await page.addInitScript("document.addEventListener('DOMContentLoaded', () => document.documentElement.style.setProperty('--safe-area-inset-top', '54px'))");
 
   await page.goto('/');
   await page.getByRole('heading', { name: /Dress for the day/ }).waitFor();
@@ -540,6 +542,16 @@ async function runNative() {
     const buy = await page.locator('a[href="/pro"], button:has-text("Go Pro"), button:has-text("See Pro"), button:has-text("Unlock"), button:has-text("Manage billing")').count();
     if (buy) fail(`native: ${url} offers a purchase (${buy} control${buy === 1 ? '' : 's'})`);
   }
+
+  // with a notch, the header keeps its full height below the status bar and its title is not squeezed under it
+  await page.goto('/closet');
+  await page.waitForSelector('.topbar .brand');
+  const bar = await page.evaluate(() => {
+    const top = document.querySelector('.topbar').getBoundingClientRect();
+    const brand = document.querySelector('.topbar .brand').getBoundingClientRect();
+    return { height: Math.round(top.height), brandTop: Math.round(brand.top), brandBottom: Math.round(brand.bottom) };
+  });
+  if (bar.height < 114 || bar.brandTop < 54 || bar.brandBottom > bar.height) fail(`native: with a notch the header is squeezed (${JSON.stringify(bar)})`);
 
   // a day beyond the free plan explains itself, without a way to buy
   await page.goto('/week');

@@ -85,7 +85,7 @@ const SCREENS = [
   },
   {
     id: 'shop',
-    title: 'Looks to shop, made for your taste',
+    title: 'Looks to shop, made for you',
     sub: 'Complete looks from the stores you choose',
     async shoot(page) {
       await page.goto('/shop');

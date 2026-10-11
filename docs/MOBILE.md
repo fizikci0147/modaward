@@ -121,6 +121,15 @@ Inside the apps, **email reminders work** (including "your free Pro is about to 
 - **Screenshots:** iPhone 6.9" and 6.5", iPad 13" (the apps support iPad); Android phone (and tablet if offered). I can produce clean screenshots from the real app on request.
 - **Export compliance:** already answered in the app (`ITSAppUsesNonExemptEncryption = false`: HTTPS only).
 
+## Store screenshots
+
+`node mobile/store/make-screenshots.mjs` makes them from the real app (it needs the main project installed with `npm install`, and Chromium; set `CHROMIUM_PATH` if it is not found). It starts the app with a demo account, opens each screen as the iOS and Android apps show it, and writes, under `dist/store-screenshots/`:
+
+- `Apple/iphone-6.9in` (1320×2868), `Apple/iphone-6.5in` (1284×2778), `Apple/ipad-13in` (2064×2752)
+- `Google/android-phone` (1080×1920), `Google/android-tablet-10in` (1600×2560), and `Google/feature-graphic-1024x500.png`
+
+Each folder has `with-headlines` (the screen in a phone frame under a headline) and `screens-only` (the plain screen at the exact store size). Seven screens: Today, Week, Closet, Shop, Style quiz, Trip, Insights. Re-run it after any visible change. Edit the headlines at the top of the script. They are made in a desktop browser at phone size with a sample forecast, not captured on a real phone, so for a final listing you can replace them with captures from your own iPhone or Android phone (the app must look the same).
+
 ## Troubleshooting
 
 - **A white screen on launch**: the app could not reach the site. Open the same address in the phone's browser. On a test server, check the phone is on the same Wi-Fi and the address in `MODAWARD_URL` is right.

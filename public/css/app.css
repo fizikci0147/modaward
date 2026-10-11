@@ -75,7 +75,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(var(--top-h) + 16px); scroll-padding-bottom: calc(var(--nav-h) + 28px); }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(var(--top-h) + var(--sat) + 16px); scroll-padding-bottom: calc(var(--nav-h) + 28px); }
 @media (min-width: 980px) { html { scroll-padding-top: 24px; scroll-padding-bottom: 24px; } }
 body {
   margin: 0;
@@ -120,7 +120,7 @@ ul { margin: 0; padding: 0; list-style: none; }
 /* ── layout ───────────────────────────────────────── */
 .app { min-height: 100dvh; display: flex; flex-direction: column; }
 .topbar {
-  position: sticky; top: 0; z-index: 30; height: var(--top-h);
+  position: sticky; top: 0; z-index: 30; height: calc(var(--top-h) + var(--sat)); /* the status bar area (a notch) is on top of the 60px bar, not inside it */
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 0 18px; padding-top: var(--sat);
   background: color-mix(in srgb, var(--bg) 82%, transparent);

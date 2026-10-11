@@ -1,6 +1,6 @@
 {
   "name": "modaward-mobile",
-  "version": "5.15.2",
+  "version": "5.15.3",
   "private": true,
   "description": "ModaWard for iOS and Android: native shells around the same web app that runs on modaward.com.",
   "scripts": {

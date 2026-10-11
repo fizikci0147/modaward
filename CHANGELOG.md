@@ -4,6 +4,14 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.15.3] · 2026-10-16
+
+### Fixed
+- **On a phone with a notch the top bar was squeezed** (the app title half hidden under the status bar). The bar kept its 60px height but also added the notch's padding inside it. It now sits below the status bar at full height, in the iPhone and Android apps and anywhere a browser reports a top inset. Nothing changes in a normal browser. A browser test now checks it.
+
+### Added
+- `mobile/store/make-screenshots.mjs` makes the App Store and Google Play screenshots from the real app: iPhone 6.9" and 6.5", iPad 13", Android phone and 10" tablet, plus the Google Play feature graphic (see docs/MOBILE.md).
+
 ## [5.15.2] · 2026-10-15
 
 ### Fixed
