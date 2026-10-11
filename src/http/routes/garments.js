@@ -59,7 +59,7 @@ export function garmentRoutes({ config, repos, images }) {
   r.post('/garments', (req, res) => {
     const input = createSchema(req.body);
     assertCanAddGarments(req.user, config, repos.garments.count(req.user.id));
-    assertWithinStorageCap(req.user, repos.garments.countAll(req.user.id));
+    assertWithinStorageCap(req.user, repos.garments.countAll(req.user.id), 1, config);
     const { image, ...data } = withPriceCents(input);
     data.name ||= req.t('{color} {type}', { color: req.t(colorName(data.color)), type: req.t(TYPES[data.type].label).toLowerCase() }).replace(/^./, (c) => c.toUpperCase());
     let saved = null;
@@ -78,7 +78,7 @@ export function garmentRoutes({ config, repos, images }) {
     const dept = department || repos.profiles.get(req.user.id).department;
     const items = starterWardrobe(dept, req.t);
     assertCanAddGarments(req.user, config, repos.garments.count(req.user.id), items.length);
-    assertWithinStorageCap(req.user, repos.garments.countAll(req.user.id), items.length);
+    assertWithinStorageCap(req.user, repos.garments.countAll(req.user.id), items.length, config);
     const created = repos.db.transaction(() => items.map((item) => repos.garments.create(req.user.id, item)));
     res.status(201).json({ garments: created });
   });

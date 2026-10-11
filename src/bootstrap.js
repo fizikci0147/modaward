@@ -52,7 +52,8 @@ export async function createDeps(config, overrides = {}) {
   const ai = await createAiClient(config, usage, log, overrides.aiClient);
   const stylist = ai ? createStylist({ ai, db, log }) : null;
   const cutoutService = overrides.cutoutService === undefined ? createCutoutService(config, usage, log, overrides.fetch) : overrides.cutoutService;
-  const billing = overrides.billing === undefined ? createBilling(config, repos, log, overrides.fetch) : overrides.billing;
+  // nothing is sold in the free version, so there is no billing at all (even if Stripe keys are present)
+  const billing = overrides.billing === undefined ? (config.plans.pricing === 'paid' ? createBilling(config, repos, log, overrides.fetch) : null) : overrides.billing;
 
   const capabilities = {
     ai: Boolean(stylist),
@@ -62,7 +63,9 @@ export async function createDeps(config, overrides = {}) {
     // who runs this site, shown in the privacy policy (set OPERATOR_NAME and CONTACT_EMAIL)
     operator: config.operator,
     // the free Pro period new members get, so the sign-up screens can say so (0 = no offer)
-    promo: { proDays: config.plans.signupProDays }
+    promo: { proDays: config.plans.signupProDays },
+    // 'free': everything is free and the app shows no Pro anywhere; 'paid': Free and Pro plans
+    pricing: config.plans.pricing
   };
 
   // trend lists: the saved ones (written by the monthly refresh, or by hand: docs/TRENDS.md) override the built-in ones
