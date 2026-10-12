@@ -85,12 +85,12 @@ for (const file of files.filter((f) => f.startsWith(path.join(root, 'public')) &
   if (/<script(?![^>]*\ssrc=)[^>]*>/i.test(html)) fail(`html: ${rel(file)} has an inline <script> (blocked by the CSP)`);
   if (/\son[a-z]+\s*=/i.test(html)) fail(`html: ${rel(file)} has an inline event handler`);
   if (/\sstyle\s*=/i.test(html)) fail(`html: ${rel(file)} has a style attribute (blocked by the CSP)`);
-  for (const m of html.matchAll(/(?:src|href)="(\/[^"#?]+)"/g)) if (!fs.existsSync(path.join(root, 'public', m[1]))) fail(`html: ${rel(file)} references missing ${m[1]}`);
+  for (const m of html.matchAll(/(?:src|href)="(\/[^"#?]+)(?:\?[^"#]*)?"/g)) if (!fs.existsSync(path.join(root, 'public', m[1]))) fail(`html: ${rel(file)} references missing ${m[1]}`);
 }
 
 // 4. manifest + service worker
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'public', 'manifest.webmanifest'), 'utf8'));
-for (const i of manifest.icons) if (!fs.existsSync(path.join(root, 'public', i.src))) fail(`manifest: missing icon ${i.src}`);
+for (const i of manifest.icons) if (!fs.existsSync(path.join(root, 'public', i.src.split('?')[0]))) fail(`manifest: missing icon ${i.src}`);
 const sw = fs.readFileSync(path.join(root, 'public', 'sw.js'), 'utf8');
 const shell = /const SHELL = \[([^\]]+)\]/.exec(sw)?.[1].match(/'([^']+)'/g)?.map((s) => s.slice(1, -1)) ?? [];
 if (!shell.length) fail('sw: could not read the precache list');

@@ -385,6 +385,37 @@ export function segment(img, { maxWork = 320, debug = false, split = false } = {
   }
 
   const T = Math.max(1.3, Math.min(4, otsu(score)));
+
+  // A pattern made of pale squares (a light check, a pinstripe) looks like backdrop square by square, so the backdrop leaks
+  // in between them. On a smooth surface, a dense mesh of edges is a better sign of cloth than colour: after the flood, any
+  // "backdrop" pixel in the middle of such a mesh is put back as cloth.
+  const edge = new Float32Array(n);
+  for (let y = 0; y < h - 1; y++) {
+    for (let x = 0; x < w - 1; x++) {
+      const i = y * w + x;
+      edge[i] = Math.max(distance(lab[i], lab[i + 1]), distance(lab[i], lab[i + w]));
+    }
+  }
+  const band = Math.max(2, Math.round(0.035 * Math.min(w, h)));
+  const ring = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (x < band || y < band || x >= w - band || y >= h - band) ring.push(edge[y * w + x]);
+  ring.sort((a, b) => a - b);
+  const noise = ring[Math.floor(ring.length * 0.7)] || 0;
+  const wall = new Uint8Array(n);
+  if (noise < 6) {
+    // the surface is smooth enough for edges to mean something
+    const strong = Math.max(5, noise * 3.5);
+    for (let y = 1; y < h - 1; y++) {
+      for (let x = 1; x < w - 1; x++) {
+        if (edge[y * w + x] > strong) {
+          // thicken by a pixel so the wall has no gaps along a diagonal
+          wall[y * w + x] = 1;
+          wall[y * w + x - 1] = 1;
+          wall[(y - 1) * w + x] = 1;
+        }
+      }
+    }
+  }
   const bgLike = (i) => score[i] <= T;
 
   // flood the backdrop in from the border
@@ -407,6 +438,47 @@ export function segment(img, { maxWork = 320, debug = false, split = false } = {
     if (x < w - 1) seed(p + 1);
     if (p >= w) seed(p - w);
     if (p < n - w) seed(p + w);
+  }
+
+  if (noise < 6) {
+    const dense = boxBlur(Float32Array.from(wall), w, h, 4);
+    const candidate = new Uint8Array(n);
+    let found = 0;
+    for (let i = 0; i < n; i++) {
+      if (bg[i] && dense[i] > 0.5) {
+        candidate[i] = 1;
+        found += 1;
+      }
+    }
+    if (found) {
+      // Only what is inside the cloth comes back. The band along the outside of the garment is the dense edge of its own
+      // outline (and of JPEG ringing), not cloth: walk a few pixels in from the real backdrop through the candidates and
+      // leave those as backdrop; whatever lies deeper is cloth.
+      const reach = Math.max(3, Math.round(0.018 * Math.min(w, h)));
+      const depth = new Int16Array(n).fill(-1);
+      const queue = new Int32Array(n);
+      let head = 0;
+      let tail = 0;
+      for (let i = 0; i < n; i++) {
+        if (bg[i] && !candidate[i]) {
+          depth[i] = 0;
+          queue[tail++] = i;
+        }
+      }
+      while (head < tail) {
+        const p = queue[head++];
+        if (depth[p] >= reach) continue;
+        const x = p % w;
+        const nb = [x > 0 ? p - 1 : -1, x < w - 1 ? p + 1 : -1, p >= w ? p - w : -1, p < n - w ? p + w : -1];
+        for (const q of nb) {
+          if (q >= 0 && candidate[q] && depth[q] < 0) {
+            depth[q] = depth[p] + 1;
+            queue[tail++] = q;
+          }
+        }
+      }
+      for (let i = 0; i < n; i++) if (candidate[i] && depth[i] < 0) bg[i] = 0; // not reached from outside: inside the cloth
+    }
   }
 
   // large enclosed patches that clearly are backdrop (a bag handle's loop) are backdrop too
@@ -445,7 +517,7 @@ export function segment(img, { maxWork = 320, debug = false, split = false } = {
       if (keptParts >= 3 && sep >= 8) {
         fgCount += fillOutline(fg, w, h);
         repaired = true;
-      } else if (sep < 8) {
+      } else if (sep < 8 && keptParts >= 2) {
         return { ok: false, reason: 'low-contrast', fgFraction: fgCount / n, borderContact: 0, solidity: filled };
       }
     }

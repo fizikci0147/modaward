@@ -29,4 +29,33 @@ for (const [name, size, rounded, scale] of jobs) {
   await page.screenshot({ path: path.join(out, name), omitBackground: true });
   console.log('wrote', name);
 }
+
+// The browser-tab icon: a simpler mark (no rays) so it stays readable at 16 pixels, as favicon.svg, plus PNG sizes
+// bundled into favicon.ico for the browsers and tools that still ask for /favicon.ico.
+const faviconSvg = fs.readFileSync(path.join(out, 'favicon.svg'), 'utf8');
+const pngs = [];
+for (const size of [16, 32, 48]) {
+  await page.setViewportSize({ width: size, height: size });
+  await page.setContent(`<body style="margin:0;background:transparent">${faviconSvg.replace('<svg ', `<svg width="${size}" height="${size}" `)}</body>`);
+  const buf = await page.screenshot({ omitBackground: true });
+  pngs.push({ size, buf });
+  if (size === 32) fs.writeFileSync(path.join(out, 'favicon-32.png'), buf);
+}
+const header = Buffer.alloc(6);
+header.writeUInt16LE(1, 2); // type: icon
+header.writeUInt16LE(pngs.length, 4);
+let offset = 6 + 16 * pngs.length;
+const entries = pngs.map(({ size, buf }) => {
+  const e = Buffer.alloc(16);
+  e[0] = size;
+  e[1] = size;
+  e.writeUInt16LE(1, 4); // colour planes
+  e.writeUInt16LE(32, 6); // bits per pixel
+  e.writeUInt32LE(buf.length, 8);
+  e.writeUInt32LE(offset, 12);
+  offset += buf.length;
+  return e;
+});
+fs.writeFileSync(path.join(root, 'public', 'favicon.ico'), Buffer.concat([header, ...entries, ...pngs.map((p) => p.buf)]));
+console.log('wrote favicon-32.png and favicon.ico');
 await browser.close();

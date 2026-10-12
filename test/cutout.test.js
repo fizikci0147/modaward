@@ -172,3 +172,18 @@ describe('background removal', () => {
     assert.ok(Math.abs(l2 - 53.2) < 1 && a2 > 70);
   });
 });
+
+describe('background removal: pale patterns', () => {
+  test('a light check shirt on a plain surface is cut out whole, not as a lace of holes', async () => {
+    const { scene, iou } = await import('./cutout/scenes.js');
+    for (const backdrop of ['white sheet', 'bed fabric']) {
+      for (const shape of ['tee', 'hoodie']) {
+        const { img, truth } = scene({ backdrop, shape, garment: 'pale check', seed: 3, w: 400, h: 400, wrinkles: 0.15 });
+        const seg = segment(img);
+        assert.equal(seg.ok, true, `${backdrop} / ${shape}: ${seg.reason}`);
+        const score = iou(seg, truth, 400, 400);
+        assert.ok(score > 0.85, `${backdrop} / ${shape}: IoU ${score.toFixed(2)}`);
+      }
+    }
+  });
+});

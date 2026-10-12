@@ -318,12 +318,75 @@ export function pressFabric(img, { strength = 0.85, tilt = 0.7 } = {}) {
   return { data: out, width: w, height: h };
 }
 
+// ── clean the rim ─────────────────────────────────────────────────────────
+
+/**
+ * A cut-out's outermost pixels often still carry a little of the old backdrop: a pale fringe round a darker garment. Shave
+ * one pixel off the edge and pull the next two pixels' brightness down to what is just inside, so no light outline shows
+ * on a coloured background. Hue is not touched.
+ */
+export function cleanRim(img) {
+  const { data, width: w, height: h } = img;
+  const n = w * h;
+  const alpha = new Uint8Array(n);
+  for (let i = 0; i < n; i++) alpha[i] = data[i * 4 + 3];
+  const out = new Uint8ClampedArray(data);
+  // shave one pixel (4-neighbour erosion of the opacity)
+  const eroded = new Uint8Array(n);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      let a = alpha[i];
+      if (x > 0) a = Math.min(a, alpha[i - 1]);
+      if (x < w - 1) a = Math.min(a, alpha[i + 1]);
+      if (y > 0) a = Math.min(a, alpha[i - w]);
+      if (y < h - 1) a = Math.min(a, alpha[i + w]);
+      eroded[i] = a;
+    }
+  }
+  // the rim: still visible, within two pixels of nothing
+  const rim = new Uint8Array(n);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (eroded[i] < 30) continue;
+      for (let dy = -2; dy <= 2 && !rim[i]; dy++) {
+        for (let dx = -2; dx <= 2; dx++) {
+          const xx = x + dx;
+          const yy = y + dy;
+          if (xx < 0 || yy < 0 || xx >= w || yy >= h || eroded[yy * w + xx] < 30) {
+            rim[i] = 1;
+            break;
+          }
+        }
+      }
+    }
+  }
+  const L = new Float32Array(n);
+  const inner = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    L[i] = rgbToLab(data[i * 4], data[i * 4 + 1], data[i * 4 + 2])[0];
+    inner[i] = eroded[i] > 200 && !rim[i] ? 1 : 0;
+  }
+  const near = maskedBlur(L, inner, w, h, 4);
+  for (let i = 0; i < n; i++) {
+    out[i * 4 + 3] = eroded[i];
+    if (!rim[i] || eroded[i] < 30) continue;
+    if (L[i] > near[i] + 4) {
+      const lab = rgbToLab(data[i * 4], data[i * 4 + 1], data[i * 4 + 2]);
+      labToRgb(near[i] + 4, lab[1], lab[2], out, i * 4);
+    }
+  }
+  return { data: out, width: w, height: h };
+}
+
 /**
  * The whole finish: straighten, then press. Returns the polished image and what was done.
  * @param {{data: Uint8ClampedArray, width: number, height: number}} img an RGBA cut-out (alpha is the garment)
  */
-export function studioFinish(img, { straighten = true, press = true } = {}) {
+export function studioFinish(img, { straighten = true, press = true, rim = true } = {}) {
   let out = img;
+  if (rim) out = cleanRim(out);
   let turned = 0;
   if (straighten) {
     turned = straightenAngle(out);

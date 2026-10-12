@@ -126,6 +126,14 @@ export const GARMENTS = {
   'beige trench': { color: [196, 170, 130] }
 };
 
+/** Garments kept out of the benchmark rotation (adding to GARMENTS would shift which scene each benchmark slot gets). */
+export const EXTRA_GARMENTS = {
+  // a fine pale check, like a light gingham shirt: every square on its own looks like the surface
+  'pale check': { color: [150, 156, 150], check: [226, 223, 214] }
+};
+const garmentNamed = (name) => GARMENTS[name] ?? EXTRA_GARMENTS[name];
+const checked = (g, x, y) => g.check && (Math.floor(x / 4) + Math.floor(y / 4)) % 2 === 0;
+
 /**
  * One scene.
  * @returns {{img:{data:Uint8ClampedArray,width:number,height:number}, truth:Uint8Array}}
@@ -133,7 +141,7 @@ export const GARMENTS = {
 export function scene({ backdrop, shape, garment, seed = 1, w = 400, h = 400, shadow = true, noise = 4, wrinkles = 0.11 }) {
   const back = BACKDROPS[backdrop](seed);
   const inside = SHAPES[shape];
-  const g = GARMENTS[garment];
+  const g = garmentNamed(garment);
   const wrinkle = valueNoise(seed + 40, 26);
   const fine = valueNoise(seed + 41, 5);
   const r = rng(seed + 77);
@@ -154,6 +162,7 @@ export function scene({ backdrop, shape, garment, seed = 1, w = 400, h = 400, sh
       if (inG) {
         let col = g.color;
         if (g.stripe && Math.floor(y / 14) % 2 === 0) col = g.stripe;
+        if (checked(g, x, y)) col = g.check;
         if (g.dots) {
           const d = dotColor(x, y);
           if (d >= 0 && Math.hypot((x % 22) - 11, (y % 22) - 11) < 6) col = g.dots[d];
@@ -213,9 +222,10 @@ export function multiScene({ backdrop, parts, seed = 1, w = 600, h = 600, noise 
       let c = null;
       parts.forEach((p, k) => {
         if (c || !inPart(p, x, y)) return;
-        const g = GARMENTS[p.garment];
+        const g = garmentNamed(p.garment);
         let col = g.color;
         if (g.stripe && Math.floor(y / 14) % 2 === 0) col = g.stripe;
+        if (checked(g, x, y)) col = g.check;
         const shade = 1 + wrinkle(x, y) * 0.11;
         c = [col[0] * shade, col[1] * shade, col[2] * shade];
         truths[k][y * w + x] = 1;

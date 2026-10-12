@@ -4,6 +4,13 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.18.1] · 2026-10-20
+
+### Fixed
+- **Light check and pinstripe shirts are cut out whole.** A pale pattern looks like the surface square by square, so the background used to leak in between the squares and the photo was either refused ("too close in colour") or came out as a lace of holes. On a smooth surface the cut-out now treats a dense mesh of edges as cloth. Found with a real photo of a light checked shirt; a test now covers it.
+- **The browser-tab icon is updated** to the new M-and-sun mark, drawn simpler so it stays readable at 16 pixels (`favicon.svg`, `favicon-32.png` and `favicon.ico`). Browsers and the offline cache kept showing the old hanger because the icon files were cached under the same names; the icons now carry a version in their address and the offline cache is renewed, so everyone gets the new one.
+- Cut-outs no longer keep a pale outline from the old background: the studio finish shaves the outermost pixel and evens out the brightness of the rim.
+
 ## [5.18.0] · 2026-10-19
 
 ### Added
