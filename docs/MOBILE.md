@@ -139,6 +139,7 @@ Each folder has `with-headlines` (the screen in a phone frame under a headline) 
   2. Still in `mobile/`: `npm run ios` (it prepares the app, then opens Xcode). Open the project this way, not by double-clicking `App.xcodeproj` first.
   3. In Xcode wait for *Resolving Package Dependencies* (bottom bar; it downloads Capacitor from GitHub, so it needs internet). If it errors or hangs, choose *File → Packages → Reset Package Caches*, then *File → Packages → Resolve Package Versions*.
   4. Select the *App* target, pick your Team under *Signing & Capabilities*, and run.
+  If Xcode's project settings do not show a Targets list, you can set the team without it: `cd mobile`, then `npm run team -- ABCDE12345` (your 10-character Team ID, shown under *Membership details* at developer.apple.com/account), then reopen the project.
   If `npm run ios` stops with "The app needs its packages first", step 1 was skipped.
 
 - **A white screen on launch**: the app could not reach the site. Open the same address in the phone's browser. On a test server, check the phone is on the same Wi-Fi and the address in `MODAWARD_URL` is right.
