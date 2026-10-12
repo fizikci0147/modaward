@@ -124,6 +124,28 @@ export function eraseSimilar(img, mask, x, y, tolerance) {
     }
     gone.set(next);
   }
+  // Blended pixels along the old edge do not match the patch's colour and survive as hairlines; anything kept that is only a
+  // pixel or two wide next to the erased patch goes with it.
+  {
+    const x0 = Math.max(1, minX - 3);
+    const x1 = Math.min(w - 2, maxX + 3);
+    const y0 = Math.max(1, minY - 3);
+    const y1 = Math.min(h - 2, maxY + 3);
+    const solid = (p) => mask[p] > 127;
+    const core = new Uint8Array(w * h);
+    for (let j = y0 - 1; j <= y1 + 1; j++) {
+      for (let i = x0 - 1; i <= x1 + 1; i++) {
+        const p = j * w + i;
+        core[p] = solid(p) && solid(p - 1) && solid(p + 1) && solid(p - w) && solid(p + w) ? 1 : 0;
+      }
+    }
+    for (let j = y0; j <= y1; j++) {
+      for (let i = x0; i <= x1; i++) {
+        const p = j * w + i;
+        if (solid(p) && !core[p] && !core[p - 1] && !core[p + 1] && !core[p - w] && !core[p + w]) mask[p] = 0;
+      }
+    }
+  }
   // a soft edge where the erased patch meets what stays
   for (let j = Math.max(0, minY - 1); j <= Math.min(h - 1, maxY + 1); j++) {
     for (let i = Math.max(0, minX - 1); i <= Math.min(w - 1, maxX + 1); i++) {

@@ -65,6 +65,17 @@ describe('touch-up editing', () => {
     for (let y = 5; y < 95; y++) assert.equal(mask[y * 100 + 49], 0, `rim left at row ${y}`);
   });
 
+  test('hairlines left beside an erased patch go too, but solid areas stay', () => {
+    const img = solid(100, 100, (x) => (x < 40 ? [30, 44, 90] : [236, 228, 210]));
+    const mask = new Uint8Array(100 * 100).fill(255);
+    for (let y = 0; y < 100; y++) for (let x = 40; x < 100; x++) mask[y * 100 + x] = 255;
+    // erase the left half by tapping it; a one-pixel line at x=40 (blended edge) and a thick block at x>=60 stay or go by width
+    for (let y = 0; y < 100; y++) for (let x = 41; x < 60; x++) mask[y * 100 + x] = 0;
+    eraseSimilar(img, mask, 10, 50, 16);
+    assert.equal(mask[50 * 100 + 40], 0, 'the one-pixel line should be gone');
+    assert.equal(mask[50 * 100 + 80], 255, 'the solid area must stay');
+  });
+
   test('a tap that does nothing reports nothing', () => {
     const img = solid(40, 40, () => [200, 200, 200]);
     const mask = new Uint8Array(40 * 40);
