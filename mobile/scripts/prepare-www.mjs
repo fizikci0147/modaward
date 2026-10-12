@@ -16,6 +16,12 @@ try {
   console.error(`MODAWARD_URL is not a valid address: ${url}`);
   process.exit(1);
 }
+// The iOS and Android projects use the Capacitor packages installed in mobile/node_modules (the iOS package points at
+// them by path), so without `npm install` Xcode says "Missing package product 'CapApp-SPM'".
+if (!fs.existsSync(path.join(root, 'node_modules', '@capacitor', 'app'))) {
+  console.error('The app needs its packages first. In the mobile folder run:  npm install   (then run this again)');
+  process.exit(1);
+}
 fs.mkdirSync(path.join(root, 'www'), { recursive: true });
 for (const name of ['index.html', 'offline.html']) {
   const html = fs.readFileSync(path.join(root, 'templates', name), 'utf8').replaceAll('__SERVER_URL__', url);

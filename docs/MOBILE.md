@@ -134,6 +134,13 @@ Each folder has `with-headlines` (the screen in a phone frame under a headline) 
 
 ## Troubleshooting
 
+- **Xcode: "Missing package product 'CapApp-SPM'"** (or Package.swift errors, or `@capacitor/...` not found). The iOS project gets its Capacitor code from `mobile/node_modules`, which is not part of the zip, so it has to be installed once, **before** opening Xcode. Do it in this order:
+  1. Quit Xcode. In Terminal: `cd <the unzipped folder>/mobile`, then `npm install` (needs Node.js 22 or newer and internet).
+  2. Still in `mobile/`: `npm run ios` (it prepares the app, then opens Xcode). Open the project this way, not by double-clicking `App.xcodeproj` first.
+  3. In Xcode wait for *Resolving Package Dependencies* (bottom bar; it downloads Capacitor from GitHub, so it needs internet). If it errors or hangs, choose *File → Packages → Reset Package Caches*, then *File → Packages → Resolve Package Versions*.
+  4. Select the *App* target, pick your Team under *Signing & Capabilities*, and run.
+  If `npm run ios` stops with "The app needs its packages first", step 1 was skipped.
+
 - **A white screen on launch**: the app could not reach the site. Open the same address in the phone's browser. On a test server, check the phone is on the same Wi-Fi and the address in `MODAWARD_URL` is right.
 - **Signed out every time on a test server**: leave `NODE_ENV=production` unset on the test server (production cookies need https).
 - **`npm run android`: SDK not found**: open the project once in Android Studio so it creates `local.properties`, or install the SDK it asks for.
