@@ -40,10 +40,11 @@ function thumbnail(dataUrl, side = 512) {
  * Add many pieces at once: pick a pile of photos, we cut out the backgrounds and (with the AI
  * stylist on) recognise each piece, then you check them over on one screen and add them all.
  */
-export function BulkAddSheet({ onClose, room, vision, onDone }) {
+export function BulkAddSheet({ onClose, room, vision, onDone, initial }) {
   const [items, setItems] = useState([]);
   const [over, setOver] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [split, setSplit] = useState(Boolean(initial?.split)); // one photo may show several pieces
   const ref = useRef([]); // source of truth, so the async pipeline never works on stale state
   const fileRef = useRef(null);
   const closed = useRef(false);
@@ -51,6 +52,10 @@ export function BulkAddSheet({ onClose, room, vision, onDone }) {
   const warned = useRef(false);
 
   useEffect(() => () => { closed.current = true; }, []);
+  // handed over from the single-piece sheet: its photo is already chosen
+  useEffect(() => {
+    if (initial?.files?.length) start(initial.files, { split: Boolean(initial.split) });
+  }, []);
 
   const commit = () => setItems([...ref.current]);
   const patch = (key, p) => {
@@ -82,7 +87,7 @@ export function BulkAddSheet({ onClose, room, vision, onDone }) {
     }
   };
 
-  const start = async (fileList) => {
+  const start = async (fileList, { split: wantSplit = split } = {}) => {
     let files = [...fileList].filter((f) => /^image\//i.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name));
     if (!files.length) return toast(t('Choose photos (JPEG, PNG or WebP).'), { kind: 'err' });
     const space = Math.min(MAX_FILES - ref.current.length, room == null ? Infinity : room - ref.current.length);
@@ -91,7 +96,8 @@ export function BulkAddSheet({ onClose, room, vision, onDone }) {
       toast(room != null && room < MAX_FILES ? t('The free plan has room for {n} more pieces, so we took the first {n}.', { n: space }) : t('We took the first {n} photos.', { n: space }), { ms: 5000 });
       files = files.slice(0, space);
     }
-    const fresh = files.map((file) => ({ key: ++uid, file, name: file.name, status: 'reading', tag: vision ? 'pending' : 'none', type: null, color: '#8a8578', pattern: 'solid', warmth: null, formality: null, waterproof: false, label: '', useCutout: true }));
+    const blank = (extra) => ({ key: ++uid, status: 'reading', tag: vision ? 'pending' : 'none', type: null, color: '#8a8578', pattern: 'solid', warmth: null, formality: null, waterproof: false, label: '', useCutout: true, ...extra });
+    const fresh = files.map((file) => blank({ file, name: file.name }));
     ref.current = [...ref.current, ...fresh];
     commit();
 
@@ -99,15 +105,29 @@ export function BulkAddSheet({ onClose, room, vision, onDone }) {
     for (const it of fresh) {
       if (closed.current) return;
       try {
-        const p = await readPhoto(it.file, { removeBackground: true });
+        const p = await readPhoto(it.file, { removeBackground: true, split: wantSplit });
         if (!ref.current.some((x) => x.key === it.key)) continue; // removed meanwhile
-        patch(it.key, { status: 'ready', original: p.original, cutout: p.cutout, color: p.color || '#8a8578', file: null });
+        // each piece found in the photo becomes its own card, in the place of the photo
+        const made = p.found?.length
+          ? p.found.map((f, i) => blank({ name: '', status: 'ready', original: f.original, cutout: f.cutout, color: f.color || '#8a8578' }))
+          : [{ ...it, status: 'ready', original: p.original, cutout: p.cutout, color: p.color || '#8a8578', file: null }];
+        if (p.found) {
+          ref.current = ref.current.flatMap((x) => (x.key === it.key ? made : [x]));
+          commit();
+          if (p.found.length > 1) toast(tn(p.found.length, '{n} piece found in this photo', '{n} pieces found in this photo'), { ms: 4500 });
+          if (p.skipped) toast(tn(p.skipped, '{n} piece was too close in colour to the surface and was left out.', '{n} pieces were too close in colour to the surface and were left out.'), { ms: 6500 });
+        } else {
+          if (wantSplit && p.cutoutReason) toast(t('We couldn’t tell the pieces in that photo apart from the surface, so we kept it as one photo.'), { ms: 6000 });
+          patch(it.key, { status: 'ready', original: p.original, cutout: p.cutout, color: p.color || '#8a8578', file: null });
+        }
         if (vision) {
-          queue.push(it.key);
-          if (queue.length >= TAG_BATCH) {
-            const keys = queue;
-            queue = [];
-            tagChain.current = tagChain.current.then(() => tagBatch(keys));
+          for (const m of made) {
+            queue.push(m.key);
+            if (queue.length >= TAG_BATCH) {
+              const keys = queue;
+              queue = [];
+              tagChain.current = tagChain.current.then(() => tagBatch(keys));
+            }
           }
         }
       } catch (e) {
@@ -191,6 +211,7 @@ export function BulkAddSheet({ onClose, room, vision, onDone }) {
         <span class="small muted">${vision ? t('We remove the backgrounds and recognise each piece. You check them before anything is added.') : t('We remove the backgrounds. Then choose what each piece is and add them all in one go.')}</span>
       </div>
       <input ref=${fileRef} type="file" accept="image/*" multiple hidden onChange=${(e) => { start(e.target.files); e.target.value = ''; }} />
+      <div class="spread"><div><div class="label">${t('Several pieces in one photo')}</div><div class="hint">${t('Lay them apart on a plain surface and each one is cut out on its own.')}</div></div><${Switch} label=${t('Several pieces in one photo')} checked=${split} onChange=${setSplit} /></div>
 
       ${busy ? html`<p class="small muted row" style=${{ gap: '8px' }}><${Spinner} />${reading ? t('Preparing photos… {n} to go', { n: reading }) : t('Recognising your pieces…')}</p>` : null}
 

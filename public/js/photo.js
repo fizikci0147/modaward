@@ -25,22 +25,31 @@ function getWorker() {
   return worker;
 }
 
-function cutoutInWorker(img) {
+function cutoutInWorker(img, split = false) {
   return new Promise((resolve) => {
     const w = getWorker();
     if (!w) {
       // no worker support: run on the main thread after letting the UI paint
       return setTimeout(() => {
+        if (split) {
+          const seg = segment(img, { split: true });
+          if (!seg.ok) return resolve({ ok: false, reason: seg.reason });
+          const items = seg.items.map((it) => {
+            const out = renderCutout(img, it, { maxSide: 900 });
+            return { width: out.width, height: out.height, buffer: out.data.buffer, box: out.box };
+          });
+          return resolve({ ok: true, items, skipped: seg.skipped || 0 });
+        }
         const seg = segment(img);
-        if (!seg.ok) return resolve({ ok: false, reason: seg.reason });
+        if (!seg.ok) return resolve({ ok: false, reason: seg.reason, pieces: seg.pieces || 0 });
         const out = renderCutout(img, seg, { maxSide: 900 });
-        resolve({ ok: true, width: out.width, height: out.height, buffer: out.data.buffer });
+        resolve({ ok: true, width: out.width, height: out.height, buffer: out.data.buffer, pieces: seg.pieces || 1 });
       }, 30);
     }
     const id = ++seq;
     pending.set(id, resolve);
     const copy = img.data.slice().buffer;
-    w.postMessage({ id, width: img.width, height: img.height, buffer: copy }, [copy]);
+    w.postMessage({ id, width: img.width, height: img.height, buffer: copy, split }, [copy]);
   });
 }
 
@@ -65,9 +74,12 @@ export const toPngDataUrl = (data, width, height, maxBytes = 2_600_000) => {
  * Read a photo file: resize it, optionally remove the background, and detect the garment colour.
  * Everything happens in the browser; nothing is uploaded until the person saves.
  *
- * @returns {Promise<{original: string, cutout: string|null, cutoutReason: string|null, color: string|null}>}
+ * With `split`, a photo of several pieces lying apart gives one entry per piece in `pieces` (each with its own cropped
+ * photo, cut-out and colour). Without it, `pieces` counts how many pieces the photo seems to show.
+ *
+ * @returns {Promise<{original: string, cutout: string|null, cutoutReason: string|null, color: string|null, pieces: number, found?: {original: string, cutout: string, color: string|null}[], skipped?: number}>}
  */
-export async function readPhoto(file, { removeBackground = true } = {}) {
+export async function readPhoto(file, { removeBackground = true, split = false } = {}) {
   if (!/^image\//i.test(file.type) && !/\.(jpe?g|png|webp|heic|heif)$/i.test(file.name)) throw new Error(t('Choose a photo (JPEG, PNG or WebP).'));
   const bmp = await createImageBitmap(file).catch(() => null);
   if (!bmp) throw new Error(t('That photo could not be read. Try a JPEG or PNG.'));
@@ -87,9 +99,27 @@ export async function readPhoto(file, { removeBackground = true } = {}) {
   let cutout = null;
   let cutoutReason = null;
   let color = null;
-  if (removeBackground) {
+  let pieces = 0;
+  if (removeBackground && split) {
+    const raw = ctx.getImageData(0, 0, w, h);
+    const res = await cutoutInWorker({ data: raw.data, width: w, height: h }, true);
+    if (res.ok) {
+      const found = res.items.map((it) => {
+        const data = new Uint8ClampedArray(it.buffer);
+        // the piece's own photo: the same crop of the original, so the original and the cut-out always match
+        const crop = document.createElement('canvas');
+        crop.width = it.box.w;
+        crop.height = it.box.h;
+        crop.getContext('2d').drawImage(canvas, it.box.x, it.box.y, it.box.w, it.box.h, 0, 0, it.box.w, it.box.h);
+        return { original: crop.toDataURL('image/jpeg', 0.84), cutout: toPngDataUrl(data, it.width, it.height), color: dominantColor(data, it.width, it.height) };
+      });
+      return { original, cutout: null, cutoutReason: null, color: found[0]?.color || null, pieces: found.length, found, skipped: res.skipped || 0 };
+    }
+    cutoutReason = res.reason;
+  } else if (removeBackground) {
     const raw = ctx.getImageData(0, 0, w, h);
     const res = await cutoutInWorker({ data: raw.data, width: w, height: h });
+    pieces = res.pieces || 0;
     if (res.ok) {
       const data = new Uint8ClampedArray(res.buffer);
       cutout = toPngDataUrl(data, res.width, res.height);
@@ -106,5 +136,5 @@ export async function readPhoto(file, { removeBackground = true } = {}) {
     sctx.drawImage(canvas, 0, 0, 48, 48);
     color = dominantColor(sctx.getImageData(0, 0, 48, 48).data, 48, 48);
   }
-  return { original, cutout, cutoutReason, color };
+  return { original, cutout, cutoutReason, color, pieces };
 }

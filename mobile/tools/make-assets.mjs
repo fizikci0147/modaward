@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Draws the app icon and launch screen sources (assets/*.png) from the ModaWard hanger mark.
+ * Draws the app icon and launch screen sources (assets/*.png) from the ModaWard mark (an M with a sun).
  * `npm run assets` then turns them into every size iOS and Android need.
  * Run `npm run assets` (in mobile/) only if the logo changes; it installs its own tools first.
  */
@@ -21,7 +21,7 @@ const CORAL = '#e0825f';
 
 // the mark, drawn in a 32x32 box (the same paths as public/icons/icon.svg)
 const mark = (stroke, heart) =>
-  `<g fill="none"><path d="M16 10.2V8.6a2.9 2.9 0 1 0-2.9-2.9" stroke="${stroke}" stroke-width="2.1" stroke-linecap="round"/><path d="M16 10.2 4.6 19.2a2.1 2.1 0 0 0 1.3 3.8h20.2a2.1 2.1 0 0 0 1.3-3.8L16 10.2Z" stroke="${stroke}" stroke-width="2.1" stroke-linejoin="round"/><path d="M16 26.3s2.4-2.5 2.4-4a2.4 2.4 0 0 0-4.8 0c0 1.5 2.4 4 2.4 4Z" fill="${heart}"/></g>`;
+  `<g fill="none"><path d="M6 26V14.2a1.7 1.7 0 0 1 2.9-1.2L16 20l7.1-7a1.7 1.7 0 0 1 2.9 1.2V26" stroke="${stroke}" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="9.6" r="2.7" fill="${heart}"/><g stroke="${heart}" stroke-width="1.5" stroke-linecap="round"><path d="M16 5.1V3.6M12.82 6.42l-1.06-1.06M19.18 6.42l1.06-1.06M11.5 9.6H10M20.5 9.6H22"/></g></g>`;
 
 /** A square canvas of `size` px with the mark centred, `fraction` of the canvas wide. `bg` = null for transparent. */
 const canvas = (size, fraction, bg, stroke, heart) => {

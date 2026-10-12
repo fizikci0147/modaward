@@ -112,7 +112,7 @@ function WearHistory({ garment }) {
   </div>`;
 }
 
-export function GarmentSheet({ garment, onClose, caps }) {
+export function GarmentSheet({ garment, onClose, caps, onSplit }) {
   const editing = Boolean(garment);
   const currency = useStore().profile?.currency || 'USD';
   const [form, setForm] = useState(() => ({
@@ -153,11 +153,11 @@ export function GarmentSheet({ garment, onClose, caps }) {
     setWorking(true);
     try {
       const p = await readPhoto(file, { removeBackground: true });
-      setPhotos({ original: p.original, cutout: p.cutout, reason: p.cutoutReason });
+      setPhotos({ original: p.original, cutout: p.cutout, reason: p.cutoutReason, pieces: p.pieces || 0, file });
       setRemoveBg(true);
       setRemovePhoto(false);
       if (p.color && !editing) set({ color: p.color });
-      if (p.cutoutReason && CUTOUT_MESSAGES[p.cutoutReason]) toast(t(CUTOUT_MESSAGES[p.cutoutReason]), { ms: 6500 });
+      if (p.cutoutReason && CUTOUT_MESSAGES[p.cutoutReason] && !(p.pieces >= 2)) toast(t(CUTOUT_MESSAGES[p.cutoutReason]), { ms: 6500 });
     } catch (e) {
       toast(e.message, { kind: 'err' });
     } finally {
@@ -256,6 +256,7 @@ export function GarmentSheet({ garment, onClose, caps }) {
           ${(photo || preview) && !removePhoto ? html`<button class="btn btn-ghost btn-s" onClick=${() => { setPhotos(null); setPreview(null); setRemovePhoto(true); }}>${t('Remove')}</button>` : null}
         </div>
         ${photos && photos.cutout ? html`<div class="spread"><div><div class="label">${t('Remove background')}</div><div class="hint">${t('Shows just the garment')}</div></div><${Switch} label=${t('Remove background')} checked=${removeBg} onChange=${setRemoveBg} /></div>` : null}
+        ${photos && photos.pieces >= 2 && onSplit ? html`<div class="callout stack" style=${{ gap: '8px' }}><span class="small">${t('This photo seems to show {n} pieces.', { n: photos.pieces })}</span><button class="btn btn-accent btn-s" onClick=${() => onSplit(photos.file)}><${Icon} name="sparkle" />${t('Add them separately')}</button></div>` : null}
         ${photos ? html`<button class="btn btn-outline btn-s" onClick=${() => setTouchUp(true)} disabled=${working}><${Icon} name="edit" />${t('Touch up')}</button>` : null}
         ${photos && !photos.cutout && photos.reason && caps.cutoutService ? html`<button class="btn btn-outline btn-s" onClick=${cloudCutout} disabled=${working}><${Icon} name="sparkle" />${t('Try high-accuracy removal')}</button>` : null}
         ${photos && !photos.cutout && photos.reason && !caps.cutoutService ? html`<p class="hint">${t('Tip: lay the piece on a plain, contrasting surface for a clean cut-out.')}</p>` : null}
@@ -315,6 +316,7 @@ export function ClosetView() {
   const [panel, setPanel] = useState(() => (q.get('view') === 'insights' ? 'insights' : 'pieces'));
   const today = todayLocal();
   const [sheet, setSheet] = useState(q.get('add') ? 'add' : null);
+  const [bulkInit, setBulkInit] = useState(null); // a photo handed from the single-piece sheet to the several-pieces one
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
 
@@ -449,7 +451,7 @@ export function ClosetView() {
           ? html`<div class="grid wide">${shown.map((g) => html`<${Tile} key=${g.id} g=${g} today=${today} onOpen=${(x) => setSheet(x)} onFav=${fav} onRemove=${remove} />`)}<button class="tile tile-add" onClick=${openAdd}><${Icon} name="plus" /><span>${t('Add a piece')}</span></button></div>`
           : html`<${Empty} title=${t('No matches')} text=${t('Try a different search or category.')} />`}`}
 
-    ${sheet === 'bulk' ? html`<${BulkAddSheet} room=${limit != null ? Math.max(0, limit - garments.length) : null} vision=${Boolean(capabilities.vision && entitlements?.photoTagging)} onClose=${() => setSheet(null)} />` : null}
-    ${sheet && sheet !== 'bulk' ? html`<${GarmentSheet} garment=${sheet === 'add' ? null : sheet} caps=${{ vision: capabilities.vision && entitlements?.photoTagging, cutoutService: capabilities.cutoutService && entitlements?.photoTagging }} onClose=${() => setSheet(null)} />` : null}
+    ${sheet === 'bulk' ? html`<${BulkAddSheet} initial=${bulkInit} room=${limit != null ? Math.max(0, limit - garments.length) : null} vision=${Boolean(capabilities.vision && entitlements?.photoTagging)} onClose=${() => (setSheet(null), setBulkInit(null))} />` : null}
+    ${sheet && sheet !== 'bulk' ? html`<${GarmentSheet} garment=${sheet === 'add' ? null : sheet} caps=${{ vision: capabilities.vision && entitlements?.photoTagging, cutoutService: capabilities.cutoutService && entitlements?.photoTagging }} onSplit=${(file) => (setBulkInit({ files: [file], split: true }), setSheet('bulk'))} onClose=${() => setSheet(null)} />` : null}
   </div>`;
 }

@@ -76,7 +76,7 @@ npm run android    # prepares the app, then opens Android Studio
 
 ## Test checklist (do this on both an iPhone and an Android phone)
 
-- Opens to the front page with no flash of white; launch screen shows the hanger on the cream (or dark) background.
+- Opens to the front page with no flash of white; launch screen shows the M-and-sun mark on the cream (or dark) background.
 - Sign up (the agreement box, show/hide password), take the style quiz, reach Today.
 - An outfit appears with the right weather; swap a piece; *I'm wearing this*.
 - **Closet → Add a piece → take a photo**: the camera permission prompt appears with the text above, the photo is cut out and added.

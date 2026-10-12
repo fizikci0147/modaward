@@ -195,3 +195,43 @@ export function iou(seg, truth, w, h) {
   }
   return inter / union;
 }
+
+/**
+ * Several pieces lying apart on one surface.
+ * @param {{shape:string, garment:string, ox:number, oy:number, scale:number}[]} parts position and size of each piece
+ * @returns {{img:{data:Uint8ClampedArray,width:number,height:number}, truths:Uint8Array[]}} one truth mask per piece
+ */
+export function multiScene({ backdrop, parts, seed = 1, w = 600, h = 600, noise = 4 }) {
+  const back = BACKDROPS[backdrop](seed);
+  const wrinkle = valueNoise(seed + 40, 26);
+  const noiseR = rng(seed + 123);
+  const data = new Uint8ClampedArray(w * h * 4);
+  const truths = parts.map(() => new Uint8Array(w * h));
+  const inPart = (p, x, y) => SHAPES[p.shape]((x - p.ox) / p.scale, (y - p.oy) / p.scale);
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let c = null;
+      parts.forEach((p, k) => {
+        if (c || !inPart(p, x, y)) return;
+        const g = GARMENTS[p.garment];
+        let col = g.color;
+        if (g.stripe && Math.floor(y / 14) % 2 === 0) col = g.stripe;
+        const shade = 1 + wrinkle(x, y) * 0.11;
+        c = [col[0] * shade, col[1] * shade, col[2] * shade];
+        truths[k][y * w + x] = 1;
+      });
+      if (!c) {
+        c = back(x, y);
+        let s = 0;
+        for (const [dx, dy] of [[-6, -8], [-3, -4]]) if (parts.some((p) => inPart(p, x + dx, y + dy))) s += 1;
+        if (s) c = c.map((v) => v * (1 - 0.07 * s));
+      }
+      const i = (y * w + x) * 4;
+      data[i] = clamp(c[0] + (noiseR() - 0.5) * noise * 2);
+      data[i + 1] = clamp(c[1] + (noiseR() - 0.5) * noise * 2);
+      data[i + 2] = clamp(c[2] + (noiseR() - 0.5) * noise * 2);
+      data[i + 3] = 255;
+    }
+  }
+  return { img: { data, width: w, height: h }, truths };
+}

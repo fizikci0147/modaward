@@ -351,7 +351,7 @@ function separation(lab, fg, n) {
  * @param {{maxWork?: number}} [opts]
  * @returns {{ok: boolean, reason?: string, mask?: Float32Array, width?: number, height?: number, fgFraction: number, borderContact: number, alreadyTransparent?: boolean}}
  */
-export function segment(img, { maxWork = 320, debug = false } = {}) {
+export function segment(img, { maxWork = 320, debug = false, split = false } = {}) {
   if (img.width < 24 || img.height < 24) return { ok: false, reason: 'too-small', fgFraction: 0, borderContact: 0 };
   const small = shrink(img, maxWork);
   const { width: w, height: h, data } = small;
@@ -419,64 +419,145 @@ export function segment(img, { maxWork = 320, debug = false } = {}) {
   const fgParts = components(w, h, (i) => !bg[i]);
   if (!fgParts.sizes.length) return { ok: false, reason: 'nothing-found', fgFraction: 0, borderContact: 0 };
   const largest = Math.max(...fgParts.sizes);
+
+  /**
+   * Turn one set of foreground pixels into a finished cut-out (or a reason it is not one): fill pin-holes, repair a
+   * garment broken into pieces, check it looks plausible, feather the edge.
+   */
+  const finish = (fg, keptParts, minFraction) => {
+    let fgCount = 0;
+    for (let i = 0; i < n; i++) if (fg[i]) fgCount += 1;
+    // fill pin-holes (small gaps inside the garment)
+    const holes = components(w, h, (i) => !fg[i]);
+    holes.sizes.forEach((size, id) => {
+      if (size < 0.003 * n) {
+        for (let i = 0; i < n; i++) if (holes.labels[i] === id) ((fg[i] = 1), (fgCount += 1));
+      }
+    });
+
+    // A garment broken into pieces is either a patterned one (light stripes that look like backdrop: the pieces are
+    // clearly different from the surface, so fill its outline) or one too close to the surface in colour (the pieces
+    // are a guess: say so, so the person can touch it up). Two well-separated items (a pair of shoes) are left alone.
+    const filled = solidity(fg, w, h, fgCount);
+    let repaired = false;
+    if (filled < 0.62) {
+      const sep = separation(lab, fg, n);
+      if (keptParts >= 3 && sep >= 8) {
+        fgCount += fillOutline(fg, w, h);
+        repaired = true;
+      } else if (sep < 8) {
+        return { ok: false, reason: 'low-contrast', fgFraction: fgCount / n, borderContact: 0, solidity: filled };
+      }
+    }
+
+    // does the result look plausible?
+    let borderFg = 0;
+    let borderTotal = 0;
+    const touch = (i) => {
+      borderTotal += 1;
+      if (fg[i]) borderFg += 1;
+    };
+    for (let x = 0; x < w; x++) (touch(x), touch((h - 1) * w + x));
+    for (let y = 0; y < h; y++) (touch(y * w), touch(y * w + w - 1));
+    const fgFraction = fgCount / n;
+    const borderContact = borderFg / borderTotal;
+    if (fgFraction < minFraction) return { ok: false, reason: 'low-contrast', fgFraction, borderContact };
+    if (fgFraction > 0.88) return { ok: false, reason: 'no-clear-backdrop', fgFraction, borderContact };
+    if (borderContact > 0.45) return { ok: false, reason: 'cluttered', fgFraction, borderContact };
+
+    // feather the edge
+    const raw = new Float32Array(n);
+    for (let i = 0; i < n; i++) raw[i] = fg[i];
+    const soft = boxBlur(boxBlur(raw, w, h, 1), w, h, 1);
+    const mask = new Float32Array(n);
+    for (let i = 0; i < n; i++) mask[i] = smoothstep(0.3, 0.7, soft[i]);
+    const out = { ok: true, mask, width: w, height: h, fgFraction, borderContact, repaired, refine: { clusters, T } };
+    if (debug) out.debug = { lab, fg, w, h, parts: keptParts, bgClusters: clusters.length, T };
+    return out;
+  };
+
+  // Separate pieces lying apart on one surface. Parts that are close together (the stripes of one garment, the
+  // sleeves and body of one jumper) belong to the same piece; parts with clear space between them do not.
+  const groupParts = () => {
+    const keepSplit = fgParts.sizes.map((s) => s > 0.0008 * n); // small parts count too: the stripes of a striped piece
+    const boxes = fgParts.sizes.map(() => ({ x0: w, y0: h, x1: -1, y1: -1 }));
+    for (let i = 0; i < n; i++) {
+      const id = fgParts.labels[i];
+      if (id < 0 || !keepSplit[id]) continue;
+      const x = i % w;
+      const y = (i - x) / w;
+      const b = boxes[id];
+      if (x < b.x0) b.x0 = x;
+      if (x > b.x1) b.x1 = x;
+      if (y < b.y0) b.y0 = y;
+      if (y > b.y1) b.y1 = y;
+    }
+    const ids = keepSplit.map((k, id) => (k ? id : -1)).filter((id) => id >= 0);
+    const gap = 0.035 * Math.max(w, h);
+    const parent = new Map(ids.map((id) => [id, id]));
+    const find = (id) => (parent.get(id) === id ? id : (parent.set(id, find(parent.get(id))), parent.get(id)));
+    for (const a of ids) {
+      for (const b of ids) {
+        if (a >= b) continue;
+        const A = boxes[a];
+        const B = boxes[b];
+        if (A.x0 - gap <= B.x1 && B.x0 - gap <= A.x1 && A.y0 - gap <= B.y1 && B.y0 - gap <= A.y1) parent.set(find(a), find(b));
+      }
+    }
+    const groups = new Map();
+    for (const id of ids) {
+      const root = find(id);
+      if (!groups.has(root)) groups.set(root, []);
+      groups.get(root).push(id);
+    }
+    return [...groups.values()].map((members) => {
+      let x0 = w;
+      let y0 = h;
+      let area = 0;
+      for (const id of members) {
+        x0 = Math.min(x0, boxes[id].x0);
+        y0 = Math.min(y0, boxes[id].y0);
+        area += fgParts.sizes[id];
+      }
+      return { members, area, x0, y0 };
+    });
+  };
+
+  if (split) {
+    const groups = groupParts()
+      .filter((g) => g.area >= 0.008 * n)
+      .sort((p, q) => (Math.abs(p.y0 - q.y0) > 0.12 * h ? p.y0 - q.y0 : p.x0 - q.x0)); // reading order
+    const items = [];
+    for (const g of groups) {
+      const fg = new Uint8Array(n);
+      for (let i = 0; i < n; i++) if (fgParts.labels[i] >= 0 && g.members.includes(fgParts.labels[i])) fg[i] = 1;
+      const one = finish(fg, g.members.length, 0.008);
+      if (one.ok) items.push(one);
+    }
+    if (!items.length) return { ok: false, reason: 'nothing-found', fgFraction: 0, borderContact: 0 };
+    return { ok: true, items, width: w, height: h, skipped: groups.length - items.length };
+  }
+
   const keep = fgParts.sizes.map((s) => s >= largest * 0.15 && s > 0.004 * n);
   const fg = new Uint8Array(n);
-  let fgCount = 0;
-  for (let i = 0; i < n; i++) {
-    if (fgParts.labels[i] >= 0 && keep[fgParts.labels[i]]) {
-      fg[i] = 1;
-      fgCount += 1;
+  for (let i = 0; i < n; i++) if (fgParts.labels[i] >= 0 && keep[fgParts.labels[i]]) fg[i] = 1;
+  const result = finish(fg, keep.filter(Boolean).length, 0.04);
+  // is there more than one piece in this photo? (a pair of similar pieces, like two shoes, counts as one)
+  const groups = groupParts().filter((g) => g.area >= 0.008 * n);
+  const meanLab = (g) => {
+    const sum = [0, 0, 0];
+    let count = 0;
+    for (let i = 0; i < n; i++) {
+      if (fgParts.labels[i] >= 0 && g.members.includes(fgParts.labels[i])) {
+        for (let k = 0; k < 3; k++) sum[k] += lab[i][k];
+        count += 1;
+      }
     }
-  }
-  // fill pin-holes (small gaps inside the garment)
-  const holes = components(w, h, (i) => !fg[i]);
-  holes.sizes.forEach((size, id) => {
-    if (size < 0.003 * n) {
-      for (let i = 0; i < n; i++) if (holes.labels[i] === id) ((fg[i] = 1), (fgCount += 1));
-    }
-  });
-
-  // A garment broken into pieces is either a patterned one (light stripes that look like backdrop: the pieces are
-  // clearly different from the surface, so fill its outline) or one too close to the surface in colour (the pieces
-  // are a guess: say so, so the person can touch it up). Two well-separated items (a pair of shoes) are left alone.
-  const keptParts = keep.filter(Boolean).length;
-  const filled = solidity(fg, w, h, fgCount);
-  let repaired = false;
-  if (filled < 0.62) {
-    const sep = separation(lab, fg, n);
-    if (keptParts >= 3 && sep >= 8) {
-      fgCount += fillOutline(fg, w, h);
-      repaired = true;
-    } else if (sep < 8) {
-      return { ok: false, reason: 'low-contrast', fgFraction: fgCount / n, borderContact: 0, solidity: filled };
-    }
-  }
-
-  // does the result look plausible?
-  let borderFg = 0;
-  let borderTotal = 0;
-  const touch = (i) => {
-    borderTotal += 1;
-    if (fg[i]) borderFg += 1;
+    return sum.map((v) => v / Math.max(1, count));
   };
-  for (let x = 0; x < w; x++) (touch(x), touch((h - 1) * w + x));
-  for (let y = 0; y < h; y++) (touch(y * w), touch(y * w + w - 1));
-  const fgFraction = fgCount / n;
-  const borderContact = borderFg / borderTotal;
-  if (fgFraction < 0.04) return { ok: false, reason: 'low-contrast', fgFraction, borderContact };
-  if (fgFraction > 0.88) return { ok: false, reason: 'no-clear-backdrop', fgFraction, borderContact };
-  if (borderContact > 0.45) return { ok: false, reason: 'cluttered', fgFraction, borderContact };
-
-  // feather the edge
-  const raw = new Float32Array(n);
-  for (let i = 0; i < n; i++) raw[i] = fg[i];
-  const soft = boxBlur(boxBlur(raw, w, h, 1), w, h, 1);
-  const mask = new Float32Array(n);
-  for (let i = 0; i < n; i++) mask[i] = smoothstep(0.3, 0.7, soft[i]);
-
-  const out = { ok: true, mask, width: w, height: h, fgFraction, borderContact, repaired, refine: { clusters, T } };
-  if (debug) out.debug = { lab, fg, w, h, parts: keptParts, bgClusters: clusters.length, T };
-  return out;
+  const pair = groups.length === 2 && Math.min(groups[0].area, groups[1].area) >= 0.7 * Math.max(groups[0].area, groups[1].area) && distance(meanLab(groups[0]), meanLab(groups[1])) < 14;
+  result.pieces = pair ? 1 : groups.length;
+  return result;
 }
 
 /**

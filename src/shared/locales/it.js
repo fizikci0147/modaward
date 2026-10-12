@@ -1165,5 +1165,14 @@ export default {
   "Use this cut-out": "Usa questo ritaglio",
   "Tool": "Strumento",
   "How alike the colours must be": "Quanto devono somigliare i colori",
-  "Brush size": "Dimensione del pennello"
+  "Brush size": "Dimensione del pennello",
+  "We couldn’t tell the pieces in that photo apart from the surface, so we kept it as one photo.": "Non siamo riusciti a distinguere i capi in questa foto dalla superficie, quindi l’abbiamo tenuta come un’unica foto.",
+  "Several pieces in one photo": "Più capi in una foto",
+  "Lay them apart on a plain surface and each one is cut out on its own.": "Disponili distanziati su una superficie liscia e ognuno viene ritagliato da solo.",
+  "{n} piece found in this photo": "{n} capo trovato in questa foto",
+  "{n} pieces found in this photo": "{n} capi trovati in questa foto",
+  "{n} piece was too close in colour to the surface and was left out.": "{n} capo era troppo simile alla superficie nel colore ed è stato escluso.",
+  "{n} pieces were too close in colour to the surface and were left out.": "{n} capi erano troppo simili alla superficie nel colore e sono stati esclusi.",
+  "This photo seems to show {n} pieces.": "Questa foto sembra mostrare {n} capi.",
+  "Add them separately": "Aggiungili separatamente"
 };

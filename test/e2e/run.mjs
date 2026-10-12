@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { chromium } from 'playwright-core';
 import { startTestServer } from '../helpers.js';
-import { syntheticGarmentPng } from './photo.mjs';
+import { syntheticGarmentPng, flatLayPng } from './photo.mjs';
 
 const shots = process.env.SHOTS;
 if (shots) fs.mkdirSync(shots, { recursive: true });
@@ -346,6 +346,46 @@ async function run(label, contextOptions) {
   await page.getByRole('dialog').waitFor({ state: 'detached' });
   if ((await page.locator('.tile:not(.tile-add)').count()) !== beforeCount + 2) fail(`${label}: bulk add did not add both pieces`);
   ok(`${label}: several photos are cut out, reviewed on one screen and added together`);
+
+  // ── one photo with several pieces: split it into separate pieces ──
+  const delApi = (url) => page.request.fetch(url, { method: 'DELETE', headers: { 'x-requested-with': 'modaward' } });
+  const removeNewest = async (n) => {
+    const all = (await (await page.request.fetch('/api/garments', { headers: { 'x-requested-with': 'modaward' } })).json()).garments;
+    for (const g of all.slice(-n)) await delApi(`/api/garments/${g.id}`);
+  };
+  await page.goto('/closet');
+  await page.getByRole('heading', { name: 'Your closet' }).waitFor();
+  const beforeSplit = await page.locator('.tile:not(.tile-add)').count();
+  await page.getByRole('button', { name: 'Add a piece' }).first().click();
+  const single = page.getByRole('dialog', { name: 'Add a piece' });
+  await single.locator('input[type=file]').setInputFiles({ name: 'flat-lay.png', mimeType: 'image/png', buffer: flatLayPng() });
+  await single.getByText('This photo seems to show 3 pieces.').waitFor({ timeout: 30000 });
+  await single.getByRole('button', { name: 'Add them separately' }).click();
+  const several = page.getByRole('dialog', { name: 'Add several pieces' });
+  await several.locator('.bulk-card img.cutout').nth(2).waitFor({ timeout: 30000 });
+  if ((await several.locator('.bulk-card').count()) !== 3) fail(`${label}: the flat-lay photo did not become 3 pieces`);
+  await shot('10d2-split-pieces');
+  const kinds = several.locator('.bulk-card select');
+  await kinds.nth(0).selectOption('tee');
+  await kinds.nth(1).selectOption('trousers');
+  await kinds.nth(2).selectOption('dress');
+  await several.getByRole('button', { name: /Add 3 pieces/ }).click();
+  await page.locator('.toast').filter({ hasText: /3 pieces added/ }).first().waitFor();
+  await page.getByRole('dialog').waitFor({ state: 'detached' });
+  if ((await page.locator('.tile:not(.tile-add)').count()) !== beforeSplit + 3) fail(`${label}: the split pieces were not all added`);
+  await removeNewest(3);
+  // and straight from Add several, with the switch on
+  await page.goto('/closet');
+  await page.getByRole('heading', { name: 'Your closet' }).waitFor();
+  await page.getByRole('button', { name: 'Add several' }).click();
+  const viaSwitch = page.getByRole('dialog', { name: 'Add several pieces' });
+  await viaSwitch.getByRole('switch', { name: 'Several pieces in one photo' }).click();
+  await viaSwitch.locator('input[type=file]').setInputFiles({ name: 'flat-lay.png', mimeType: 'image/png', buffer: flatLayPng() });
+  await viaSwitch.locator('.bulk-card img.cutout').nth(2).waitFor({ timeout: 30000 });
+  if ((await viaSwitch.locator('.bulk-card').count()) !== 3) fail(`${label}: Add several with the switch on did not split the photo`);
+  page.once('dialog', (d) => d.accept());
+  await viaSwitch.getByRole('button', { name: 'Close' }).click();
+  ok(`${label}: a photo of several pieces is split into separate cut-outs, from either sheet`);
 
   // ── pieces that have not been worn in a while ──
   const api = (method, url, data) => page.request.fetch(url, { method, data, headers: { 'x-requested-with': 'modaward', 'content-type': 'application/json' } });

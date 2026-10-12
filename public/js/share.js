@@ -48,7 +48,7 @@ export async function outfitPosterSvg({ items, weather, date, units, headline })
     <text x="60" y="1060" font-family="${serif}" font-size="76" fill="#161511">${esc(headline)}</text>
     <text x="60" y="1118" font-family="${sans}" font-size="32" fill="#57534a">${esc(date ? longDate(date) : '')}${range ? ` · ${esc(range)}` : ''}</text>
     <text x="60" y="1180" font-family="${sans}" font-size="28" fill="#8a8578">${esc(names)}</text>
-    <g transform="translate(60 1256)"><rect width="56" height="56" rx="14" fill="#1f3d33"/><g transform="translate(8 7) scale(1.3)" fill="none"><path d="M16 10.2V8.6a2.9 2.9 0 1 0-2.9-2.9" stroke="#f6f3ed" stroke-width="2.1" stroke-linecap="round"/><path d="M16 10.2 4.6 19.2a2.1 2.1 0 0 0 1.3 3.8h20.2a2.1 2.1 0 0 0 1.3-3.8L16 10.2Z" stroke="#f6f3ed" stroke-width="2.1" stroke-linejoin="round"/></g></g>
+    <g transform="translate(60 1256)"><rect width="56" height="56" rx="14" fill="#1f3d33"/><g transform="translate(8 7) scale(1.3)" fill="none"><path d="M6 26V14.2a1.7 1.7 0 0 1 2.9-1.2L16 20l7.1-7a1.7 1.7 0 0 1 2.9 1.2V26" stroke="#f6f3ed" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="9.6" r="2.7" fill="#e0825f"/><g stroke="#e0825f" stroke-width="1.5" stroke-linecap="round"><path d="M16 5.1V3.6M12.82 6.42l-1.06-1.06M19.18 6.42l1.06-1.06M11.5 9.6H10M20.5 9.6H22"/></g></g></g>
     <text x="136" y="1296" font-family="${serif}" font-size="48" fill="#161511">ModaWard</text>
   </svg>`;
 }

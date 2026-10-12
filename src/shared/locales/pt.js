@@ -1165,5 +1165,14 @@ export default {
   "Use this cut-out": "Usar este recorte",
   "Tool": "Ferramenta",
   "How alike the colours must be": "Quão parecidas as cores devem ser",
-  "Brush size": "Tamanho do pincel"
+  "Brush size": "Tamanho do pincel",
+  "We couldn’t tell the pieces in that photo apart from the surface, so we kept it as one photo.": "Não conseguimos distinguir as peças dessa foto da superfície, então mantivemos como uma foto só.",
+  "Several pieces in one photo": "Várias peças em uma foto",
+  "Lay them apart on a plain surface and each one is cut out on its own.": "Coloque-as separadas sobre uma superfície lisa e cada uma é recortada individualmente.",
+  "{n} piece found in this photo": "{n} peça encontrada nesta foto",
+  "{n} pieces found in this photo": "{n} peças encontradas nesta foto",
+  "{n} piece was too close in colour to the surface and was left out.": "{n} peça era parecida demais com a superfície na cor e ficou de fora.",
+  "{n} pieces were too close in colour to the surface and were left out.": "{n} peças eram parecidas demais com a superfície na cor e ficaram de fora.",
+  "This photo seems to show {n} pieces.": "Esta foto parece mostrar {n} peças.",
+  "Add them separately": "Adicionar separadamente"
 };

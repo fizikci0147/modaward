@@ -1165,5 +1165,14 @@ export default {
   "Use this cut-out": "Utiliser ce détourage",
   "Tool": "Outil",
   "How alike the colours must be": "Ressemblance des couleurs requise",
-  "Brush size": "Taille du pinceau"
+  "Brush size": "Taille du pinceau",
+  "We couldn’t tell the pieces in that photo apart from the surface, so we kept it as one photo.": "Nous n’avons pas pu distinguer les pièces de cette photo de la surface, nous l’avons donc gardée en une seule photo.",
+  "Several pieces in one photo": "Plusieurs pièces sur une photo",
+  "Lay them apart on a plain surface and each one is cut out on its own.": "Posez-les à distance les unes des autres sur une surface unie et chacune est détourée séparément.",
+  "{n} piece found in this photo": "{n} pièce trouvée sur cette photo",
+  "{n} pieces found in this photo": "{n} pièces trouvées sur cette photo",
+  "{n} piece was too close in colour to the surface and was left out.": "{n} pièce était trop proche de la surface en couleur et a été laissée de côté.",
+  "{n} pieces were too close in colour to the surface and were left out.": "{n} pièces étaient trop proches de la surface en couleur et ont été laissées de côté.",
+  "This photo seems to show {n} pieces.": "Cette photo semble montrer {n} pièces.",
+  "Add them separately": "Les ajouter séparément"
 };

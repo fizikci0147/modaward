@@ -1165,5 +1165,14 @@ export default {
   "Use this cut-out": "Bu kesimi kullan",
   "Tool": "Araç",
   "How alike the colours must be": "Renklerin ne kadar benzer olması gerektiği",
-  "Brush size": "Fırça boyutu"
+  "Brush size": "Fırça boyutu",
+  "We couldn’t tell the pieces in that photo apart from the surface, so we kept it as one photo.": "Bu fotoğraftaki parçaları yüzeyden ayırt edemedik, bu yüzden tek fotoğraf olarak bıraktık.",
+  "Several pieces in one photo": "Bir fotoğrafta birden fazla parça",
+  "Lay them apart on a plain surface and each one is cut out on its own.": "Parçaları düz bir yüzeye aralarında boşluk bırakarak koy; her biri ayrı ayrı kesilir.",
+  "{n} piece found in this photo": "Bu fotoğrafta {n} parça bulundu",
+  "{n} pieces found in this photo": "Bu fotoğrafta {n} parça bulundu",
+  "{n} piece was too close in colour to the surface and was left out.": "{n} parça renk olarak yüzeye çok yakındı ve dışarıda bırakıldı.",
+  "{n} pieces were too close in colour to the surface and were left out.": "{n} parça renk olarak yüzeye çok yakındı ve dışarıda bırakıldı.",
+  "This photo seems to show {n} pieces.": "Bu fotoğraf {n} parça gösteriyor gibi görünüyor.",
+  "Add them separately": "Ayrı ayrı ekle"
 };

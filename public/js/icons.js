@@ -85,11 +85,9 @@ export function Icon({ name, size, class: cls = '', label, style }) {
 export const weatherIcon = (condition, isDay = true) =>
   ({ clear: isDay ? 'sun' : 'sun', partly: 'sun-cloud', cloudy: 'cloud', fog: 'fog', drizzle: 'rain', rain: 'rain', snow: 'snow', storm: 'storm' })[condition] || 'cloud';
 
-/** The ModaWard mark: a hanger whose hook forms a rain-drop. */
+/** The ModaWard mark: an M with a sun rising between its peaks. */
 export function Logo({ size = 24 }) {
   return html`<svg width=${size} height=${size} viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <path d="M16 10.2V8.6a2.9 2.9 0 1 0-2.9-2.9" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>
-    <path d="M16 10.2 4.6 19.2a2.1 2.1 0 0 0 1.3 3.8h20.2a2.1 2.1 0 0 0 1.3-3.8L16 10.2Z" stroke="currentColor" stroke-width="2.1" stroke-linejoin="round"/>
-    <path d="M16 26.3s2.4-2.5 2.4-4a2.4 2.4 0 0 0-4.8 0c0 1.5 2.4 4 2.4 4Z" fill="var(--clay)"/>
+    <path d="M6 26V14.2a1.7 1.7 0 0 1 2.9-1.2L16 20l7.1-7a1.7 1.7 0 0 1 2.9 1.2V26" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/><circle cx="16" cy="9.6" r="2.7" fill="var(--clay)"/><g stroke="var(--clay)" stroke-width="1.5" stroke-linecap="round"><path d="M16 5.1V3.6M12.82 6.42l-1.06-1.06M19.18 6.42l1.06-1.06M11.5 9.6H10M20.5 9.6H22"/></g>
   </svg>`;
 }

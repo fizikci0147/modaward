@@ -1165,5 +1165,14 @@ export default {
   "Use this cut-out": "Diesen Ausschnitt verwenden",
   "Tool": "Werkzeug",
   "How alike the colours must be": "Wie ähnlich die Farben sein müssen",
-  "Brush size": "Pinselgröße"
+  "Brush size": "Pinselgröße",
+  "We couldn’t tell the pieces in that photo apart from the surface, so we kept it as one photo.": "Wir konnten die Teile auf diesem Foto nicht von der Unterlage unterscheiden und haben es als ein Foto behalten.",
+  "Several pieces in one photo": "Mehrere Teile auf einem Foto",
+  "Lay them apart on a plain surface and each one is cut out on its own.": "Lege sie mit Abstand auf eine einfarbige Fläche, dann wird jedes einzeln freigestellt.",
+  "{n} piece found in this photo": "{n} Teil auf diesem Foto gefunden",
+  "{n} pieces found in this photo": "{n} Teile auf diesem Foto gefunden",
+  "{n} piece was too close in colour to the surface and was left out.": "{n} Teil war farblich zu nah an der Unterlage und wurde weggelassen.",
+  "{n} pieces were too close in colour to the surface and were left out.": "{n} Teile waren farblich zu nah an der Unterlage und wurden weggelassen.",
+  "This photo seems to show {n} pieces.": "Dieses Foto scheint {n} Teile zu zeigen.",
+  "Add them separately": "Einzeln hinzufügen"
 };

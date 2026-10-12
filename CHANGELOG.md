@@ -4,6 +4,17 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.17.0] · 2026-10-18
+
+### Added
+- **Several pieces in one photo.** Lay a few pieces apart on a plain surface, take one photo, and each piece is cut out on its own and becomes its own card to check and add. In *Add several* there is a new switch, *Several pieces in one photo*. In the single-piece sheet, a photo that seems to show several pieces offers *Add them separately*, which hands the photo over. Pieces that are too close in colour to the surface are left out and you are told. Pieces that touch or overlap come out as one, so keep a little space between them. A pair of near-identical pieces (two shoes) is not offered as a split.
+
+### Changed
+- **New logo:** an M with a sun rising between its peaks. It replaces the hanger everywhere: the website, the favicon, the app icons and launch screens for iPhone and Android, the offline screen, the shared-outfit picture, the store screenshots and the front page.
+
+### Fixed
+- The front page's desktop layout and the Touch up styles were lost because of an unclosed brace in the stylesheet; the check now fails on an unbalanced stylesheet.
+
 ## [5.16.0] · 2026-10-17
 
 ### Added

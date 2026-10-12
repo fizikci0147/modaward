@@ -2,6 +2,7 @@
 // using only Node built-ins, so the e2e test can upload a real file through the real UI.
 import zlib from 'node:zlib';
 import { rng } from '../../src/engine/rng.js';
+import { multiScene } from '../cutout/scenes.js';
 
 const crcTable = new Uint32Array(256).map((_, n) => {
   let c = n;
@@ -71,4 +72,16 @@ export function syntheticGarmentPng({ width = 900, height = 900 } = {}) {
     }
   }
   return encodePng(width, height, rgba);
+}
+
+/** A "flat lay": a tee, trousers and a dress lying apart on a wooden floor, as one photo. */
+export function flatLayPng({ size = 800 } = {}) {
+  const k = size / 600;
+  const parts = [
+    { shape: 'tee', garment: 'navy, solid', ox: 10 * k, oy: 20 * k, scale: 0.7 * k },
+    { shape: 'trousers', garment: 'red, solid', ox: 300 * k, oy: 10 * k, scale: 0.8 * k },
+    { shape: 'dress', garment: 'light blue, solid', ox: 120 * k, oy: 300 * k, scale: 0.75 * k }
+  ];
+  const { img } = multiScene({ backdrop: 'wooden floor', parts, seed: 3, w: size, h: size });
+  return encodePng(size, size, img.data);
 }
