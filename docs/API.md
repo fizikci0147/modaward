@@ -49,7 +49,10 @@ Common codes: `bad_request` 400, `unauthorized` 401, `upgrade_required` 402, `fo
 
 | | |
 |---|---|
-| `GET /api/shop/retailers` | |
+| `GET /api/shop/retailers` | The original list of stores (id, name, tier, departments) |
+| `GET /api/shop/stores` | The store picker: every built-in store (with regions it ships to and where it is a starter store), the regions, the person's region and the stores they added |
+| `POST /api/shop/stores` | Add a store: `{ name, url, search? }` (`search` contains `{q}`). Refused for non-public addresses, a store we already list (409), a duplicate, or more than 25. The store is chosen straight away. |
+| `DELETE /api/shop/stores/:id` | Remove a store you added (also drops it from your chosen stores) |
 | `POST /api/shop/looks` `{kind,storeMode,occasions,seed,limit,curate?}` | looks, `locked` count, weather reference |
 | `POST /api/shop/gaps` | closet gaps with suggested pieces |
 | `POST /api/shop/feedback` `{lookId,signal,pieceIndex?}` | trains the taste model |

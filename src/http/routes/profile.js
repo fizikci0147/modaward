@@ -6,7 +6,8 @@ import { PALETTE } from '../../shared/color.js';
 import {
   DEPARTMENTS, UNITS, CURRENCIES, AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CODES, NEVER_TAGS, BUDGET_TIERS, DEFAULT_PROFILE, mergeProfile, completeness
 } from '../../shared/profile.js';
-import { RETAILER_IDS } from '../../shop/retailers.js';
+import { RETAILER_IDS, CUSTOM_PREFIX } from '../../shop/retailers.js';
+import { REGION_CODES } from '../../shop/regions.js';
 import { badRequest } from '../../util/errors.js';
 import { LOCALES } from '../../shared/i18n.js';
 
@@ -20,6 +21,7 @@ export const profilePatchSchema = partial({
   units: oneOf(UNITS),
   currency: oneOf(CURRENCIES),
   locale: nullable(oneOf(Object.keys(LOCALES))),
+  shopRegion: nullable(oneOf(REGION_CODES)),
   location: nullable(object({ name: string({ min: 1, max: 80 }), lat: number({ min: -90, max: 90 }), lon: number({ min: -180, max: 180 }), timezone: string({ max: 60 }) })),
   workDays: arrayOf(integer({ min: 0, max: 6 }), { max: 7, unique: true }),
   ageRange: nullable(oneOf(AGE_RANGES)),
@@ -36,7 +38,7 @@ export const profilePatchSchema = partial({
     avoidedPatterns: arrayOf(oneOf(PATTERNS), { max: 8, unique: true }),
     never: arrayOf(oneOf(Object.keys(NEVER_TAGS)), { max: 12, unique: true }),
     brands: partial({ love: arrayOf(brand(), { max: 15, unique: true }), avoid: arrayOf(brand(), { max: 15, unique: true }) }),
-    stores: arrayOf(oneOf(RETAILER_IDS), { max: 14, unique: true }),
+    stores: arrayOf(string({ min: 1, max: 24 }), { max: 40, unique: true }),
     mixStores: boolean(),
     quizDone: boolean(),
     trendiness: oneOf(['off', 'light', 'forward']),
@@ -75,6 +77,12 @@ export function profileRoutes({ repos, weather }) {
 
   r.patch('/profile', (req, res) => {
     const patch = profilePatchSchema(req.body);
+    // a chosen store is one of ours or one this person added; anything else is refused
+    if (patch.style?.stores) {
+      const own = new Set(repos.customStores.list(req.user.id).map((c) => `${CUSTOM_PREFIX}${c.id}`));
+      const known = new Set(RETAILER_IDS);
+      if (patch.style.stores.some((id) => !known.has(id) && !own.has(id))) throw badRequest('One of those stores is not available.');
+    }
     const next = applyProfilePatch(repos.profiles.get(req.user.id), patch);
     repos.profiles.save(req.user.id, next);
     res.json({ profile: next, completeness: completeness(next) });

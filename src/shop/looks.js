@@ -23,6 +23,7 @@ import { ARCHETYPE_WORD } from '../shared/taxonomy.js';
 import { buildPool, queryFor } from './pool.js';
 import { assignRetailers, priceBand } from './assign.js';
 import { searchUrl } from './retailers.js';
+import { shopRegion } from './regions.js';
 
 /** The profile's "what do you dress for" answers → engine occasions. */
 const OCCASION_MAP = { work: 'work', casual: 'casual', weekend: 'casual', date: 'evening', travel: 'casual', active: 'active', events: 'formal' };
@@ -131,7 +132,7 @@ export function pieceCard({ slot, piece }, retailer, ctx) {
     };
   }
   const query = queryFor(piece, profile);
-  return { ...base, source: 'spec', name: piece.name, retailer: retailerInfo, query, link: linker.link(retailer.id, searchUrl(retailer, query), 'search') };
+  return { ...base, source: 'spec', name: piece.name, retailer: retailerInfo, query, link: linker.link(retailer.id, searchUrl(retailer, query, shopRegion(profile)), 'search') };
 }
 
 function buildReasons({ parts, scores, kind, occasion, ref, units, profile, taste, cards, t, locale = 'en' }) {

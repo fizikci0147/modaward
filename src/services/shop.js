@@ -11,6 +11,7 @@ import { entitlements } from './plans.js';
 import { HttpError, badRequest, notFound, paymentRequired } from '../util/errors.js';
 import { colorName } from '../shared/color.js';
 import { hashString } from '../engine/rng.js';
+import { customRetailer } from '../shop/retailers.js';
 
 const forecastNeeded = () => new HttpError(409, 'location_required', 'Set your location so we can tailor looks to the weather.');
 
@@ -22,6 +23,9 @@ function pieceAsItem(piece) {
 }
 
 export function createShopService({ repos, weather, catalog, linker, config, stylist = null }) {
+  /** The profile with the stores the person added, as retailers the engine can pick from. */
+  const profileOf = (userId) => ({ ...repos.profiles.get(userId), customStores: repos.customStores.list(userId).map(customRetailer) });
+
   async function days(profile) {
     if (!profile.location) throw forecastNeeded();
     const { lat, lon, name } = profile.location;
@@ -40,7 +44,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
       // a small set of variations: a free-form seed would let one account defeat the cache and force a rebuild per request
       const seed = rawSeed === undefined ? undefined : String(Number.isFinite(Number(rawSeed)) ? Math.abs(Math.trunc(Number(rawSeed))) % 24 : hashString(String(rawSeed)) % 24);
       const tr = translatorFor(locale);
-      const profile = repos.profiles.get(user.id);
+      const profile = profileOf(user.id);
       const ent = entitlements(user, config);
       const forecast = await days(profile);
       const cap = ent.shopLooks;
@@ -89,7 +93,7 @@ export function createShopService({ repos, weather, catalog, linker, config, sty
 
     async gaps(user, { storeMode, locale = 'en' } = {}) {
       const tr = translatorFor(locale);
-      const profile = repos.profiles.get(user.id);
+      const profile = profileOf(user.id);
       const forecast = await days(profile);
       return { gaps: gapSuggestions({ wardrobe: repos.garments.list(user.id).filter((g) => !g.excluded), profile, days: forecast, catalog, linker, storeMode, t: tr.t, tn: tr.tn }) };
     },

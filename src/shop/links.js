@@ -9,7 +9,8 @@
 import { hmac, safeEqual } from '../services/secrets.js';
 import { retailerById, affiliateUrl, hostOf } from './retailers.js';
 
-export function createLinker({ secret, affiliates = {} }) {
+/** @param {{secret: string, affiliates?: object, resolve?: (id: string) => object|null}} opts  `resolve` finds a store a person added, by id */
+export function createLinker({ secret, affiliates = {}, resolve = null }) {
   const sign = (retailerId, url, kind) => hmac(secret, `${retailerId}|${kind}|${url}`);
 
   return {
@@ -27,7 +28,7 @@ export function createLinker({ secret, affiliates = {} }) {
       const { r, k, u, s } = query;
       if (![r, k, u, s].every((v) => typeof v === 'string')) return null;
       if (!safeEqual(sign(r, u, k), s)) return null;
-      const retailer = retailerById(r);
+      const retailer = retailerById(r) ?? resolve?.(r) ?? null;
       if (!retailer) return null;
       let parsed;
       try {

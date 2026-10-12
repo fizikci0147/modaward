@@ -133,7 +133,9 @@ export function GarmentSheet({ garment, onClose, caps, onSplit }) {
   const [removeBg, setRemoveBg] = useState(true);
   const [working, setWorking] = useState(false);
   const [touchUp, setTouchUp] = useState(false);
-  const photo = photos ? (removeBg && photos.cutout ? photos.cutout : photos.original) : null;
+  const [studio, setStudio] = useState(true); // the studio finish (straightened, wrinkle shading softened) on the cut-out
+  const cutoutNow = photos ? (!studio && photos.plainCutout ? photos.plainCutout : photos.cutout) : null;
+  const photo = photos ? (removeBg && cutoutNow ? cutoutNow : photos.original) : null;
   const [preview, setPreview] = useState(garment?.imageUrl || null);
   const [removePhoto, setRemovePhoto] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -153,7 +155,7 @@ export function GarmentSheet({ garment, onClose, caps, onSplit }) {
     setWorking(true);
     try {
       const p = await readPhoto(file, { removeBackground: true });
-      setPhotos({ original: p.original, cutout: p.cutout, reason: p.cutoutReason, pieces: p.pieces || 0, file });
+      setPhotos({ original: p.original, cutout: p.cutout, plainCutout: p.plainCutout, reason: p.cutoutReason, pieces: p.pieces || 0, file });
       setRemoveBg(true);
       setRemovePhoto(false);
       if (p.color && !editing) set({ color: p.color });
@@ -256,6 +258,7 @@ export function GarmentSheet({ garment, onClose, caps, onSplit }) {
           ${(photo || preview) && !removePhoto ? html`<button class="btn btn-ghost btn-s" onClick=${() => { setPhotos(null); setPreview(null); setRemovePhoto(true); }}>${t('Remove')}</button>` : null}
         </div>
         ${photos && photos.cutout ? html`<div class="spread"><div><div class="label">${t('Remove background')}</div><div class="hint">${t('Shows just the garment')}</div></div><${Switch} label=${t('Remove background')} checked=${removeBg} onChange=${setRemoveBg} /></div>` : null}
+        ${photos && photos.cutout && photos.plainCutout && removeBg ? html`<div class="spread"><div><div class="label">${t('Studio finish')}</div><div class="hint">${t('Straightens the piece and softens wrinkles in the shading. Colours and prints stay as they are.')}</div></div><${Switch} label=${t('Studio finish')} checked=${studio} onChange=${setStudio} /></div>` : null}
         ${photos && photos.pieces >= 2 && onSplit ? html`<div class="callout stack" style=${{ gap: '8px' }}><span class="small">${t('This photo seems to show {n} pieces.', { n: photos.pieces })}</span><button class="btn btn-accent btn-s" onClick=${() => onSplit(photos.file)}><${Icon} name="sparkle" />${t('Add them separately')}</button></div>` : null}
         ${photos ? html`<button class="btn btn-outline btn-s" onClick=${() => setTouchUp(true)} disabled=${working}><${Icon} name="edit" />${t('Touch up')}</button>` : null}
         ${photos && !photos.cutout && photos.reason && caps.cutoutService ? html`<button class="btn btn-outline btn-s" onClick=${cloudCutout} disabled=${working}><${Icon} name="sparkle" />${t('Try high-accuracy removal')}</button>` : null}
@@ -303,7 +306,7 @@ export function GarmentSheet({ garment, onClose, caps, onSplit }) {
       </div>
     </div>
   </${Sheet}>
-  ${touchUp && photos ? html`<${TouchUp} original=${photos.original} onClose=${() => setTouchUp(false)} onDone=${({ image, color }) => { setPhotos({ ...photos, cutout: image, reason: null }); setRemoveBg(true); setRemovePhoto(false); if (color && !editing) set({ color }); setTouchUp(false); }} />` : null}`;
+  ${touchUp && photos ? html`<${TouchUp} original=${photos.original} onClose=${() => setTouchUp(false)} onDone=${({ image, plain, color }) => { setPhotos({ ...photos, cutout: image, plainCutout: plain || null, reason: null }); setRemoveBg(true); setRemovePhoto(false); if (color && !editing) set({ color }); setTouchUp(false); }} />` : null}`;
 }
 
 export function ClosetView() {

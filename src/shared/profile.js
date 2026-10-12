@@ -71,6 +71,7 @@ export const DEFAULT_PROFILE = Object.freeze({
   currency: 'USD',
   locale: null,
   location: null,
+  shopRegion: null, // where the person shops; null means guess from their currency and language
   workDays: [1, 2, 3, 4, 5],
   ageRange: null,
   heightCm: null,

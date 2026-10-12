@@ -128,3 +128,17 @@ Run the numbers on your own plan: *(average paid AI calls per Pro user per month
 - **Give Pro to an existing user:** `/admin` → *Pro access* → enter their email and a number of days. Pro ends automatically; a paying Stripe subscriber is never overridden.
 - **Pro codes:** `/admin` → *Pro access* → *Create code* (leave the code blank for a random one such as `K7QM-2XPD-9TRB`). Choose the days of Pro and how many people can use it. Users enter it on the Pro page ("Have a Pro code?"). Every code is one use per person.
 - **Stripe discounts:** the checkout page already accepts Stripe promotion codes. Create a coupon and promotion code in the Stripe dashboard (Product catalogue → Coupons) for discounts on paid subscriptions.
+
+## Photos that look like a catalogue shot (and what "AI try-on" would cost)
+
+Out of the box ModaWard removes the background on the phone and applies a **studio finish** (straightens the piece, softens wrinkle shading, evens the light). That is free to run and has no per-photo cost.
+
+What many apps advertise on top of that, a photo of a crumpled piece turned into an ironed one **worn on a model**, needs an image-generation ("virtual try-on") model. It is not something that can run free on a phone or on shared web hosting:
+
+| Route | Cost | Notes |
+|---|---|---|
+| Free hosted demos (for example on Hugging Face Spaces) | free | Queues of minutes, rate limits, no promise they stay up, and not intended for a product. Fine to experiment with, not to build on. |
+| Run an open try-on model on your own GPU server | a GPU server (roughly one to a few US dollars an hour, or pay per image on a serverless GPU service) | Needs a developer to host it. **Check each model's licence: several well-known try-on models are released for non-commercial or research use only**, which would rule them out for a commercial app. |
+| A commercial try-on or "product photo" API | typically a few cents per image | Simplest to add (one server endpoint and an API key), but not free; it could be a paid feature or paid for from affiliate income. |
+
+If you decide to add one, it is a contained change: a server endpoint that sends the cut-out to the provider and returns the image, behind an environment switch like `FREE_AI`, with a per-person daily limit so the bill cannot run away.

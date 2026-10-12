@@ -1,6 +1,7 @@
 import { segment, renderCutout } from '/shared/cutout.js';
 import { t } from '/js/i18n.js';
 import { dominantColor } from '/shared/color.js';
+import { studioFinish } from '/shared/polish.js';
 
 let worker;
 let seq = 0;
@@ -25,6 +26,16 @@ function getWorker() {
   return worker;
 }
 
+/** The studio-finished twin of a cut-out, or null if the finish fails (it is a nicety, never worth losing the cut-out for). */
+function finished(out) {
+  try {
+    const fin = studioFinish({ data: new Uint8ClampedArray(out.data), width: out.width, height: out.height });
+    return { width: fin.width, height: fin.height, buffer: fin.data.buffer, turned: fin.turned };
+  } catch {
+    return null;
+  }
+}
+
 function cutoutInWorker(img, split = false) {
   return new Promise((resolve) => {
     const w = getWorker();
@@ -36,14 +47,14 @@ function cutoutInWorker(img, split = false) {
           if (!seg.ok) return resolve({ ok: false, reason: seg.reason });
           const items = seg.items.map((it) => {
             const out = renderCutout(img, it, { maxSide: 900 });
-            return { width: out.width, height: out.height, buffer: out.data.buffer, box: out.box };
+            return { width: out.width, height: out.height, buffer: out.data.buffer, box: out.box, polished: finished(out) };
           });
           return resolve({ ok: true, items, skipped: seg.skipped || 0 });
         }
         const seg = segment(img);
         if (!seg.ok) return resolve({ ok: false, reason: seg.reason, pieces: seg.pieces || 0 });
         const out = renderCutout(img, seg, { maxSide: 900 });
-        resolve({ ok: true, width: out.width, height: out.height, buffer: out.data.buffer, pieces: seg.pieces || 1 });
+        resolve({ ok: true, width: out.width, height: out.height, buffer: out.data.buffer, polished: finished(out), pieces: seg.pieces || 1 });
       }, 30);
     }
     const id = ++seq;
@@ -100,6 +111,7 @@ export async function readPhoto(file, { removeBackground = true, split = false }
   let cutoutReason = null;
   let color = null;
   let pieces = 0;
+  let plainCutout = null;
   if (removeBackground && split) {
     const raw = ctx.getImageData(0, 0, w, h);
     const res = await cutoutInWorker({ data: raw.data, width: w, height: h }, true);
@@ -111,7 +123,9 @@ export async function readPhoto(file, { removeBackground = true, split = false }
         crop.width = it.box.w;
         crop.height = it.box.h;
         crop.getContext('2d').drawImage(canvas, it.box.x, it.box.y, it.box.w, it.box.h, 0, 0, it.box.w, it.box.h);
-        return { original: crop.toDataURL('image/jpeg', 0.84), cutout: toPngDataUrl(data, it.width, it.height), color: dominantColor(data, it.width, it.height) };
+        const plain = toPngDataUrl(data, it.width, it.height);
+        const fin = it.polished ? new Uint8ClampedArray(it.polished.buffer) : null;
+        return { original: crop.toDataURL('image/jpeg', 0.84), cutout: fin ? toPngDataUrl(fin, it.polished.width, it.polished.height) : plain, plainCutout: fin ? plain : null, color: dominantColor(data, it.width, it.height) };
       });
       return { original, cutout: null, cutoutReason: null, color: found[0]?.color || null, pieces: found.length, found, skipped: res.skipped || 0 };
     }
@@ -122,7 +136,10 @@ export async function readPhoto(file, { removeBackground = true, split = false }
     pieces = res.pieces || 0;
     if (res.ok) {
       const data = new Uint8ClampedArray(res.buffer);
-      cutout = toPngDataUrl(data, res.width, res.height);
+      plainCutout = toPngDataUrl(data, res.width, res.height);
+      // the studio finish (straightened, wrinkle shading softened) is what is used by default
+      cutout = res.polished ? toPngDataUrl(new Uint8ClampedArray(res.polished.buffer), res.polished.width, res.polished.height) : plainCutout;
+      if (!res.polished) plainCutout = null;
       color = dominantColor(data, res.width, res.height);
     } else {
       cutoutReason = res.reason;
@@ -136,5 +153,5 @@ export async function readPhoto(file, { removeBackground = true, split = false }
     sctx.drawImage(canvas, 0, 0, 48, 48);
     color = dominantColor(sctx.getImageData(0, 0, 48, 48).data, 48, 48);
   }
-  return { original, cutout, cutoutReason, color, pieces };
+  return { original, cutout, plainCutout, cutoutReason, color, pieces };
 }

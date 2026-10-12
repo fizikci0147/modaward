@@ -4,6 +4,18 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [5.18.0] · 2026-10-19
+
+### Added
+- **A large built-in store database.** About 530 stores across 13 regions (United States, Canada, United Kingdom, Australia, Germany/Austria/Switzerland, France, Spain, Italy, Portugal, Netherlands, Türkiye, Brazil, Mexico) plus global brands: fast fashion, department stores, luxury, sport and outdoor, shoes, marketplaces and resale. In *Brands and stores* (and in the first-run quiz) you can search the whole list, narrow it to where you shop, and pick as many as you like. Where you shop starts from your currency and language and you can change it.
+- **Add your own store.** If a shop is not listed, add its name and website (and, if you like, a search link) and the Shop's links to it start to appear in your looks. Your stores are private to you, and the address is checked so only ordinary public shop websites are accepted.
+- **Studio finish for photos.** A cut-out is now tidied automatically: a garment photographed a little crooked is straightened, the lumpy shading of wrinkles in plain fabric is softened (about a third less), and light that fell harder on one side is evened out. Colours and prints are left as they are. It is on by default, and a *Studio finish* switch (in Add a piece, Add several and after Touch up) gives the plain cut-out back. It is image processing on the phone, not AI, so it cleans a photo up but cannot press fabric flat or show the piece on a person.
+- `npm run stores:check` visits every store's website and lists any that no longer answer, so the list is easy to keep current (it needs internet access).
+
+### Changed
+- Starter stores follow your region: someone in Germany who has picked no stores is sent to stores that ship to Germany, not American department stores. For people in the United States nothing changes: the starter set is exactly the original fourteen.
+- Links use a store's own search page where we are certain of it and a search of the store's website otherwise, so every link is valid.
+
 ## [5.17.0] · 2026-10-18
 
 ### Added

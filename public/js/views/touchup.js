@@ -6,6 +6,7 @@ import { toast } from '/js/store.js';
 import { toPngDataUrl } from '/js/photo.js';
 import { dominantColor } from '/shared/color.js';
 import { initialMask, paintLine, eraseSimilar, applyMask } from '/shared/touchup.js';
+import { studioFinish } from '/shared/polish.js';
 
 const MAX_SIDE = 900;
 const BRUSHES = [[L('Small'), 0.012], [L('Medium'), 0.028], [L('Large'), 0.06]];
@@ -140,7 +141,15 @@ export function TouchUp({ original, onDone, onClose }) {
           toast(t('Nothing is left of the piece. Restore some of it first.'), { kind: 'err' });
           return;
         }
-        onDone({ image: toPngDataUrl(out.data, out.width, out.height), color: dominantColor(out.data, out.width, out.height) });
+        const plain = toPngDataUrl(out.data, out.width, out.height);
+        let image = plain;
+        try {
+          const fin = studioFinish({ data: new Uint8ClampedArray(out.data), width: out.width, height: out.height });
+          image = toPngDataUrl(fin.data, fin.width, fin.height);
+        } catch {
+          /* the finish is a nicety */
+        }
+        onDone({ image, plain: image === plain ? null : plain, color: dominantColor(out.data, out.width, out.height) });
       } finally {
         setBusy(false);
       }

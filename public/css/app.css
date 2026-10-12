@@ -805,3 +805,13 @@ main:focus { outline: none; }
 @media (min-width: 880px) { .tu { grid-template-columns: minmax(0, 1fr) 250px; align-items: start; } .tu-canvas { max-height: min(62vh, 560px); } }
 
 .callout { padding: 12px 14px; border-radius: var(--r-m, 14px); background: var(--clay-soft); color: var(--ink); }
+
+/* choosing and adding stores */
+.store-picker { gap: 14px; }
+.store-filters { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 560px) { .store-filters { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.store-own { position: relative; display: grid; }
+.store-own .opt { padding-inline-end: 44px; }
+.store-del { position: absolute; inset-block-start: 4px; inset-inline-end: 4px; width: 36px; height: 36px; color: var(--ink-3); }
+.store-del:hover { color: var(--danger); }
+.store-picker .chip svg { margin-inline-start: 4px; }

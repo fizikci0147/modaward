@@ -24,14 +24,17 @@ async function run(label, contextOptions) {
   const ctx = await browser.newContext({ ...contextOptions, baseURL: t.base, geolocation: { latitude: 40.7128, longitude: -74.006 }, permissions: ['geolocation'] });
   const page = await ctx.newPage();
   const problems = [];
+  let expectRefusal = false; // set around a request the test knows the server will refuse
   page.on('console', (m) => {
     // Chrome's "preloaded but not used within a few seconds" is a timing heuristic about when the page happened to reach the font, not a fault in the app
+    if (expectRefusal && /status of 400/.test(m.text())) return;
     if ((m.type() === 'error' || m.type() === 'warning') && !/preloaded using link preload but not used/.test(m.text())) problems.push(`console.${m.type()}: ${m.text()}`);
   });
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   // a request the browser cancels because the test navigated away mid-load is not a failure
   page.on('requestfailed', (r) => r.failure()?.errorText !== 'net::ERR_ABORTED' && problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`));
   page.on('response', (r) => {
+    if (expectRefusal && r.status() === 400) return;
     if (r.status() >= 400 && !/\/api\/(auth\/me|outfits\/recommend)/.test(r.url()) && !/favicon/.test(r.url())) problems.push(`HTTP ${r.status()} ${r.url()}`);
   });
   const shot = async (name) => shots && (await page.waitForTimeout(350), await page.screenshot({ path: path.join(shots, `${label}-${name}.png`), fullPage: name.startsWith('full-') }));
@@ -124,6 +127,38 @@ async function run(label, contextOptions) {
     await page.getByRole('button', { name: 'Continue' }).click();
     await page.getByRole('heading', { name: heading }).waitFor();
     await shot(`03-welcome-${heading.toLowerCase().replace(/\W+/g, '-')}`);
+    if (heading === 'Your rules and stores') {
+      // ── choosing stores: search the database, change region, add a store of your own ──
+      const region = page.getByLabel('Where do you shop?');
+      await region.waitFor();
+      if ((await region.inputValue()) !== 'US') fail(`${label}: the starting region should follow the currency (US), got ${await region.inputValue()}`);
+      await page.getByLabel('Search stores').fill('zara');
+      await page.getByRole('button', { name: /^Zara \$/ }).click();
+      await page.getByRole('group', { name: 'Your stores' }).getByRole('button', { name: /Remove Zara/ }).waitFor();
+      await region.selectOption({ label: 'Germany, Austria and Switzerland' });
+      await page.getByLabel('Search stores').fill('zalando');
+      await page.getByRole('button', { name: /^Zalando \$/ }).click();
+      await page.getByLabel('Search stores').fill('');
+      await page.getByRole('button', { name: 'Add a store that is not listed' }).click();
+      await page.getByLabel('Store name').fill('Corner Boutique');
+      await page.getByLabel('Website', { exact: true }).fill('127.0.0.1');
+      expectRefusal = true;
+      await page.getByRole('button', { name: 'Add store' }).click();
+      await page.locator('.toast.err').first().waitFor();
+      expectRefusal = false;
+      await page.getByLabel('Website', { exact: true }).fill('www.cornerboutique.example.com/shop');
+      await page.getByRole('button', { name: 'Add store' }).click();
+      await page.locator('.toast').filter({ hasText: /Corner Boutique added/ }).first().waitFor();
+      await page.getByText('Stores you added').waitFor();
+      await page.getByRole('group', { name: 'Your stores' }).getByRole('button', { name: /Remove Corner Boutique/ }).waitFor();
+      await shot('03b-welcome-stores');
+      await page.getByRole('group', { name: 'Your stores' }).getByRole('button', { name: /Remove Zara/ }).click();
+      await page.waitForTimeout(900);
+      const saved = (await (await page.request.get('/api/profile')).json()).profile;
+      if (!saved.style.stores.includes('zalandode') || saved.style.stores.includes('zara') || !saved.style.stores.some((id) => /^c_\d+$/.test(id))) fail(`${label}: the chosen stores were not saved (${JSON.stringify(saved.style.stores)})`);
+      if (saved.shopRegion !== 'DE') fail(`${label}: the chosen region was not saved (${saved.shopRegion})`);
+      ok(`${label}: stores can be searched across regions, chosen, and your own can be added (bad addresses refused)`);
+    }
   }
   await page.getByRole('button', { name: 'Back' }).click();
   await page.getByRole('heading', { name: 'Your life and budget' }).waitFor();
@@ -271,6 +306,15 @@ async function run(label, contextOptions) {
   await dialog.locator('input[type=file]').setInputFiles({ name: 'tee-on-floor.png', mimeType: 'image/png', buffer: syntheticGarmentPng() });
   await dialog.locator('img.cutout').waitFor({ timeout: 20000 });
   await dialog.getByRole('switch', { name: 'Remove background' }).waitFor();
+  // the studio finish is on by default and can be switched off to get the plain cut-out back
+  const studioSwitch = dialog.getByRole('switch', { name: 'Studio finish' });
+  await studioSwitch.waitFor();
+  if ((await studioSwitch.getAttribute('aria-checked')) !== 'true') fail(`${label}: the studio finish should start switched on`);
+  const finished = await dialog.locator('img.cutout').getAttribute('src');
+  await studioSwitch.click();
+  await page.waitForFunction((was) => document.querySelector('[role=dialog] img.cutout')?.getAttribute('src') !== was, finished);
+  await studioSwitch.click();
+  await page.waitForFunction((was) => document.querySelector('[role=dialog] img.cutout')?.getAttribute('src') === was, finished);
   await shot('10b-closet-cutout');
   const alpha = await dialog.locator('img.cutout').evaluate(async (img) => {
     await img.decode();
@@ -449,7 +493,7 @@ async function run(label, contextOptions) {
   await page.getByText(/Your style profile is/).waitFor();
   await shot('13-profile-style');
   for (const s of ['About you', 'Sizes & fit', 'Lifestyle & budget', 'Account & plan']) {
-    await page.getByRole('button', { name: s }).click();
+    await page.getByRole('button', { name: s, exact: true }).click();
     await page.waitForTimeout(200);
     await shot(`14-profile-${s.split(' ')[0].toLowerCase()}`);
   }

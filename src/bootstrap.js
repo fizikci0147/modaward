@@ -15,6 +15,7 @@ import { createCutoutService } from './services/cutout.js';
 import { createBilling } from './services/billing.js';
 import { persistentSecret } from './services/secrets.js';
 import { createLinker } from './shop/links.js';
+import { customRetailer, CUSTOM_PREFIX } from './shop/retailers.js';
 import { createCatalog } from './shop/catalog.js';
 import { createAiClient } from './ai/client.js';
 import { createStylist } from './ai/stylist.js';
@@ -45,7 +46,13 @@ export async function createDeps(config, overrides = {}) {
 
   const provider = overrides.weatherProvider ?? (config.weather.provider === 'mock' ? mockProvider() : openMeteoProvider({ apiKey: config.weather.apiKey }));
   const weather = createWeatherService({ provider, cacheMinutes: config.weather.cacheMinutes, log });
-  const linker = createLinker({ secret: persistentSecret(config.dataDir, 'link', config.linkSecret), affiliates: overrides.affiliates ?? {} });
+  // a store a person added is looked up by id when one of their links is followed (the link's signature, made by us, is what vouches for it)
+  const resolveCustom = (id) => {
+    if (!id.startsWith(CUSTOM_PREFIX)) return null;
+    const row = repos.customStores.get(Number(id.slice(CUSTOM_PREFIX.length)));
+    return row ? customRetailer(row) : null;
+  };
+  const linker = createLinker({ secret: persistentSecret(config.dataDir, 'link', config.linkSecret), affiliates: overrides.affiliates ?? {}, resolve: resolveCustom });
   const catalog = createCatalog(db);
 
   // optional integrations: each is null when its key is absent, and the app degrades gracefully

@@ -12,6 +12,7 @@ import { AGE_RANGES, FIT_TOPS, FIT_BOTTOMS, BODY_AREAS, SHOP_OCCASIONS, DRESS_CO
 import { cap, weekdayShort } from '/js/format.js';
 import { navigate, useSearch } from '/js/router.js';
 import { RemindersSection } from '/js/views/reminders.js';
+import { StorePicker } from '/js/views/stores.js';
 
 /** Sample board for each style archetype: drawn, not photographed. */
 const SAMPLE = {
@@ -150,11 +151,8 @@ export function NeverSection({ profile }) {
 export function BrandsStoresSection({ profile }) {
   const [status, save] = useSaver();
   const s = profile.style;
-  const [stores, setStores] = useState([]);
-  useEffect(() => { api.get('/shop/retailers').then((d) => setStores(d.retailers)).catch(() => {}); }, []);
-  const dept = profile.department;
   return html`<${Section} title=${t('Brands and stores')} blurb=${t('Pick stores you like to shop at (or none, and we’ll choose). Avoided brands never appear.')} status=${status}>
-      <div class="store-grid">${stores.filter((r) => dept === 'unisex' || r.departments.includes(dept)).map((r) => html`<button key=${r.id} class="opt" aria-pressed=${s.stores.includes(r.id) ? 'true' : 'false'} onClick=${() => save({ style: { stores: s.stores.includes(r.id) ? s.stores.filter((x) => x !== r.id) : [...s.stores, r.id] } })}><b>${r.name}</b><span>${{ value: '$', mid: '$$', premium: '$$$' }[r.tier]}</span></button>`)}</div>
+      <${StorePicker} profile=${profile} save=${save} />
       <div class="spread"><div><div class="label">${t('Mix brands in one look')}</div><div class="hint">${t('Off keeps each look to a single store')}</div></div><${Switch} label=${t('Mix brands')} checked=${s.mixStores} onChange=${(v) => save({ style: { mixStores: v } })} /></div>
       <div class="size-row">
         <div class="field"><span class="label">${t('Brands you love')}</span><${TagInput} label=${t('Brands you love')} values=${s.brands.love} placeholder=${t('Type a brand, press Enter')} onChange=${(v) => save({ style: { brands: { love: v } } })} /></div>

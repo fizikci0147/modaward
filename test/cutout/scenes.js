@@ -130,7 +130,7 @@ export const GARMENTS = {
  * One scene.
  * @returns {{img:{data:Uint8ClampedArray,width:number,height:number}, truth:Uint8Array}}
  */
-export function scene({ backdrop, shape, garment, seed = 1, w = 400, h = 400, shadow = true, noise = 4 }) {
+export function scene({ backdrop, shape, garment, seed = 1, w = 400, h = 400, shadow = true, noise = 4, wrinkles = 0.11 }) {
   const back = BACKDROPS[backdrop](seed);
   const inside = SHAPES[shape];
   const g = GARMENTS[garment];
@@ -158,7 +158,7 @@ export function scene({ backdrop, shape, garment, seed = 1, w = 400, h = 400, sh
           const d = dotColor(x, y);
           if (d >= 0 && Math.hypot((x % 22) - 11, (y % 22) - 11) < 6) col = g.dots[d];
         }
-        const shade = 1 + wrinkle(x, y) * 0.11 + fine(x, y) * 0.04;
+        const shade = 1 + wrinkle(x, y) * wrinkles + fine(x, y) * 0.04;
         c = [col[0] * shade, col[1] * shade, col[2] * shade];
         truth[y * w + x] = 1;
       } else {

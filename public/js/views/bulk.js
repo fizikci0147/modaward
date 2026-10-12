@@ -11,6 +11,8 @@ import { cap } from '/js/format.js';
 import { readPhoto } from '/js/photo.js';
 
 const CAT_ORDER = ['top', 'bottom', 'dress', 'outerwear', 'shoes', 'accessory'];
+/** The cut-out to use: the studio-finished one unless the person switched that off. */
+const shownCutout = (it) => (it.useStudio === false && it.plainCutout ? it.plainCutout : it.cutout);
 const MAX_FILES = 40;
 const TAG_BATCH = 6;
 
@@ -96,7 +98,7 @@ export function BulkAddSheet({ onClose, room, vision, onDone, initial }) {
       toast(room != null && room < MAX_FILES ? t('The free plan has room for {n} more pieces, so we took the first {n}.', { n: space }) : t('We took the first {n} photos.', { n: space }), { ms: 5000 });
       files = files.slice(0, space);
     }
-    const blank = (extra) => ({ key: ++uid, status: 'reading', tag: vision ? 'pending' : 'none', type: null, color: '#8a8578', pattern: 'solid', warmth: null, formality: null, waterproof: false, label: '', useCutout: true, ...extra });
+    const blank = (extra) => ({ key: ++uid, status: 'reading', tag: vision ? 'pending' : 'none', type: null, color: '#8a8578', pattern: 'solid', warmth: null, formality: null, waterproof: false, label: '', useCutout: true, useStudio: true, ...extra });
     const fresh = files.map((file) => blank({ file, name: file.name }));
     ref.current = [...ref.current, ...fresh];
     commit();
@@ -109,8 +111,8 @@ export function BulkAddSheet({ onClose, room, vision, onDone, initial }) {
         if (!ref.current.some((x) => x.key === it.key)) continue; // removed meanwhile
         // each piece found in the photo becomes its own card, in the place of the photo
         const made = p.found?.length
-          ? p.found.map((f, i) => blank({ name: '', status: 'ready', original: f.original, cutout: f.cutout, color: f.color || '#8a8578' }))
-          : [{ ...it, status: 'ready', original: p.original, cutout: p.cutout, color: p.color || '#8a8578', file: null }];
+          ? p.found.map((f, i) => blank({ name: '', status: 'ready', original: f.original, cutout: f.cutout, plainCutout: f.plainCutout, color: f.color || '#8a8578' }))
+          : [{ ...it, status: 'ready', original: p.original, cutout: p.cutout, plainCutout: p.plainCutout, color: p.color || '#8a8578', file: null }];
         if (p.found) {
           ref.current = ref.current.flatMap((x) => (x.key === it.key ? made : [x]));
           commit();
@@ -118,7 +120,7 @@ export function BulkAddSheet({ onClose, room, vision, onDone, initial }) {
           if (p.skipped) toast(tn(p.skipped, '{n} piece was too close in colour to the surface and was left out.', '{n} pieces were too close in colour to the surface and were left out.'), { ms: 6500 });
         } else {
           if (wantSplit && p.cutoutReason) toast(t('We couldn’t tell the pieces in that photo apart from the surface, so we kept it as one photo.'), { ms: 6000 });
-          patch(it.key, { status: 'ready', original: p.original, cutout: p.cutout, color: p.color || '#8a8578', file: null });
+          patch(it.key, { status: 'ready', original: p.original, cutout: p.cutout, plainCutout: p.plainCutout, color: p.color || '#8a8578', file: null });
         }
         if (vision) {
           for (const m of made) {
@@ -169,7 +171,7 @@ export function BulkAddSheet({ onClose, room, vision, onDone, initial }) {
           formality: it.formality ?? def.formality,
           waterproof: it.waterproof,
           ...(it.label.trim() ? { name: it.label.trim() } : it.tag === 'ai' && it.name ? { name: it.name } : {}),
-          image: it.useCutout && it.cutout ? it.cutout : it.original
+          image: it.useCutout && it.cutout ? shownCutout(it) : it.original
         });
         upsertGarment(garment);
         added += 1;
@@ -224,7 +226,7 @@ export function BulkAddSheet({ onClose, room, vision, onDone, initial }) {
 
 function BulkCard({ it, vision, onRemove, onType, onPatch }) {
   const cname = colorName(it.color);
-  const src = it.status === 'ready' ? (it.useCutout && it.cutout ? it.cutout : it.original) : null;
+  const src = it.status === 'ready' ? (it.useCutout && it.cutout ? shownCutout(it) : it.original) : null;
   const unsure = it.status === 'ready' && it.tag === 'unsure';
   return html`<div class=${`bulk-card ${it.status === 'ready' && !it.type ? 'need' : ''}`}>
     <div class="bulk-photo">
@@ -249,6 +251,7 @@ function BulkCard({ it, vision, onRemove, onType, onPatch }) {
             </div>
             <input class="input" maxlength="80" placeholder=${it.tag === 'ai' && it.name ? it.name : t('Name (optional)')} aria-label=${t('Name')} value=${it.label} onInput=${(e) => onPatch({ label: e.target.value })} />
             ${it.cutout ? html`<div class="spread"><span class="small">${t('Remove background')}</span><${Switch} label=${t('Remove background')} checked=${it.useCutout} onChange=${(v) => onPatch({ useCutout: v })} /></div>` : null}
+            ${it.cutout && it.plainCutout && it.useCutout ? html`<div class="spread"><span class="small">${t('Studio finish')}</span><${Switch} label=${t('Studio finish')} checked=${it.useStudio !== false} onChange=${(v) => onPatch({ useStudio: v })} /></div>` : null}
             ${it.error ? html`<p class="small" style=${{ color: 'var(--danger)' }}>${it.error}</p>` : null}
           </div>`}
   </div>`;

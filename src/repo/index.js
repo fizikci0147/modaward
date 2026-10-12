@@ -330,6 +330,18 @@ export function createRepos(db) {
     clear: (userId) => db.run('DELETE FROM pair_blocks WHERE user_id = ?', userId).changes
   };
 
+  /** Stores a person added themselves. */
+  const customStores = {
+    list: (userId) => db.all('SELECT id, name, domain, search FROM custom_stores WHERE user_id = ? ORDER BY id', userId),
+    get: (id) => db.get('SELECT id, user_id AS userId, name, domain, search FROM custom_stores WHERE id = ?', id) ?? null,
+    count: (userId) => db.get('SELECT COUNT(*) AS n FROM custom_stores WHERE user_id = ?', userId).n,
+    add(userId, { name, domain, search }) {
+      db.run('INSERT INTO custom_stores (user_id,name,domain,search,created_at) VALUES (?,?,?,?,?)', userId, name, domain, search ?? null, now());
+      return db.get('SELECT id, name, domain, search FROM custom_stores WHERE user_id = ? AND domain = ?', userId, domain);
+    },
+    remove: (userId, id) => db.run('DELETE FROM custom_stores WHERE user_id = ? AND id = ?', userId, id).changes > 0
+  };
+
   const looks = {
     remember(userId, id, payload) {
       db.run('INSERT OR REPLACE INTO looks (id,user_id,payload,created_at) VALUES (?,?,?,?)', id, userId, JSON.stringify(payload), now());
@@ -357,5 +369,5 @@ export function createRepos(db) {
     count: (userId) => db.get('SELECT COUNT(*) AS n FROM saved_looks WHERE user_id = ?', userId).n
   };
 
-  return { users, sessions, resets, profiles, garments, wear, plans, feedback, pairs, looks, saved, db };
+  return { users, sessions, resets, profiles, garments, wear, plans, feedback, pairs, customStores, looks, saved, db };
 }

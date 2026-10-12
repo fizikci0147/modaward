@@ -7,6 +7,7 @@
  */
 import { RETAILERS, retailerById } from './retailers.js';
 import { budgetTier } from '../shared/profile.js';
+import { shopRegion } from './regions.js';
 
 const TIER = { value: 1, mid: 2, premium: 3 };
 
@@ -43,7 +44,7 @@ function styleFit(retailer, archetypes) {
   return den ? num / den : 0.6;
 }
 
-/** @param {object} profile */
+/** @param {object} profile  (with `customStores`, the stores the person added, already as retailers) */
 export function retailerPrefs(profile) {
   const style = profile.style || {};
   return {
@@ -52,20 +53,36 @@ export function retailerPrefs(profile) {
     chosen: new Set(style.stores || []),
     love: new Set((style.brands?.love || []).map(norm)),
     avoid: new Set((style.brands?.avoid || []).map(norm)),
-    archetypes: style.archetypes || {}
+    archetypes: style.archetypes || {},
+    region: shopRegion(profile),
+    custom: profile.customStores || []
   };
 }
 
-/** Retailers the person has not ruled out (department and brand avoids). */
-export function baseRetailers(prefs) {
-  return RETAILERS.filter((r) => !prefs.avoid.has(norm(r.name)) && !prefs.avoid.has(norm(r.id)) && (prefs.dept === 'unisex' || r.departments.includes(prefs.dept)));
+/**
+ * The starter set for a region: the stores marked as defaults there (for the United States, exactly the original fourteen),
+ * or, in a region with few of those, every store that ships there.
+ */
+function regionPool(prefs) {
+  const core = RETAILERS.filter((r) => r.core.includes(prefs.region));
+  if (core.length >= 4) return core;
+  return RETAILERS.filter((r) => r.regions.includes('*') || r.regions.includes(prefs.region));
 }
 
-/** Retailers to prefer: the person's chosen stores when they picked any, otherwise everything allowed. */
+const allowed = (r, prefs) => !prefs.avoid.has(norm(r.name)) && !prefs.avoid.has(norm(r.id)) && (prefs.dept === 'unisex' || r.departments.includes(prefs.dept));
+
+/** The region's starter stores the person has not ruled out (department and brand avoids). */
+export function baseRetailers(prefs) {
+  return regionPool(prefs).filter((r) => allowed(r, prefs));
+}
+
+/**
+ * Retailers to prefer: the stores the person picked (from the whole database, and their own), otherwise the region's
+ * starter set.
+ */
 export function eligibleRetailers(prefs) {
-  const base = baseRetailers(prefs);
-  const chosen = base.filter((r) => prefs.chosen.has(r.id));
-  return chosen.length ? chosen : base;
+  const chosen = [...RETAILERS, ...prefs.custom].filter((r) => prefs.chosen.has(r.id) && allowed(r, prefs));
+  return chosen.length ? chosen : baseRetailers(prefs);
 }
 
 /** Score of one retailer for one piece (higher is better). Returns -Infinity if it cannot supply it. */
