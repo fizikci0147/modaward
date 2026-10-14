@@ -7,7 +7,7 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 ## [Unreleased]
 
 ### Added
-- **modaward.com/phillyproject** serves the Philadelphia building map, a separate static site kept in `sites/phillyproject/`. Nothing in the app links to it, and it is marked `noindex`. It gets its own Content-Security-Policy because the map uses inline scripts and styles; the app's own pages keep the strict one. That policy also lets the map load street photos from Mapillary.
+- **modaward.com/cities** is a page for picking a city map, starting with Philadelphia's building map at /cities/philadelphia (New York is listed as coming soon). The sites live in `sites/cities/`. Nothing in the app links to them, and they are marked `noindex`. They get their own Content-Security-Policy because the maps use inline scripts and styles and load street photos from Mapillary; the app's own pages keep the strict one. The map's first address, /phillyproject, redirects to /cities/philadelphia.
 
 ## [5.18.1] · 2026-10-20
 

@@ -95,14 +95,16 @@ export function createApp(deps) {
   // ── side projects: static sites under their own address, not linked from the app ──
   // They ship their own inline scripts and styles, so they get their own, looser CSP.
   app.use(
-    '/phillyproject',
+    '/cities',
     (_req, res, next) => {
       res.setHeader('Content-Security-Policy', SITE_CSP);
       res.setHeader('X-Robots-Tag', 'noindex');
       next();
     },
-    express.static(path.join(config.sitesDir, 'phillyproject'), { ...staticOpts, index: 'index.html' })
+    express.static(path.join(config.sitesDir, 'cities'), { ...staticOpts, index: 'index.html' })
   );
+  // the Philadelphia map's first address, kept working for links already shared
+  app.use('/phillyproject', (req, res) => res.redirect(301, '/cities/philadelphia' + req.url));
 
   // ── authenticated files and redirects ──
   app.get('/uploads/:name', sessionAuth(repos), uploadsRoute(deps));

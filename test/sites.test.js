@@ -9,23 +9,38 @@ describe('side-project sites', () => {
   });
   after(() => t.close());
 
-  test('/phillyproject serves the Philadelphia map with its own CSP, kept out of search', async () => {
-    const res = await t.client().raw('GET', '/phillyproject/', undefined, { accept: 'text/html' });
+  test('/cities/philadelphia serves the Philadelphia map with its own CSP, kept out of search', async () => {
+    const res = await t.client().raw('GET', '/cities/philadelphia/', undefined, { accept: 'text/html' });
     assert.equal(res.status, 200);
     assert.match(res.text, /<canvas|<script/);
     assert.doesNotMatch(res.text, /ModaWard/);
     assert.match(res.headers.get('content-security-policy'), /script-src 'self' 'unsafe-inline'/);
     assert.match(res.headers.get('content-security-policy'), /connect-src 'self' https:\/\/graph\.mapillary\.com/, 'street photos come from Mapillary');
     assert.equal(res.headers.get('x-robots-tag'), 'noindex');
-    const meta = await t.client().raw('GET', '/phillyproject/meta.json');
+    const meta = await t.client().raw('GET', '/cities/philadelphia/meta.json');
     assert.equal(meta.status, 200);
     assert.ok(JSON.parse(meta.text).N > 0);
   });
 
   test('without the trailing slash it redirects, so the page’s relative files resolve', async () => {
-    const res = await t.client().raw('GET', '/phillyproject', undefined, { accept: 'text/html' });
+    const res = await t.client().raw('GET', '/cities/philadelphia', undefined, { accept: 'text/html' });
     assert.ok([301, 302, 308].includes(res.status), `status ${res.status}`);
-    assert.equal(res.headers.get('location'), '/phillyproject/');
+    assert.equal(res.headers.get('location'), '/cities/philadelphia/');
+  });
+
+  test('/cities lists the city maps', async () => {
+    const res = await t.client().raw('GET', '/cities/', undefined, { accept: 'text/html' });
+    assert.equal(res.status, 200);
+    assert.match(res.text, /href="philadelphia\/"/);
+    assert.equal(res.headers.get('x-robots-tag'), 'noindex');
+  });
+
+  test('the old /phillyproject address redirects to the map, keeping the path', async () => {
+    for (const [from, to] of [['/phillyproject', '/cities/philadelphia/'], ['/phillyproject/', '/cities/philadelphia/'], ['/phillyproject/meta.json', '/cities/philadelphia/meta.json']]) {
+      const res = await t.client().raw('GET', from, undefined, { accept: 'text/html' });
+      assert.equal(res.status, 301, from);
+      assert.equal(res.headers.get('location'), to, from);
+    }
   });
 
   test('the app itself keeps its strict CSP', async () => {
