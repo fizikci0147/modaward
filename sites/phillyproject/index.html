@@ -115,6 +115,11 @@ button{font:inherit;color:inherit}
 .story .photo img{display:block;width:100%;max-height:260px;object-fit:cover}
 .story .photo figcaption{font-size:11.5px;color:var(--ink-2);padding:6px 18px 0;line-height:1.35}
 .story .photo figcaption a{color:inherit}
+.story .photo .yrs{display:flex;gap:6px;overflow-x:auto;padding:8px 18px 2px}
+.story .photo .yrs button{flex:0 0 auto;border:0;padding:0;background:none;cursor:pointer;display:grid;gap:3px;font:inherit;font-size:11px;color:var(--ink-2);text-align:center}
+.story .photo .yrs img{width:58px;height:42px;object-fit:cover;border-radius:4px;outline:2px solid transparent;outline-offset:1px}
+.story .photo .yrs button[aria-pressed="true"] img{outline-color:var(--ink)}
+.story .photo .yrs button[aria-pressed="true"] span{color:var(--ink);font-weight:600}
 .story .top{padding:18px 18px 14px;border-bottom:1px solid var(--rule);position:relative}
 .story .x{position:absolute;top:10px;right:10px;border:0;background:#f3f1ec;width:30px;height:30px;border-radius:50%;cursor:pointer;font-size:16px;line-height:1}
 .story .eyebrow{color:var(--ink-2);font-size:12px;letter-spacing:.06em;text-transform:uppercase;font-weight:600}
@@ -304,7 +309,7 @@ button{font:inherit;color:inherit}
       <li>City of Philadelphia, Office of Property Assessment, property characteristics (OpenDataPhilly)</li>
       <li>City of Philadelphia, building footprints (OpenDataPhilly)</li>
       <li>Overture Maps Foundation, places, base and divisions themes, release 2026-09-23</li>
-      <li>Photos: Wikimedia Commons, matched to buildings through Wikidata; each photo credits its author and licence</li>
+      <li>Photos, recent and historic: Wikimedia Commons, matched to buildings through Wikidata; each photo credits its author and licence</li>
     </ul>
     <p style="margin-top:12px;color:var(--ink-2);font-size:13px">Modelled on the Amsterdam edition at <a href="https://stop-token.com/lab/amsterdam/" target="_blank" rel="noopener">stop-token.com/lab/amsterdam</a>.</p>
   </div>
@@ -947,7 +952,11 @@ function showStory(i) {
   const cu = CURATED[S.origOf[i]] || null;
   const title = (cu && cu.name) || d.name || (S.photos && S.photos[i] && S.photos[i][1]) || (d.addr ? titleCase(d.addr) : 'Unnamed building');
   const ph = S.photos && S.photos[i];
-  let h = ph ? '<figure class="photo"><img src="photos/' + ph[0] + '.webp" alt="' + esc(ph[1] || 'Photo of the building') + '" loading="lazy"><figcaption>Photo: <a href="https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(ph[2].replace(/ /g, '_')) + '" target="_blank" rel="noopener">' + esc([ph[3], ph[4]].filter(Boolean).join(', ') || 'Wikimedia Commons') + '</a></figcaption></figure>' : '';
+  const shots = (S.hist && S.hist[i] || []).map((x) => ['hist/' + x[0] + '.webp', x[2], x[3], x[4], String(x[1])]);
+  if (ph) shots.push(['photos/' + ph[0] + '.webp', ph[2], ph[3], ph[4], 'Recent']);
+  const shotCap = (s) => 'Photo' + (s[4] === 'Recent' ? '' : ', ' + esc(s[4])) + ': <a href="https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(s[1].replace(/ /g, '_')) + '" target="_blank" rel="noopener">' + esc([s[2], s[3]].filter(Boolean).join(', ') || 'Wikimedia Commons') + '</a>';
+  const cur = shots.length - 1;
+  let h = shots.length ? '<figure class="photo"><img id="storyImg" src="' + shots[cur][0] + '" alt="' + esc((ph && ph[1]) || 'Photo of the building') + '" loading="lazy"><figcaption id="storyCap">' + shotCap(shots[cur]) + '</figcaption>' + (shots.length > 1 ? '<div class="yrs" aria-label="Photos from different years">' + shots.map((s, k) => '<button type="button" data-k="' + k + '" aria-pressed="' + (k === cur) + '"><img src="' + s[0] + '" alt="" loading="lazy"><span>' + esc(s[4]) + '</span></button>').join('') + '</div>' : '') + '</figure>' : '';
   h += '<div class="top"><button class="x" id="storyClose" aria-label="Close">×</button><div class="eyebrow">' + esc(d.hood || 'Philadelphia') + '</div><h2>' + esc(title) + '</h2>' + (d.name && d.addr ? '<div class="addr">' + esc(titleCase(d.addr)) + '</div>' : '');
   h += '<div class="bigyr"><b class="num">' + (d.y ? d.y : '—') + '</b>' + (d.era ? '<span class="chip"><i style="background:' + d.era.col + '"></i>' + d.era.label + ' · ' + d.era.name + '</span>' : '<span class="chip">Year not recorded</span>') + '</div></div><div class="body">';
   if (d.fixed) h += '<div class="flag">Year from the documented completion date. The city\'s assessment record lists a different year for this parcel.</div>';
@@ -965,6 +974,11 @@ function showStory(i) {
   }
   h += '<div><h3>Sources</h3><ul class="src"><li>Year built and storeys: City of Philadelphia, Office of Property Assessment</li><li>Footprint and height: City of Philadelphia building footprints</li>' + (cu ? '<li>Story and facts: written for this map from published histories; follow the Wikipedia link to check them</li>' : '') + (d.layers.length || d.name ? '<li>Places and names: Overture Maps Foundation, city footprint names</li>' : '') + '<li>Neighbourhood: Overture Maps divisions</li></ul></div></div>';
   st.innerHTML = h; st.hidden = false;
+  st.querySelectorAll('.yrs button').forEach((b) => b.onclick = () => {
+    const sh = shots[+b.dataset.k];
+    $('#storyImg').src = sh[0]; $('#storyCap').innerHTML = shotCap(sh);
+    st.querySelectorAll('.yrs button').forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+  });
   $('#storyClose').onclick = () => { select(-1); };
 }
 function select(i) {
@@ -1421,6 +1435,7 @@ async function boot() {
   const [addrTxt, names] = await Promise.all([getText('addr.txt.b64.txt'), getJSON('names.json.b64.txt')]);
   S.addr = addrTxt.split('\n'); S.names = names;
   try { S.photos = await getJSON('photos.json'); if (S.sel >= 0) showStory(S.sel); } catch (e) { console.warn('photos', e); }
+  try { S.hist = await getJSON('history.json'); if (S.sel >= 0) showStory(S.sel); } catch (e) { console.warn('history', e); }
 }
 boot().catch((err) => { console.error(err); $('#loadTitle').textContent = "The map couldn't load"; $('#loadNote').textContent = String(err.message || err); });
 })();
