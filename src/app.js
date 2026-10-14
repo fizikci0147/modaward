@@ -13,6 +13,18 @@ import { notFound } from './util/errors.js';
 import { createAssets } from './http/assets.js';
 
 const LONG_CACHE = 'public, max-age=86400';
+const SITE_CSP = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "img-src 'self' data: blob:",
+  "font-src 'self' https://fonts.gstatic.com",
+  "connect-src 'self'",
+  "worker-src 'self' blob:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "frame-ancestors 'none'"
+].join('; ');
 
 /**
  * Build the Express app from explicit dependencies (no globals), so tests can run the whole
@@ -77,6 +89,18 @@ export function createApp(deps) {
         if (rel === 'sw.js') res.setHeader('Service-Worker-Allowed', '/');
       }
     })
+  );
+
+  // ── side projects: static sites under their own address, not linked from the app ──
+  // They ship their own inline scripts and styles, so they get their own, looser CSP.
+  app.use(
+    '/phillyproject',
+    (_req, res, next) => {
+      res.setHeader('Content-Security-Policy', SITE_CSP);
+      res.setHeader('X-Robots-Tag', 'noindex');
+      next();
+    },
+    express.static(path.join(config.sitesDir, 'phillyproject'), { ...staticOpts, index: 'index.html' })
   );
 
   // ── authenticated files and redirects ──
