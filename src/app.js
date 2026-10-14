@@ -17,9 +17,10 @@ const SITE_CSP = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline'",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  "img-src 'self' data: blob:",
+  // street photos: Mapillary's API, which serves its images from Facebook's CDN
+  "img-src 'self' data: blob: https://*.fbcdn.net https://*.mapillary.com",
   "font-src 'self' https://fonts.gstatic.com",
-  "connect-src 'self'",
+  "connect-src 'self' https://graph.mapillary.com",
   "worker-src 'self' blob:",
   "object-src 'none'",
   "base-uri 'self'",

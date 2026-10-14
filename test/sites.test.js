@@ -15,6 +15,7 @@ describe('side-project sites', () => {
     assert.match(res.text, /<canvas|<script/);
     assert.doesNotMatch(res.text, /ModaWard/);
     assert.match(res.headers.get('content-security-policy'), /script-src 'self' 'unsafe-inline'/);
+    assert.match(res.headers.get('content-security-policy'), /connect-src 'self' https:\/\/graph\.mapillary\.com/, 'street photos come from Mapillary');
     assert.equal(res.headers.get('x-robots-tag'), 'noindex');
     const meta = await t.client().raw('GET', '/phillyproject/meta.json');
     assert.equal(meta.status, 200);
