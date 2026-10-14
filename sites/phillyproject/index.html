@@ -952,7 +952,13 @@ function showStory(i) {
   const cu = CURATED[S.origOf[i]] || null;
   const title = (cu && cu.name) || d.name || (S.photos && S.photos[i] && S.photos[i][1]) || (d.addr ? titleCase(d.addr) : 'Unnamed building');
   const ph = S.photos && S.photos[i];
-  const shots = (S.hist && S.hist[i] || []).map((x) => ['hist/' + x[0] + '.webp', x[2], x[3], x[4], String(x[1])]);
+  const hx = S.hist && S.hist[i] || [];
+  const packs = [...new Set(hx.map((x) => x[0] % 8))].filter((k) => !(S.histPack || {})[k]);
+  if (packs.length) {
+    S.histPack = S.histPack || {};
+    Promise.all(packs.map((k) => getJSON('histpack/' + k + '.json').then((d) => { S.histPack[k] = d; }))).then(() => { if (S.sel === i) showStory(i); }).catch((e) => console.warn('history photos', e));
+  }
+  const shots = hx.filter((x) => S.histPack && S.histPack[x[0] % 8]).map((x) => [S.histPack[x[0] % 8][x[0]], x[2], x[3], x[4], String(x[1])]);
   if (ph) shots.push(['photos/' + ph[0] + '.webp', ph[2], ph[3], ph[4], 'Recent']);
   const shotCap = (s) => 'Photo' + (s[4] === 'Recent' ? '' : ', ' + esc(s[4])) + ': <a href="https://commons.wikimedia.org/wiki/File:' + encodeURIComponent(s[1].replace(/ /g, '_')) + '" target="_blank" rel="noopener">' + esc([s[2], s[3]].filter(Boolean).join(', ') || 'Wikimedia Commons') + '</a>';
   const cur = shots.length - 1;
