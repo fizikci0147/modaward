@@ -34,12 +34,10 @@ h1{margin:8px 0 10px;font-weight:900;font-variation-settings:"wdth" 82;font-size
 a.city:hover,a.city:focus-visible{transform:translateY(-2px);box-shadow:0 2px 4px rgba(0,0,0,.08),0 14px 32px rgba(0,0,0,.12)}
 a.city:focus-visible{outline:2px solid var(--brick);outline-offset:3px}
 .city .pic{aspect-ratio:3/2;background:#e4e7e4 center/cover no-repeat}
-.city .pic.soon{display:grid;place-items:center;background:repeating-linear-gradient(135deg,var(--rule) 0 2px,transparent 2px 14px);color:var(--ink-2);font-family:var(--f-mono);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
 .city .txt{padding:16px 18px 18px;display:grid;gap:4px}
 .city h2{margin:0;font-weight:800;font-variation-settings:"wdth" 88;font-size:26px;letter-spacing:-.01em}
 .city p{margin:0;color:var(--ink-2);font-size:14.5px}
 .city .num{font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2);margin-top:6px}
-.city.off{opacity:.75}
 footer{margin-top:40px;font-size:13px;color:var(--ink-2)}
 footer a{color:inherit}
 </style>
@@ -58,14 +56,14 @@ footer a{color:inherit}
         <div class="num">546,049 buildings · 1700s to today</div>
       </div>
     </a>
-    <div class="city off" aria-disabled="true">
-      <div class="pic soon">Coming soon</div>
+    <a class="city" href="nyc/">
+      <div class="pic" style="background-image:url('img/nyc.webp')" role="img" aria-label="3D map of Lower Manhattan looking north to Midtown, buildings coloured by age"></div>
       <div class="txt">
         <h2>New York</h2>
-        <p>Five boroughs, from Dutch-era lanes to the skyscraper boom.</p>
-        <div class="num">About 1.1 million buildings</div>
+        <p>Five boroughs, from a Dutch farmhouse in Flatbush to the supertalls of 57th Street.</p>
+        <div class="num">869,606 buildings · 1652 to today</div>
       </div>
-    </div>
+    </a>
   </div>
   <footer>Inspired by the Amsterdam edition at <a href="https://stop-token.com/lab/amsterdam/" target="_blank" rel="noopener">stop-token.com/lab/amsterdam</a>.</footer>
 </main>
