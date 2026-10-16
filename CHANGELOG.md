@@ -4,6 +4,11 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 > Releases up to 5.2.0 were all uploaded as `modaward-5.0.0.zip`. They are numbered below after the fact so the history is readable; from 5.3.0 on, each zip carries its real version.
 
+## [Unreleased]
+
+### Added (not yet visible in the app)
+- **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next; no templates ship yet, so nothing changes for people using the app.
+
 ## [5.18.1] · 2026-10-20
 
 ### Fixed

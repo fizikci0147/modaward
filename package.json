@@ -17,6 +17,8 @@
     "package": "node scripts/package.mjs",
     "live:check": "node scripts/live-check.mjs",
     "stores:check": "node scripts/check-stores.mjs",
+    "template:add": "node scripts/make-template.mjs",
+    "template:check": "node scripts/check-templates.mjs",
     "doctor": "node scripts/doctor.mjs",
     "mobile:install": "cd mobile && npm install",
     "mobile:ios": "cd mobile && npm run ios",
