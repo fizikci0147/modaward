@@ -80,7 +80,9 @@ export async function createDeps(config, overrides = {}) {
   trends.load();
 
   const codes = createCodes({ db, repos });
-  const deps = { config, db, repos, codes, trends, log, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
+  // what day it is for date checks (tests pin it to the same day as the mock weather)
+  const clock = overrides.clock ?? (() => new Date());
+  const deps = { config, db, repos, codes, trends, log, clock, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
   deps.outfits = createOutfitService({ repos, weather, config, stylist });
   deps.shop = createShopService({ repos, weather, catalog, linker, config, stylist });
   deps.push = overrides.push === undefined ? await createPush(config, db, log, overrides.pushSender) : overrides.push;

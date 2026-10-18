@@ -31,7 +31,7 @@ const tripSchema = object({
 const feedbackSchema = object({ itemIds: ids(), signal: oneOf(Object.keys(SIGNALS)), key: optional(string({ max: 600 }), undefined) });
 const weekSchema = object({ seed: optional(string({ max: 40 }), undefined) });
 
-export function outfitRoutes({ outfits, repos }) {
+export function outfitRoutes({ outfits, repos, clock = () => new Date() }) {
   const r = Router();
   r.use(['/weather', '/outfits', '/plan', '/plans', '/trips'], requireUser);
   const heavy = rateLimit({ windowMs: 60_000, max: 40, key: (req) => req.user.id, message: 'You are asking for outfits very quickly. Take a breath and try again.' });
@@ -68,13 +68,13 @@ export function outfitRoutes({ outfits, repos }) {
   // what each day is for (a dinner, a wedding, a day at the office): it decides the occasion
   const dayParam = (v) => {
     const d = date()(v, 'date');
-    const ago = daysBetween(d, new Date().toISOString().slice(0, 10));
+    const ago = daysBetween(d, clock().toISOString().slice(0, 10));
     if (Number.isNaN(ago) || ago > 7 || ago < -120) throw badRequest('That date is out of range.');
     return d;
   };
   const planSchema = object({ occasion: oneOf(OCCASION_IDS), note: optional(string({ max: 60 }), '') });
   r.get('/plans', (req, res) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = clock().toISOString().slice(0, 10);
     res.json({ plans: repos.plans.list(req.user.id, date()(req.query.from || today, 'from'), date()(req.query.to || '2999-12-31', 'to')) });
   });
   r.put('/plans/:date', (req, res) => {
