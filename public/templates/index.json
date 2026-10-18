@@ -69,6 +69,18 @@
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
       }
+    },
+    {
+      "id": "classic",
+      "type": "waistcoat",
+      "label": "Classic",
+      "widthCm": 50,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Waistcoat.jpg",
+        "author": "Gerry Lynch",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+      }
     }
   ]
 }

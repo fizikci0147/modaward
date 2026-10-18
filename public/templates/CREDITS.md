@@ -15,3 +15,4 @@ them.
 | `shirt/classic-collar.png` | [Man's Off-White Cotton Dress Shirt Belonging to Charles Lindbergh - DPLA - 73ccccda3e1162ece8676944970eeea4 (page 1).jpg](https://commons.wikimedia.org/wiki/File:Man%27s_Off-White_Cotton_Dress_Shirt_Belonging_to_Charles_Lindbergh_-_DPLA_-_73ccccda3e1162ece8676944970eeea4_%28page_1%29.jpg) | Missouri Historical Society, via DPLA | Public domain |
 | `tee/crew.png` | [T-shirt2.jpg](https://commons.wikimedia.org/wiki/File:T-shirt2.jpg) | Elkagye | Public domain |
 | `trousers/straight.png` | [Chino pants.jpg](https://commons.wikimedia.org/wiki/File:Chino_pants.jpg) | Kuha455405 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| `waistcoat/classic.png` | [Waistcoat.jpg](https://commons.wikimedia.org/wiki/File:Waistcoat.jpg) | Gerry Lynch | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
