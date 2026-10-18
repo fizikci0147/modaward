@@ -3,6 +3,7 @@
  * Turn a photograph of a garment into a catalogue-look template (see docs/TEMPLATES.md).
  *
  *   npm run template:add -- photo.jpg --type shirt --id classic-collar --label "Classic collar" [--width 58] [--tags long-sleeve,button]
+ *     [--source https://commons.wikimedia.org/wiki/File:... --author "Jane Doe" --license "CC0" --license-url https://...]
  *
  * It removes the backdrop (unless the photo already has a transparent one), straightens and crops, takes the colour out so
  * only the light and shadow stay, and writes public/templates/<type>/<id>.png and the entry in public/templates/index.json.
@@ -28,6 +29,9 @@ const opt = (name) => {
   return i >= 0 ? args[i + 1] : undefined;
 };
 const entry = { id: opt('id'), type: opt('type'), label: opt('label'), widthCm: Number(opt('width') ?? 55), ...(opt('tags') ? { tags: opt('tags').split(',') } : {}) };
+if (opt('source') || opt('author') || opt('license')) {
+  entry.credit = { source: opt('source'), author: opt('author'), license: opt('license'), ...(opt('license-url') ? { licenseUrl: opt('license-url') } : {}) };
+}
 const fail = (msg) => {
   console.error(msg);
   process.exit(1);

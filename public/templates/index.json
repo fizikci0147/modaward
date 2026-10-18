@@ -1,1 +1,110 @@
-{ "templates": [] }
+{
+  "templates": [
+    {
+      "id": "single-breasted",
+      "type": "blazer",
+      "label": "Single-breasted",
+      "widthCm": 58,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Navy_Blazer_%2851011161195%29.jpg",
+        "author": "ajay_suresh",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+      }
+    },
+    {
+      "id": "straight",
+      "type": "chinos",
+      "label": "Straight",
+      "widthCm": 40,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Chino_pants.jpg",
+        "author": "Kuha455405",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+      }
+    },
+    {
+      "id": "pleated",
+      "type": "dress",
+      "label": "Pleated day dress",
+      "widthCm": 54,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Grey_Linen_Pleated_Dress_designed_by_Sybil_Connolly_-_Full_Length_Front.jpg",
+        "author": "Hunt Museum and Inés Rivilla López",
+        "license": "CC BY-SA 4.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+      }
+    },
+    {
+      "id": "classic-collar",
+      "type": "shirt",
+      "label": "Classic collar",
+      "widthCm": 58,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Man%27s_Off-White_Cotton_Dress_Shirt_Belonging_to_Charles_Lindbergh_-_DPLA_-_73ccccda3e1162ece8676944970eeea4_%28page_1%29.jpg",
+        "author": "Missouri Historical Society, via DPLA",
+        "license": "Public domain"
+      }
+    },
+    {
+      "id": "crew",
+      "type": "tee",
+      "label": "Crew neck",
+      "widthCm": 52,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:T-shirt2.jpg",
+        "author": "Elkagye",
+        "license": "Public domain"
+      }
+    },
+    {
+      "id": "straight",
+      "type": "trousers",
+      "label": "Straight leg",
+      "widthCm": 42,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Chino_pants.jpg",
+        "author": "Kuha455405",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+      }
+    },
+    {
+      "id": "classic",
+      "type": "waistcoat",
+      "label": "Classic",
+      "widthCm": 50,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Waistcoat.jpg",
+        "author": "Gerry Lynch",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+      }
+    },
+    {
+      "id": "v-neck",
+      "type": "vest",
+      "label": "V-neck",
+      "widthCm": 50,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:De_ridder_van_het_geheugen,_kostuum_event_6_Inspecteur,_bruine_mouwloze_v-hals_trui,_objectnr_85937-11.C.JPG",
+        "author": "Museum Rotterdam (object by Jeanne van Heeswijk)",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+      }
+    },
+    {
+      "id": "quilted",
+      "type": "gilet",
+      "label": "Quilted",
+      "widthCm": 56,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Bodywarmer1272.JPG",
+        "author": "Algont at Dutch Wikipedia",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+      }
+    }
+  ]
+}

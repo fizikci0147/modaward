@@ -6,8 +6,12 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+### Added
+- **Five more kinds of clothing**: sweater vest, waistcoat, turtleneck, overshirt and puffer vest (gilet). Each has its own drawing, its translations in all seven languages, shop searches and product-feed matching. A sweater vest goes over a tee, polo, shirt, blouse or turtleneck and a waistcoat over a shirt or blouse, on days cool enough for a layer; the overshirt and puffer vest are light outer layers.
+
 ### Added (not yet visible in the app)
-- **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next; no templates ship yet, so nothing changes for people using the app.
+- **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next, so nothing changes for people using the app yet.
+- **The first real garment photos for the catalogue look**: a crew-neck tee, a button-up shirt, a pleated day dress, straight chinos and trousers, a single-breasted blazer, a classic waistcoat, a V-neck sweater vest and a quilted puffer vest, made from freely licensed Wikimedia Commons photographs (public domain, CC BY and CC BY-SA). Each template records its source, author and licence in `public/templates/index.json` and `public/templates/CREDITS.md`; `npm run template:add` takes `--source`, `--author` and `--license`, `template:check` lists any template without them, and `npm run template:preview` draws every template in several colours and fabrics to check them by eye.
 
 ## [5.18.1] · 2026-10-20
 
