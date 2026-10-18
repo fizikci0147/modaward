@@ -34,7 +34,7 @@ const MAX_SHOES = 8;
 const MAX_OUTERS = 7;
 const MAX_BASES = 8;
 const MAX_MIDS = 8;
-const LAYER_BASES = new Set(['tee', 'longsleeve', 'polo', 'shirt', 'blouse', 'sportstop']);
+const LAYER_BASES = new Set(['tee', 'longsleeve', 'polo', 'shirt', 'blouse', 'turtleneck', 'sportstop']);
 
 /** Normalise raw garments from storage or the shop catalogue. */
 export function prepareGarments(list) {

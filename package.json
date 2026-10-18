@@ -1,6 +1,6 @@
 {
   "name": "modaward",
-  "version": "5.18.1",
+  "version": "5.19.0",
   "description": "ModaWard — weather-aware outfit planner with a digital closet and multi-retailer style recommendations.",
   "private": true,
   "main": "server.js",
@@ -19,6 +19,7 @@
     "stores:check": "node scripts/check-stores.mjs",
     "template:add": "node scripts/make-template.mjs",
     "template:check": "node scripts/check-templates.mjs",
+    "template:preview": "node scripts/preview-templates.mjs",
     "doctor": "node scripts/doctor.mjs",
     "mobile:install": "cd mobile && npm install",
     "mobile:ios": "cd mobile && npm run ios",

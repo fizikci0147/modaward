@@ -39,6 +39,7 @@ for (const e of index.templates ?? []) {
     if (info.bytes > 1_200_000) problems.push(`${e.type}/${e.id}: ${(info.bytes / 1e6).toFixed(1)} MB is heavy for a phone`);
   }
 }
+const uncredited = (index.templates ?? []).filter((e) => !e.credit).map((e) => `${e.type}/${e.id}`);
 const known = new Set((index.templates ?? []).map((e) => path.join(e.type, `${e.id}.png`)));
 if (fs.existsSync(dir)) {
   for (const t of fs.readdirSync(dir, { withFileTypes: true }).filter((d) => d.isDirectory())) {
@@ -53,6 +54,7 @@ for (const cat of CATEGORY_IDS) {
   console.log(`\n${CATEGORIES[cat].label}`);
   for (const t of mine) console.log(`  ${t.count ? '✓' : '·'} ${t.id.padEnd(16)} ${t.count ? `${t.count} template${t.count > 1 ? 's' : ''}` : 'none yet'}`);
 }
+if (uncredited.length) console.warn(`\nNo credit recorded (where the photo came from and its licence): ${uncredited.join(', ')}. Add --source, --author and --license when adding a template.`);
 if (problems.length) {
   console.error(`\n${problems.length} problem${problems.length > 1 ? 's' : ''}:\n - ${problems.join('\n - ')}`);
   process.exit(1);

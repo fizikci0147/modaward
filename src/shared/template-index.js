@@ -7,7 +7,12 @@ import { TYPE_IDS, TYPES } from './taxonomy.js';
 export const TEMPLATE_DIR = 'templates';
 export const SLUG_RE = /^[a-z][a-z0-9-]{1,40}$/;
 
-/** @typedef {{id: string, type: string, label: string, widthCm: number, tags?: string[]}} TemplateEntry */
+/**
+ * `credit` says where the photograph came from, so its licence can be honoured and checked: the source page, who made
+ * it and the licence (for your own photos, author and licence can simply say so).
+ * @typedef {{source: string, author: string, license: string, licenseUrl?: string}} TemplateCredit
+ * @typedef {{id: string, type: string, label: string, widthCm: number, tags?: string[], credit?: TemplateCredit}} TemplateEntry
+ */
 
 export const templateFile = (e) => `${TEMPLATE_DIR}/${e.type}/${e.id}.png`;
 
@@ -20,6 +25,22 @@ export function entryProblems(e) {
   if (typeof e.label !== 'string' || e.label.length < 2 || e.label.length > 40) p.push('label must be 2 to 40 characters');
   if (!Number.isFinite(e.widthCm) || e.widthCm < 15 || e.widthCm > 160) p.push('widthCm must be between 15 and 160');
   if (e.tags !== undefined && (!Array.isArray(e.tags) || e.tags.some((t) => typeof t !== 'string' || t.length > 24))) p.push('tags must be short words');
+  if (e.credit !== undefined) p.push(...creditProblems(e.credit));
+  return p;
+}
+
+const text = (v, max = 200) => typeof v === 'string' && v.trim().length >= 2 && v.length <= max;
+const link = (v) => typeof v === 'string' && /^https:\/\/\S+$/.test(v);
+
+/** Problems with a template's credit: where the photograph came from, who made it and under which licence. */
+export function creditProblems(c) {
+  if (!c || typeof c !== 'object') return ['credit must say source, author and license'];
+  const p = [];
+  if (!text(c.source, 400)) p.push('credit.source must say where the photo came from (a web address, or "own photo")');
+  else if (/^http/i.test(c.source) && !link(c.source)) p.push('credit.source must be an https address');
+  if (!text(c.author)) p.push('credit.author must name who made the photo');
+  if (!text(c.license, 80)) p.push('credit.license must name the licence');
+  if (c.licenseUrl !== undefined && !link(c.licenseUrl)) p.push('credit.licenseUrl must be an https address');
   return p;
 }
 
