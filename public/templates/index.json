@@ -1,6 +1,18 @@
 {
   "templates": [
     {
+      "id": "single-breasted",
+      "type": "blazer",
+      "label": "Single-breasted",
+      "widthCm": 58,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Navy_Blazer_%2851011161195%29.jpg",
+        "author": "ajay_suresh",
+        "license": "CC BY 2.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by/2.0/"
+      }
+    },
+    {
       "id": "straight",
       "type": "chinos",
       "label": "Straight",
