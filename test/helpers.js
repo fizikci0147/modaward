@@ -16,6 +16,7 @@ export async function startTestServer({ env = {}, overrides = {} } = {}) {
   const { app, deps } = await createServer(config, {
     log,
     dbFile: ':memory:',
+    clock,
     weatherProvider: mockProvider({ clock }),
     ...overrides
   });
