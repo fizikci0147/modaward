@@ -6,6 +6,9 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+### Fixed
+- **The app starts on older browsers again.** Language detection used `Object.hasOwn`, which Safari before 15.4 (and Chrome before 93) does not have, so the app crashed at startup there with "Object.hasOwn is not a function". It now uses a check every browser supports; a test covers it.
+
 ### Added (not yet visible in the app)
 - **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next; no templates ship yet, so nothing changes for people using the app.
 

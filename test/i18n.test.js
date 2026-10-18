@@ -24,6 +24,14 @@ describe('translation core', () => {
     assert.equal(pickLocale(['ja']), 'en');
     assert.equal(pickLocale([]), 'en');
     assert.ok(isLocale('it') && !isLocale('xx') && !isLocale('__proto__'));
+    const hasOwn = Object.getOwnPropertyDescriptor(Object, 'hasOwn');
+    try {
+      delete Object.hasOwn; // older browsers (Safari < 15.4) have no Object.hasOwn
+      assert.ok(isLocale('tr') && !isLocale('toString'));
+      assert.equal(pickLocale(['de-DE']), 'de');
+    } finally {
+      Object.defineProperty(Object, 'hasOwn', hasOwn);
+    }
   });
 
   test('every offered language has a name and a loaded dictionary', () => {
