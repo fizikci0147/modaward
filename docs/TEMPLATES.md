@@ -7,8 +7,9 @@ laid over that map in the browser, so the cloth still looks like cloth. There is
 network call.
 
 The pictures have to be real photographs that you have the right to use. The app ships with a first set made from
-freely licensed photographs on Wikimedia Commons: a crew-neck tee, a button-up shirt, a pleated day dress, and straight
-chinos and trousers (see `public/templates/CREDITS.md` for each source, author and licence). Until a garment type has a
+freely licensed photographs on Wikimedia Commons: a crew-neck tee, a button-up shirt, a pleated day dress, straight
+chinos and trousers, a single-breasted blazer, a classic waistcoat, a
+V-neck sweater vest and a quilted puffer vest (see `public/templates/CREDITS.md` for each source, author and licence). Until a garment type has a
 template, the *Catalogue look* option does not appear for it (nothing is faked). Every template you add makes the option
 appear for that type straight away.
 

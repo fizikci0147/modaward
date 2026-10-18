@@ -16,3 +16,5 @@ them.
 | `tee/crew.png` | [T-shirt2.jpg](https://commons.wikimedia.org/wiki/File:T-shirt2.jpg) | Elkagye | Public domain |
 | `trousers/straight.png` | [Chino pants.jpg](https://commons.wikimedia.org/wiki/File:Chino_pants.jpg) | Kuha455405 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
 | `waistcoat/classic.png` | [Waistcoat.jpg](https://commons.wikimedia.org/wiki/File:Waistcoat.jpg) | Gerry Lynch | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| `vest/v-neck.png` | [De ridder van het geheugen, kostuum event 6 Inspecteur, bruine mouwloze v-hals trui, objectnr 85937-11.C.JPG](https://commons.wikimedia.org/wiki/File:De_ridder_van_het_geheugen,_kostuum_event_6_Inspecteur,_bruine_mouwloze_v-hals_trui,_objectnr_85937-11.C.JPG) | Museum Rotterdam (object by Jeanne van Heeswijk) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |
+| `gilet/quilted.png` | [Bodywarmer1272.JPG](https://commons.wikimedia.org/wiki/File:Bodywarmer1272.JPG) | Algont at Dutch Wikipedia | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/) |

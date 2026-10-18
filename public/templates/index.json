@@ -81,6 +81,30 @@
         "license": "CC BY-SA 3.0",
         "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
       }
+    },
+    {
+      "id": "v-neck",
+      "type": "vest",
+      "label": "V-neck",
+      "widthCm": 50,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:De_ridder_van_het_geheugen,_kostuum_event_6_Inspecteur,_bruine_mouwloze_v-hals_trui,_objectnr_85937-11.C.JPG",
+        "author": "Museum Rotterdam (object by Jeanne van Heeswijk)",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+      }
+    },
+    {
+      "id": "quilted",
+      "type": "gilet",
+      "label": "Quilted",
+      "widthCm": 56,
+      "credit": {
+        "source": "https://commons.wikimedia.org/wiki/File:Bodywarmer1272.JPG",
+        "author": "Algont at Dutch Wikipedia",
+        "license": "CC BY-SA 3.0",
+        "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/"
+      }
     }
   ]
 }
