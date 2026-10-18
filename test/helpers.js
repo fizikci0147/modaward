@@ -12,7 +12,8 @@ export async function startTestServer({ env = {}, overrides = {} } = {}) {
   const config = loadConfig({ DATA_DIR: dataDir, NODE_ENV: 'test', WEATHER_PROVIDER: 'mock', PRICING: 'paid', SIGNUP_PRO_DAYS: '0', AUTH_RATE_MAX: '10000', API_RATE_MAX: '100000', ...env }, { dotenv: false });
   const logs = [];
   const log = createLogger({ level: 'warn', sink: (l) => logs.push(JSON.parse(l)) });
-  const clock = () => new Date('2026-10-06T10:00:00Z');
+  // today at 10:00 UTC: a fixed date drifts out of the ranges the routes check against the real clock
+  const clock = () => new Date(`${new Date().toISOString().slice(0, 10)}T10:00:00Z`);
   const { app, deps } = await createServer(config, {
     log,
     dbFile: ':memory:',
