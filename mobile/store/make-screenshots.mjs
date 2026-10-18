@@ -41,6 +41,7 @@ const UA = {
 
 const GREEN = '#1f3d33';
 const CREAM = '#f6f3ed';
+const PAGE = '#ffffff'; // the app's light background, behind the drawn status bar
 const INK = '#161511';
 
 const SCREENS = [
@@ -176,7 +177,7 @@ const chrome = (d) => {
   const dark = false;
   const fg = dark ? '#fff' : '#111';
   const ios = d.os === 'ios';
-  const bar = `<div style="position:fixed;left:0;right:0;top:0;height:${d.top}px;z-index:99999;pointer-events:none;background:${CREAM};display:flex;align-items:${d.kind === 'phone' ? 'flex-end' : 'center'};justify-content:space-between;padding:0 ${d.kind === 'phone' ? 28 : 26}px ${d.kind === 'phone' ? 8 : 0}px;font:600 ${ios ? 16 : 13}px/1 -apple-system,'Segoe UI',Roboto,sans-serif;color:${fg}">
+  const bar = `<div style="position:fixed;left:0;right:0;top:0;height:${d.top}px;z-index:99999;pointer-events:none;background:${PAGE};display:flex;align-items:${d.kind === 'phone' ? 'flex-end' : 'center'};justify-content:space-between;padding:0 ${d.kind === 'phone' ? 28 : 26}px ${d.kind === 'phone' ? 8 : 0}px;font:600 ${ios ? 16 : 13}px/1 -apple-system,'Segoe UI',Roboto,sans-serif;color:${fg}">
     <span>${ios ? '9:41' : '9:41'}</span>
     <span style="display:flex;gap:6px;align-items:center">
       <svg width="18" height="12" viewBox="0 0 18 12" fill="${fg}"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5.5" width="3" height="6.5" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>

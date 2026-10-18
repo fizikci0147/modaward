@@ -9,10 +9,10 @@
 @font-face { font-family: 'Geist'; src: url('/fonts/geist-latin-ext.woff2') format('woff2-variations'), url('/fonts/geist-latin-ext.woff2') format('woff2'); font-weight: 100 900; font-style: normal; font-display: swap; unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
 
 :root {
-  --bg: #f6f3ed;
-  --bg-2: #efeae1;
-  --surface: #fffdf9;
-  --surface-2: #f3efe7;
+  --bg: #ffffff;
+  --bg-2: #f4f4f3;
+  --surface: #ffffff;
+  --surface-2: #f5f5f4;
   --ink: #161511;
   --ink-2: #57534a;
   --ink-3: #68645a;
@@ -20,7 +20,7 @@
   --line-2: rgba(22, 21, 17, 0.2);
   --accent: #1f3d33;
   --accent-2: #2b5547;
-  --accent-ink: #f6f3ed;
+  --accent-ink: #ffffff;
   --clay: #b9502f;
   --clay-soft: #f3dfd5;
   --sky: #2e5f8a;
@@ -28,7 +28,7 @@
   --ok: #256a41;
   --warn: #8c5409;
   --danger: #b3392b;
-  --board: #ece7dc;
+  --board: #ffffff;
   --radius: 20px;
   --radius-m: 14px;
   --radius-s: 10px;
@@ -505,7 +505,7 @@ ul { margin: 0; padding: 0; list-style: none; }
   .auth-side { display: flex; flex-direction: column; justify-content: space-between; }
 }
 .auth-side .boards { display: flex; justify-content: center; align-items: center; gap: 18px; padding: 10px 0; }
-.auth-side .boards > div { width: min(220px, 24vw); background: #f1ede3; border-radius: 22px; padding: 14px; box-shadow: 0 24px 50px -22px rgba(0, 0, 0, 0.55); }
+.auth-side .boards > div { width: min(220px, 24vw); background: #ffffff; border-radius: 22px; padding: 14px; box-shadow: 0 24px 50px -22px rgba(0, 0, 0, 0.55); }
 .auth-side .boards > div:nth-child(1) { transform: rotate(-3deg) translateY(-8px); }
 .auth-side .boards > div:nth-child(2) { transform: rotate(2.5deg) translateY(14px); }
 .auth-side .boards > div > svg { width: 100%; height: auto; }

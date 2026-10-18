@@ -6,6 +6,9 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+### Changed
+- **A white background for the light theme.** Pages, cards, outfit boards and closet tiles are now white instead of cream, so clothes (especially beige, camel, khaki and grey pieces) stand out better. The browser bar colour, the installed-app colours, the shared outfit picture and the reminder email follow. Dark mode is unchanged.
+
 ### Added (not yet visible in the app)
 - **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next; no templates ship yet, so nothing changes for people using the app.
 
