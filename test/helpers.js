@@ -15,6 +15,7 @@ export async function startTestServer({ env = {}, overrides = {} } = {}) {
   const clock = () => new Date('2026-10-06T10:00:00Z');
   const { app, deps } = await createServer(config, {
     log,
+    clock,
     dbFile: ':memory:',
     weatherProvider: mockProvider({ clock }),
     ...overrides
