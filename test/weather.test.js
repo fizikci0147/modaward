@@ -93,8 +93,21 @@ describe('Open-Meteo provider', () => {
       calls += 1;
       return calls === 1 ? { ok: false, status: 503 } : { ok: true, status: 200, json: async () => openMeteoFixture() };
     };
-    await openMeteoProvider({ fetch }).forecast({ lat: 1, lon: 2 });
+    const waits = [];
+    await openMeteoProvider({ fetch, wait: async (ms) => waits.push(ms) }).forecast({ lat: 1, lon: 2 });
     assert.equal(calls, 2);
+    assert.deepEqual(waits, [500]);
+  });
+
+  test('backs off between retries and reports a provider outage plainly', async () => {
+    let calls = 0;
+    const waits = [];
+    const p = openMeteoProvider({ fetch: async () => (calls++, { ok: false, status: 503 }), wait: async (ms) => waits.push(ms) });
+    const r = await p.probe();
+    assert.equal(calls, 3);
+    assert.deepEqual(waits, [500, 1500]);
+    assert.equal(r.ok, false);
+    assert.match(r.error, /Open-Meteo answered 503 \(busy or down for maintenance\) after 3 tries/);
   });
 
   test('geocoding maps results to display names', async () => {
@@ -174,7 +187,7 @@ describe('weather failure reporting', () => {
     assert.doesNotMatch(d, /SECRET|open-meteo\.com/);
   });
   test('probe reports the exact failure instead of throwing', async () => {
-    const p = openMeteoProvider({ fetch: async () => { throw new TypeError('fetch failed', { cause: Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' }) }); } });
+    const p = openMeteoProvider({ wait: async () => {}, fetch: async () => { throw new TypeError('fetch failed', { cause: Object.assign(new Error('getaddrinfo ENOTFOUND'), { code: 'ENOTFOUND' }) }); } });
     const r = await p.probe();
     assert.equal(r.ok, false);
     assert.match(r.error, /ENOTFOUND/);

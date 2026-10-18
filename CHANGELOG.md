@@ -9,6 +9,9 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 ### Added (not yet visible in the app)
 - **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next; no templates ship yet, so nothing changes for people using the app.
 
+### Fixed
+- **Weather rides out short Open-Meteo outages.** When the forecast service answered 503, the app retried twice within milliseconds, so a blip of a second or two still ended in "Weather is temporarily unavailable" (or an offline copy). Retries now wait half a second, then a second and a half. The admin System check's "Last weather error" now reads "Open-Meteo answered 503 (busy or down for maintenance) after 3 tries" instead of "Error: upstream 503".
+
 ## [5.18.1] · 2026-10-20
 
 ### Fixed
