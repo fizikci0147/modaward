@@ -93,6 +93,9 @@ const T = [
   { id: 'blouse', label: L('Blouse'), category: 'top', warmth: 1, formality: 3.5, layer: 'base', styles: ['polished', 'classic', 'boho'], art: 'blouse', search: 'blouse' },
   { id: 'sweater', label: L('Sweater'), category: 'top', warmth: 4, formality: 3, layer: 'either', styles: ['classic', 'casual', 'minimal'], art: 'sweater', search: 'crewneck sweater' },
   { id: 'cardigan', label: L('Cardigan'), category: 'top', warmth: 3, formality: 3, layer: 'mid', styles: ['classic', 'boho', 'minimal'], art: 'cardigan', search: 'cardigan' },
+  { id: 'vest', label: L('Sweater vest'), category: 'top', warmth: 2, formality: 3, layer: 'mid', styles: ['classic', 'minimal', 'street'], art: 'vest', search: 'sweater vest' },
+  { id: 'waistcoat', label: L('Waistcoat'), category: 'top', warmth: 1.5, formality: 4.5, layer: 'mid', styles: ['polished', 'classic'], art: 'waistcoat', search: 'tailored waistcoat' },
+  { id: 'turtleneck', label: L('Turtleneck'), category: 'top', warmth: 3.5, formality: 3.5, layer: 'base', styles: ['minimal', 'classic', 'polished'], art: 'turtleneck', search: 'turtleneck sweater' },
   { id: 'hoodie', label: L('Hoodie'), category: 'top', warmth: 3, formality: 1.5, layer: 'either', styles: ['casual', 'street', 'sporty'], art: 'hoodie', search: 'hoodie' },
   { id: 'sportstop', label: L('Athletic top'), category: 'top', warmth: 1, formality: 1, layer: 'base', styles: ['sporty'], art: 'tee', search: 'performance t-shirt' },
 
@@ -123,6 +126,8 @@ const T = [
   { id: 'wool-coat', label: L('Wool coat'), category: 'outerwear', warmth: 4, formality: 4.5, styles: ['classic', 'polished', 'minimal'], art: 'coat', search: 'wool coat' },
   { id: 'puffer', label: L('Puffer jacket'), category: 'outerwear', warmth: 4.5, formality: 2, styles: ['casual', 'street', 'sporty'], art: 'puffer', search: 'puffer jacket' },
   { id: 'parka', label: L('Winter parka'), category: 'outerwear', warmth: 5, formality: 2, water: true, styles: ['casual', 'sporty'], art: 'puffer', search: 'insulated waterproof parka' },
+  { id: 'overshirt', label: L('Overshirt'), category: 'outerwear', warmth: 2.5, formality: 2.5, styles: ['casual', 'street', 'minimal'], art: 'overshirt', search: 'overshirt' },
+  { id: 'gilet', label: L('Puffer vest'), category: 'outerwear', warmth: 3, formality: 2, styles: ['casual', 'sporty', 'street'], art: 'gilet', search: 'puffer vest' },
   { id: 'fleece', label: L('Fleece'), category: 'outerwear', warmth: 3, formality: 1.5, styles: ['sporty', 'casual'], art: 'jacket', search: 'fleece jacket' },
 
   // ── Shoes ─────────────────────────────────────────────────────────────

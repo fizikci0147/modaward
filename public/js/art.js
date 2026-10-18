@@ -82,6 +82,31 @@ A.cardigan = {
     [30, 42, 54, 66, 78].map((y) => `<circle cx="54" cy="${y}" r="1.4" fill="${c.dark}" opacity=".85"/>`).join('') +
     `<path d="M24 80 H48 M52 80 H76" stroke="${c.line}" stroke-width=".7" opacity=".3"/><path d="M94 70 L84 74 M6 70 L16 74" stroke="${c.dark}" stroke-width="3" opacity=".3"/>`
 };
+A.vest = {
+  half: ['M50 31 L60 9 L67 10 Q68 30 76 40 L76 88 L50 88 Z'],
+  detail: (c) =>
+    `<path d="M40 9 L50 31 L60 9" fill="none" stroke="${c.dark}" stroke-width="3" opacity=".45"/>` +
+    `<path d="M67 10 Q68 30 76 40 M33 10 Q32 30 24 40" fill="none" stroke="${c.dark}" stroke-width="2.4" opacity=".4"/>` +
+    `<path d="M24 80 H76 V88 H24Z" fill="${c.dark}" opacity=".16"/>` +
+    [28, 34, 40, 46, 52, 58, 64, 70].map((x) => `<path d="M${x} 80 V88" stroke="${c.line}" stroke-width=".6" opacity=".35"/>`).join('') +
+    `<path d="M50 44 L40 54 L50 64 L60 54 Z M50 64 L40 74 M50 64 L60 74" fill="none" stroke="${c.line}" stroke-width=".7" opacity=".3"/>`
+};
+A.waistcoat = {
+  half: ['M51 42 L59 8 L66 9 Q67 28 76 38 L76 84 L60 92 L51 84 Z'],
+  detail: (c) =>
+    `<path d="M41 8 L50 42 L59 8 Z" fill="#f4f1ea"/><path d="M44 9 L50 17 L56 9" fill="none" stroke="#c9c4b8" stroke-width=".8"/>` +
+    `<path d="M51 42 V84 M49 42 V84" stroke="${c.line}" stroke-width=".9" opacity=".6"/>` +
+    [50, 60, 70, 80].map((y) => `<circle cx="53.5" cy="${y}" r="1.3" fill="${c.dark}"/>`).join('') +
+    `<path d="M62 52 H71 M38 52 H29 M63 66 H72 M37 66 H28" stroke="${c.line}" stroke-width="1" opacity=".55"/>`
+};
+A.turtleneck = {
+  half: ['M50 16 L60 15 L80 20 L94 70 L84 74 L76 47 L76 88 L50 88 Z', 'M50 2 L60 2 L61 17 L50 18 Z'],
+  detail: (c) =>
+    `<path d="M39 2 H61 V17 Q50 19 39 17 Z" fill="${c.dark}" opacity=".18"/>` +
+    [42, 46, 50, 54, 58].map((x) => `<path d="M${x} 3 V17" stroke="${c.line}" stroke-width=".6" opacity=".35"/>`).join('') +
+    `<path d="M24 80 H76 V88 H24Z" fill="${c.dark}" opacity=".16"/>` +
+    `<path d="M94 70 L84 74 L82 69 L92 65Z" fill="${c.dark}" opacity=".25"/><path d="M6 70 L16 74 L18 69 L8 65Z" fill="${c.dark}" opacity=".25"/>`
+};
 A.hoodie = {
   back: ['M33 14 Q50 -8 67 14 Q50 26 33 14Z'],
   half: ['M50 14 L62 12 L80 19 L94 70 L84 74 L76 48 L76 88 L50 88 Z'],
@@ -172,6 +197,25 @@ A.puffer = {
     `<path d="M40 5 H60 V16 H40Z" fill="${c.light}" opacity=".7" stroke="${c.line}" stroke-width=".8"/>` +
     [34, 48, 62, 76].map((y) => `<path d="M22 ${y} Q50 ${y + 4} 78 ${y}" stroke="${c.line}" stroke-width=".9" fill="none" opacity=".5"/>`).join('') +
     `<path d="M50 16 V90" stroke="${c.light}" stroke-width="1.6" opacity=".7"/><path d="M89 40 L84 56 M11 40 L16 56 M92 55 L86 66 M8 55 L14 66" stroke="${c.line}" stroke-width=".8" opacity=".45"/>`
+};
+
+A.overshirt = {
+  half: ['M51 13 L61 11 L81 19 L95 72 L85 76 L77 48 L77 90 L51 90 Z'],
+  detail: (c) =>
+    `<path d="M37 9 L50 26 L63 9 L68 15 L50 33 L32 15 Z" fill="${c.light}" opacity=".85"/><path d="M37 9 L50 26 L63 9 M32 15 L50 33 L68 15" fill="none" stroke="${c.line}" stroke-width=".9" opacity=".55"/>` +
+    `<path d="M51 26 V90" stroke="${c.line}" stroke-width="1" opacity=".6"/>` +
+    [38, 52, 66, 80].map((y) => `<circle cx="53.5" cy="${y}" r="1.5" fill="${c.dark}"/>`).join('') +
+    `<path d="M59 34 H71 V48 H59Z M29 34 H41 V48 H29Z" fill="none" stroke="${c.line}" stroke-width=".9" opacity=".55"/><path d="M59 34 H71 L65 38Z M29 34 H41 L35 38Z" fill="${c.dark}" opacity=".3"/>` +
+    `<path d="M95 72 L85 76 M5 72 L15 76" stroke="${c.dark}" stroke-width="3" opacity=".3"/>`
+};
+A.gilet = {
+  half: ['M50 14 L62 12 Q66 30 76 38 L79 44 L79 86 Q70 90 50 90 Z'],
+  detail: (c) =>
+    `<path d="M40 5 H60 V16 H40Z" fill="${c.light}" opacity=".7" stroke="${c.line}" stroke-width=".8"/>` +
+    `<path d="M32 32 Q50 36 68 32" stroke="${c.line}" stroke-width=".9" fill="none" opacity=".5"/>` +
+    [48, 62, 76].map((y) => `<path d="M21 ${y} Q50 ${y + 4} 79 ${y}" stroke="${c.line}" stroke-width=".9" fill="none" opacity=".5"/>`).join('') +
+    `<path d="M50 16 V90" stroke="${c.light}" stroke-width="1.6" opacity=".7"/>` +
+    `<path d="M62 12 Q66 30 76 38 M38 12 Q34 30 24 38" fill="none" stroke="${c.dark}" stroke-width="2.4" opacity=".4"/>`
 };
 
 // ── shoes (side view, toe to the right) ─────────────────────────────────
@@ -392,7 +436,7 @@ export function outfitMarkup(items) {
     // a base with its layer: side by side, base first, never one drawn over the other, and clear of
     // the right-hand column (outer layer, shoes) so nothing in the picture overlaps
     if (tops[1]) {
-      const MID = new Set(['sweater', 'cardigan', 'hoodie']);
+      const MID = new Set(['sweater', 'cardigan', 'hoodie', 'vest']);
       const [base, mid] = MID.has(tops[0].art) && !MID.has(tops[1].art) ? [tops[1], tops[0]] : [tops[0], tops[1]];
       out += cell(base, 2 + dx, 16, 74, 128) + cell(mid, 78 + dx, 16, 74, 128);
     } else if (tops[0]) out += cell(tops[0], 12 + dx, 8, 156, 156);
