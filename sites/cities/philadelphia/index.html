@@ -33,6 +33,7 @@ html,body{height:100%;overflow:hidden}
 .veil{position:fixed;left:0;right:0;top:0;height:190px;z-index:2;pointer-events:none;background:linear-gradient(rgba(228,231,228,.92),rgba(228,231,228,.55) 55%,rgba(228,231,228,0))}
 body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:14px;font-variation-settings:"wdth" 100;-webkit-font-smoothing:antialiased;padding-left:var(--gut);padding-right:var(--gutr)}
 #lbl{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.hist-sec p{margin:0 0 8px}.hist-sec .wsrc{white-space:nowrap;font-size:12.5px}.hist-sec dl{margin:4px 0 0}.hist-sec dl+p{margin-top:10px}.muted-s{color:var(--ink-2);font-size:13px}
 #gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;outline:none;cursor:grab}
 #gl.dragging{cursor:grabbing}
 #gl.hovering{cursor:pointer}
@@ -887,6 +888,45 @@ function drawLabels() {
   }
 }
 
+
+/* ---------------- building history (lazy packs, by id % 8) ---------------- */
+S.facts = {};
+function factsOf(i) {
+  const k = i % 8;
+  if (S.facts[k] === undefined) {
+    S.facts[k] = null;
+    const done = (d) => { S.facts[k] = d; if (S.sel >= 0 && S.sel % 8 === k) showStory(S.sel); };
+    getJSON('facts/' + k + '.json').then(done).catch((e) => { console.warn('history', e); done({}); });
+  }
+  return S.facts[k] ? S.facts[k][i] || null : undefined;
+}
+function factsHtml(fx, d) {
+  if (fx === undefined) return '<div class="hist-sec"><h3>History</h3><p class="muted-s">Loading the record…</p></div>';
+  if (!fx) return '';
+  let h = '<div class="hist-sec"><h3>History</h3>';
+  if (fx.wx) h += '<p>' + esc(fx.wx) + ' <a class="wsrc" href="' + esc(fx.wu) + '" target="_blank" rel="noopener">Wikipedia ↗</a></p>';
+  else if (fx.wd) h += '<p>' + esc(fx.wd.charAt(0).toUpperCase() + fx.wd.slice(1)) + '.</p>';
+  const row = (k, v) => v ? '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>' : '';
+  let dl = '';
+  dl += row('Built', fx.date && fx.date !== String(d.y) ? fx.date : '');
+  dl += row('Architect', fx.arch) + row('Built for', fx.dev && fx.dev !== fx.arch ? fx.dev : '');
+  dl += row('Style', fx.style) + row('Material', fx.mat);
+  dl += row('Built as', [fx.type, fx.use].filter(Boolean).join(' · '));
+  if (fx.alts) dl += '<dt>Altered</dt><dd>' + fx.alts.map((a) => esc([a[0], a[1] ? 'by ' + a[1] : ''].filter(Boolean).join(' '))).join('<br>') + '</dd>';
+  else dl += row('Last altered', fx.alt ? String(fx.alt) : '');
+  dl += row('Landmark', fx.lm) + row('Historic district', fx.hd);
+  if (fx.her) dl += '<dt>Listed</dt><dd>' + fx.her.map((x) => esc(x)).join('<br>') + '</dd>';
+  if (dl) h += '<dl>' + dl + '</dl>';
+  if (fx.note) h += '<p class="muted-s">' + esc(fx.note) + '</p>';
+  return h + '</div>';
+}
+function factSources(fx) {
+  if (!fx) return '';
+  return (fx.lpc ? '<li>Architect, style, materials and alterations: NYC Landmarks Preservation Commission, Individual Landmark and Historic District Building Database</li>' : '') +
+    (fx.alt && !fx.lpc ? '<li>Last alteration: NYC Department of City Planning, PLUTO</li>' : '') +
+    (fx.wq ? '<li>History: <a href="https://www.wikidata.org/wiki/' + esc(fx.wq) + '" target="_blank" rel="noopener">Wikidata</a>' + (fx.wx ? ' and the English Wikipedia article (CC BY-SA 4.0)' : '') + '</li>' : '');
+}
+
 /* ---------------- colours per mode ---------------- */
 let yearCls = null, floorCls = null;
 function eraIndex(y) { if (!y) return -1; for (let k = 0; k < ERAS.length; k++) if (y < ERAS[k].to) return k; return ERAS.length - 1; }
@@ -1095,12 +1135,14 @@ function showStory(i) {
     if (cu.lived) h += '<div><h3>Lived or worked here</h3>' + cu.lived.map((p) => '<div class="lived"><b>' + esc(p[0]) + '</b><span>' + esc(p[1]) + '</span></div>').join('') + '</div>';
     h += '<div><h3>The ' + esc(d.era ? d.era.name.toLowerCase() : 'period') + '</h3><p style="color:var(--ink-2);font-size:13.5px">' + (d.era ? d.era.text : '') + '</p></div>';
   } else if (d.era) h += '<p>' + d.era.text + '</p>';
+  const fx = factsOf(i);
+  h += factsHtml(fx, d);
   h += '<dl>' + (cu && cu.arch ? '<dt>Architect</dt><dd>' + esc(cu.arch) + '</dd>' : '') + (cu && cu.style ? '<dt>Style</dt><dd>' + esc(cu.style) + '</dd>' : '') + '<dt>Height</dt><dd class="num">' + d.h.toFixed(1) + ' m · ' + Math.round(d.h / 0.3048) + ' ft</dd><dt>Storeys</dt><dd class="num">' + d.st + (d.storeysRec ? '' : ' (estimated)') + '</dd><dt>Type</dt><dd>' + FORM_NAMES[d.form] + '</dd><dt>Central air</dt><dd>' + (d.air === 1 ? 'Yes' : d.air === 2 ? 'No' : 'Not recorded') + '</dd>' + (d.layers.length ? '<dt>Layers</dt><dd>' + d.layers.map((l) => l.label).join(', ') + '</dd>' : '') + '</dl>';
   if (ll) {
     const la = ll[1].toFixed(6), lo = ll[0].toFixed(6);
     h += '<div><h3>Read more</h3><div class="links">' + (cu ? '<a href="https://en.wikipedia.org/w/index.php?search=' + encodeURIComponent(cu.wiki) + '" target="_blank" rel="noopener">Wikipedia ↗</a>' : '') + '<a href="https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=' + la + ',' + lo + '" target="_blank" rel="noopener">Street View ↗</a><a href="https://www.google.com/maps/search/?api=1&query=' + la + ',' + lo + '" target="_blank" rel="noopener">Google Maps ↗</a>' + (d.addr ? '<a href="https://atlas.phila.gov/' + encodeURIComponent(d.addr) + '" target="_blank" rel="noopener">City property record ↗</a>' : '') + '</div></div>';
   }
-  h += '<div><h3>Sources</h3><ul class="src"><li>Year built and storeys: City of Philadelphia, Office of Property Assessment</li><li>Footprint and height: City of Philadelphia building footprints</li>' + (cu ? '<li>Story and facts: written for this map from published histories; follow the Wikipedia link to check them</li>' : '') + (d.layers.length || d.name ? '<li>Places and names: Overture Maps Foundation, city footprint names</li>' : '') + '<li>Neighbourhood: Overture Maps divisions</li></ul></div></div>';
+  h += '<div><h3>Sources</h3><ul class="src">' + factSources(fx) + '<li>Year built and storeys: City of Philadelphia, Office of Property Assessment</li><li>Footprint and height: City of Philadelphia building footprints</li>' + (cu ? '<li>Story and facts: written for this map from published histories; follow the Wikipedia link to check them</li>' : '') + (d.layers.length || d.name ? '<li>Places and names: Overture Maps Foundation, city footprint names</li>' : '') + '<li>Neighbourhood: Overture Maps divisions</li></ul></div></div>';
   if (!shots.length && ll) h = '<figure class="photo" id="streetPh" hidden></figure>' + h;
   st.innerHTML = h; st.hidden = false;
   if (!shots.length && ll) streetPhoto(i, ll);
