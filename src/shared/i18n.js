@@ -22,7 +22,8 @@ export const LOCALES = Object.freeze({
 export const DEFAULT_LOCALE = 'en';
 /** Languages offered to people (picker and auto-detection). Add a code here once its locale file is complete. */
 export const ENABLED_LOCALES = Object.freeze(['en', 'es', 'fr', 'de', 'pt', 'it', 'tr']);
-export const isLocale = (code) => typeof code === 'string' && Object.hasOwn(LOCALES, code);
+// Object.prototype.hasOwnProperty.call rather than Object.hasOwn: the latter is missing before Safari 15.4 / Chrome 93.
+export const isLocale = (code) => typeof code === 'string' && Object.prototype.hasOwnProperty.call(LOCALES, code);
 
 /** First supported language from a list of BCP-47 tags ("es-MX" → "es"). */
 export function pickLocale(tags = []) {

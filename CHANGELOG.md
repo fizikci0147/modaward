@@ -14,6 +14,9 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 ### Changed
 - **A white background for the light theme.** Pages, cards, outfit boards and closet tiles are now white instead of cream, so clothes (especially beige, camel, khaki and grey pieces) stand out better. The browser bar colour, the installed-app colours, the shared outfit picture and the reminder email follow. Dark mode is unchanged.
 
+### Fixed
+- **The app starts on older browsers again.** Language detection used `Object.hasOwn`, which Safari before 15.4 (and Chrome before 93) does not have, so the app crashed at startup there with "Object.hasOwn is not a function". It now uses a check every browser supports; a test covers it.
+
 ### Added (not yet visible in the app)
 - **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next, so nothing changes for people using the app yet.
 - **The first real garment photos for the catalogue look**: a crew-neck tee, a button-up shirt, a pleated day dress, straight chinos and trousers, a single-breasted blazer, a classic waistcoat, a V-neck sweater vest and a quilted puffer vest, made from freely licensed Wikimedia Commons photographs (public domain, CC BY and CC BY-SA). Each template records its source, author and licence in `public/templates/index.json` and `public/templates/CREDITS.md`; `npm run template:add` takes `--source`, `--author` and `--license`, `template:check` lists any template without them, and `npm run template:preview` draws every template in several colours and fabrics to check them by eye.
