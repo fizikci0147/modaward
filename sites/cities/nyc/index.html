@@ -896,7 +896,7 @@ function factsOf(i) {
   }
   return S.facts[k] ? S.facts[k][i] || null : undefined;
 }
-function factsHtml(fx, d) {
+function factsHtml(fx, d, cu) {
   if (fx === undefined) return '<div class="hist-sec"><h3>History</h3><p class="muted-s">Loading the record…</p></div>';
   if (!fx) return '';
   let h = '<div class="hist-sec"><h3>History</h3>';
@@ -905,8 +905,8 @@ function factsHtml(fx, d) {
   const row = (k, v) => v ? '<dt>' + k + '</dt><dd>' + esc(v) + '</dd>' : '';
   let dl = '';
   dl += row('Built', fx.date && fx.date !== String(d.y) ? fx.date : '');
-  dl += row('Architect', fx.arch) + row('Built for', fx.dev && fx.dev !== fx.arch ? fx.dev : '');
-  dl += row('Style', fx.style) + row('Material', fx.mat);
+  dl += row('Architect', cu && cu.arch ? '' : fx.arch) + row('Built for', fx.dev && fx.dev !== fx.arch ? fx.dev : '');
+  dl += row('Style', cu && cu.style ? '' : fx.style) + row('Material', fx.mat);
   dl += row('Built as', [fx.type, fx.use].filter(Boolean).join(' · '));
   if (fx.alts) dl += '<dt>Altered</dt><dd>' + fx.alts.map((a) => esc([a[0], a[1] ? 'by ' + a[1] : ''].filter(Boolean).join(' '))).join('<br>') + '</dd>';
   else dl += row('Last altered', fx.alt ? String(fx.alt) : '');
@@ -1131,7 +1131,7 @@ function showStory(i) {
     h += '<div><h3>The ' + esc(d.era ? d.era.name.toLowerCase() : 'period') + '</h3><p style="color:var(--ink-2);font-size:13.5px">' + (d.era ? d.era.text : '') + '</p></div>';
   } else if (d.era) h += '<p>' + d.era.text + '</p>';
   const fx = factsOf(i);
-  h += factsHtml(fx, d);
+  h += factsHtml(fx, d, cu);
   h += '<dl>' + (cu && cu.arch ? '<dt>Architect</dt><dd>' + esc(cu.arch) + '</dd>' : '') + (cu && cu.style ? '<dt>Style</dt><dd>' + esc(cu.style) + '</dd>' : '') + '<dt>Height</dt><dd class="num">' + d.h.toFixed(1) + ' m · ' + Math.round(d.h / 0.3048) + ' ft</dd><dt>Storeys</dt><dd class="num">' + d.st + (d.storeysRec ? '' : ' (estimated)') + '</dd><dt>Type</dt><dd>' + FORM_NAMES[d.form] + '</dd>' + (d.layers.length ? '<dt>Layers</dt><dd>' + d.layers.map((l) => l.label).join(', ') + '</dd>' : '') + '</dl>';
   if (ll) {
     const la = ll[1].toFixed(6), lo = ll[0].toFixed(6);
