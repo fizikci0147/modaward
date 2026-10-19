@@ -302,7 +302,7 @@ button{font:inherit;color:inherit}
     <ul>
       <li>546,049 footprints and roof heights come from the city's building footprint layer.</li>
       <li>Each footprint is joined to its property record by address. Where there's no address match, the record whose point falls inside the footprint is used. That links 98% of buildings to a year.</li>
-      <li>Context layers place Overture Maps points of interest inside footprints. Water, parks, neighbourhoods and the city line also come from Overture.</li>
+      <li>Places of worship are buildings mapped as religious in OpenStreetMap (via Overture Maps) plus confident place-of-worship listings in non-residential buildings. The other context layers place confident Overture Maps points of interest inside footprints, skipping listings pinned to houses. Water, parks, neighbourhoods and the city line also come from Overture.</li>
       <li>Storeys come from the assessment record. Where it has none, they're estimated as height ÷ 3.2 m.</li>
     </ul>
     <h3>Read with care</h3>
@@ -987,7 +987,7 @@ function legend() {
   const titles = { period: 'Built in', context: 'In layers', floors: 'Storeys', energy: S.sub.energy === 'air' ? 'Cooling' : 'Shared walls' };
   const notes = {
     period: 'Click a period to see it alone. Paler buildings have an approximate year.',
-    context: 'Places from Overture Maps that fall inside a footprint. A building with several places takes the first layer in this list.',
+    context: 'Places of worship are buildings mapped as religious; other layers use confident Overture Maps listings, not ones pinned to homes. A building with several places takes the first layer in this list.',
     floors: 'Storeys from the assessment record, or height ÷ 3.2 m where none is recorded.',
     energy: S.sub.energy === 'air' ? 'Central air as recorded by the assessors. Grey buildings have no record.' : "Shared walls lose less heat. Most of Philadelphia is rowhouses, one of the most efficient house types there is. Grey buildings have no type on record.",
   };

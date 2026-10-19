@@ -302,7 +302,7 @@ button{font:inherit;color:inherit}
     <ul>
       <li>869,606 footprints, roof heights and construction years come from the city's building footprint layer.</li>
       <li>Each footprint is joined to its tax lot in PLUTO for the address, floors, building class and whether it shares walls. Where the footprint has no year, the lot's year built is used.</li>
-      <li>Context layers place Overture Maps points of interest inside footprints, plus every individual landmark designated by the Landmarks Preservation Commission. Water and parks come from Overture; neighbourhoods are the city's 2020 Neighborhood Tabulation Areas.</li>
+      <li>Places of worship are the city's religious building classes and buildings mapped as religious in OpenStreetMap (via Overture Maps), plus confident place-of-worship listings in non-residential buildings; schools add the city's education classes and health care its hospital and clinic classes. Other context layers place confident Overture Maps points of interest inside footprints, plus every individual landmark designated by the Landmarks Preservation Commission. Water and parks come from Overture; neighbourhoods are the city's 2020 Neighborhood Tabulation Areas.</li>
       <li>Floors come from PLUTO when the lot has one building. Otherwise they're estimated as height ÷ 3.2 m.</li>
     </ul>
     <h3>Read with care</h3>
@@ -982,7 +982,7 @@ function legend() {
   const titles = { period: 'Built in', context: 'In layers', floors: 'Storeys', energy: 'Housing type' };
   const notes = {
     period: 'Click a period to see it alone. Paler buildings have an approximate year.',
-    context: 'Places from Overture Maps that fall inside a footprint. A building with several places takes the first layer in this list.',
+    context: 'Places of worship are buildings mapped as religious; other layers use confident Overture Maps listings, not ones pinned to homes. A building with several places takes the first layer in this list.',
     floors: 'Floors from PLUTO, or height ÷ 3.2 m where the lot has several buildings or no record.',
     energy: "From the building class and wall proximity in PLUTO. Shared walls lose less heat, and apartment blocks are the most efficient of all. Grey buildings have no class on record.",
   };
