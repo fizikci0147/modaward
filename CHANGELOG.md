@@ -6,6 +6,10 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+### Added
+- **modaward.com/cities** is a page for picking a city map, with Philadelphia's building map at /cities/philadelphia and New York's at /cities/nyc (869,606 buildings across the five boroughs, with stories for 25 landmarks and three quests). The sites live in `sites/cities/`. Nothing in the app links to them, and they are marked `noindex`. They get their own Content-Security-Policy because the maps use inline scripts and styles and load street photos from Mapillary; the app's own pages keep the strict one. The map's first address, /phillyproject, redirects to /cities/philadelphia.
+- **Week:** each day now shows the same feels-like temperature graph as Today, with rain bars, above its tips.
+
 ## [5.19.0] · 2026-10-18
 
 ### Added

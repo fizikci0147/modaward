@@ -36,7 +36,7 @@ if (!changelog.includes(`## [${pkg.version}]`)) {
 const buildId = `${pkg.version}+${sha}${dirty ? '.dirty' : ''}`;
 fs.writeFileSync(path.join(root, 'BUILD.json'), JSON.stringify({ id: buildId, builtAt: new Date().toISOString() }) + '\n');
 
-const include = ['BUILD.json', 'CHANGELOG.md', 'server.js', 'app.js', 'index.js', 'package.json', 'package-lock.json', '.env.example', 'README.md', 'src', 'public', 'docs', 'scripts/backup.mjs', 'scripts/import-feed.mjs', 'scripts/doctor.mjs', 'scripts/live-check.mjs', 'scripts/package.json'];
+const include = ['BUILD.json', 'CHANGELOG.md', 'server.js', 'app.js', 'index.js', 'package.json', 'package-lock.json', '.env.example', 'README.md', 'src', 'public', 'sites', 'docs', 'scripts/backup.mjs', 'scripts/import-feed.mjs', 'scripts/doctor.mjs', 'scripts/live-check.mjs', 'scripts/package.json'];
 const out = path.join(root, 'dist');
 fs.mkdirSync(out, { recursive: true });
 for (const old of fs.readdirSync(out)) if (/^modaward-.*\.zip$/.test(old)) fs.unlinkSync(path.join(out, old)); // only the newest zip stays, so there is nothing to mix up
