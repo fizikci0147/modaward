@@ -4,7 +4,7 @@ import { api } from '/js/api.js';
 import { useStore, fail, openUpgrade, toast, proOffered } from '/js/store.js';
 import { Icon, weatherIcon } from '/js/icons.js';
 import { OutfitCard } from '/js/components/outfit.js';
-import { Tips } from '/js/components/weather.js';
+import { Tips, DayChart } from '/js/components/weather.js';
 import { describeCode } from '/shared/weather-codes.js';
 import { OCCASIONS } from '/shared/taxonomy.js';
 import { dow, dayNum, tempStr, longDate } from '/js/format.js';
@@ -139,6 +139,7 @@ export function WeekView() {
               </div>
               <div class="row"><${Icon} name=${weatherIcon(cond.condition)} size="28" /><div class="small"><b>${t(cond.label)}</b><div class="muted num">${t('{low} to {high}', { low: tempStr(w.tMinC, units), high: tempStr(w.tMaxC, units) })}</div></div></div>
             </div>
+            <${DayChart} hours=${w.hours || []} units=${units} nowHour=${null} />
             <${Tips} tips=${day.tips} />
             <${DayPlan} key=${`${day.date}-${day.plan?.occasion}-${day.plan?.note}`} day=${day} onChanged=${() => setReload((x) => x + 1)} />
           </div>

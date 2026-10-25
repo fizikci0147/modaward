@@ -28,7 +28,7 @@ async function run(label, contextOptions) {
   page.on('console', (m) => {
     // Chrome's "preloaded but not used within a few seconds" is a timing heuristic about when the page happened to reach the font, not a fault in the app
     if (expectRefusal && /status of 400/.test(m.text())) return;
-    if ((m.type() === 'error' || m.type() === 'warning') && !/preloaded using link preload but not used/.test(m.text())) problems.push(`console.${m.type()}: ${m.text()}`);
+    if ((m.type() === 'error' || m.type() === 'warning') && !/preloaded using link preload but not used|A preload for .* is found, but is not used/.test(m.text())) problems.push(`console.${m.type()}: ${m.text()}`);
   });
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   // a request the browser cancels because the test navigated away mid-load is not a failure
