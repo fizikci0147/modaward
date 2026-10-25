@@ -2,7 +2,7 @@
    - Precaches the app shell so it opens instantly and works offline-first for static files.
    - Never caches /api, /uploads or /go: personal data and redirects always come from the network.
    Bump VERSION when shipping changes to cached files. */
-const VERSION = 'mw-v5-18-1';
+const VERSION = 'mw-v5-19-0';
 const SHELL = ['/', '/offline.html', '/css/trackweight.css', '/js/trackweight/main.js', '/trackweight.webmanifest', '/css/app.css', '/js/main.js', '/js/app.js', '/vendor/ui.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/favicon.svg', '/fonts/instrument-serif-400.woff2', '/fonts/geist-latin.woff2'];
 
 self.addEventListener('install', (event) => {

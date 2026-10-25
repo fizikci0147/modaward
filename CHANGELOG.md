@@ -6,6 +6,8 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+## [5.19.0] · 2026-10-25
+
 ### Added
 - **Track Weight, a new page at `/trackweight`.** A calorie, macro, exercise and weight tracker in the ModaWard look, installable on its own (its own manifest and icon, offline once visited). Search a built-in library of about 150 everyday foods plus Open Food Facts and, with `USDA_API_KEY`, USDA FoodData Central; scan a barcode (camera where the browser supports it, or type the number); add your own foods; log exercise from 40 activities (calories from MET values and body weight) or by hand; follow weight and the last seven days against the goal. Targets come from the Mifflin–St Jeor equation for losing, keeping or gaining weight, never below 1,200 kcal (women) or 1,500 kcal (men). The diary stays on the person's device with JSON backup and restore; there is no account and nothing to delete on the server.
 - **Meal photos.** Photograph a meal and Claude lists each food with an estimated weight, calories and macros; the person checks and corrects every item (changing the grams rescales it) before it is saved, and each saved item is marked as an estimate. It uses the site's existing `ANTHROPIC_API_KEY`, needs a signed-in person, shares the daily allowance and the on/off rule of the other AI features (`FREE_AI`, or Pro on a paid site), and uses `AI_MEAL_MODEL` (default `claude-sonnet-5-5`, so the stylist's model setting is unchanged). Photos are resized in the browser and are not stored.
