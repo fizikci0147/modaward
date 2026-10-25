@@ -1290,5 +1290,12 @@ export default {
   "Waves": "Dalgalar",
   "Wide stripe": "Geniş çizgi",
   "Windowpane": "Pencere ekose",
-  "Zebra": "Zebra"
+  "Zebra": "Zebra",
+  "We could not read that photo. Try again, or add the food by searching for it.": "Bu fotoğrafı okuyamadık. Tekrar dene ya da yiyeceği arayarak ekle.",
+  "The food databases are not reachable right now. Your own foods and the built-in library still work.": "Yiyecek veri tabanlarına şu anda ulaşılamıyor. Kendi yiyeceklerin ve yerleşik kitaplık çalışmaya devam ediyor.",
+  "The food database is not reachable right now.": "Yiyecek veri tabanına şu anda ulaşılamıyor.",
+  "That product is not in the food database yet. You can add it by hand.": "Bu ürün henüz yiyecek veri tabanında yok. Elle ekleyebilirsin.",
+  "Photo estimates are not switched on for this site.": "Fotoğraftan tahmin bu sitede açık değil.",
+  "Photo estimates are a Pro feature.": "Fotoğraftan tahmin bir Pro özelliği.",
+  "Too many searches. Please slow down.": "Çok fazla arama. Lütfen yavaşla."
 };

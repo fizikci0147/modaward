@@ -1290,5 +1290,12 @@ export default {
   "Waves": "Ondas",
   "Wide stripe": "Listra larga",
   "Windowpane": "Xadrez janela",
-  "Zebra": "Zebra"
+  "Zebra": "Zebra",
+  "We could not read that photo. Try again, or add the food by searching for it.": "Não conseguimos ler essa foto. Tente de novo ou adicione o alimento pela pesquisa.",
+  "The food databases are not reachable right now. Your own foods and the built-in library still work.": "Os bancos de dados de alimentos não estão acessíveis agora. Seus próprios alimentos e a biblioteca integrada continuam funcionando.",
+  "The food database is not reachable right now.": "O banco de dados de alimentos não está acessível agora.",
+  "That product is not in the food database yet. You can add it by hand.": "Esse produto ainda não está no banco de dados de alimentos. Você pode adicioná-lo manualmente.",
+  "Photo estimates are not switched on for this site.": "As estimativas por foto não estão ativadas neste site.",
+  "Photo estimates are a Pro feature.": "As estimativas por foto são um recurso Pro.",
+  "Too many searches. Please slow down.": "Muitas buscas. Vá com calma."
 };

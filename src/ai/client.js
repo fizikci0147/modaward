@@ -30,12 +30,12 @@ export async function createAiClient(config, usage, log, injectedClient) {
      * Ask for a JSON document matching `schema`.
      * @returns {Promise<object|null>} parsed JSON, or null if the model declined/was cut off/errored
      */
-    async askJson({ user, kind, system, content, schema, effort = 'low', maxTokens = 4000 }) {
+    async askJson({ user, kind, system, content, schema, effort = 'low', maxTokens = 4000, model = config.ai.model }) {
       usage.reserve(user.id, kind, { perUser: config.ai.dailyLimitPerUser, global: config.ai.dailyLimitGlobal });
       let response;
       try {
         response = await client.beta.messages.create({
-          model: config.ai.model,
+          model,
           max_tokens: maxTokens,
           system,
           messages: [{ role: 'user', content }],

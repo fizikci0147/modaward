@@ -115,6 +115,12 @@ export function createApp(deps) {
   api.use((_req, _res, next) => next(notFound('That API endpoint does not exist.')));
   app.use('/api', api);
 
+  // ── the calorie tracker is its own page, not a screen of the app (so it never reaches the fallback below) ──
+  app.get('/trackweight', (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache');
+    res.type('html').send(assets.page('trackweight.html', '/js/trackweight/main.js'));
+  });
+
   // ── single-page app fallback ──
   app.use((req, res, next) => {
     // dotfile probes (/.env, /.git/config) get a plain 404, never the app shell

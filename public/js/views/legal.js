@@ -22,6 +22,7 @@ export function PrivacyView() {
       <li><b>Activity</b> (to personalise): outfits you wear, love or skip, looks you save, and your reminder settings. Wear history is kept until you delete it or your account. It feeds your personal taste profile. We also use profile details such as city, age range and department in combined, anonymous-style business statistics about the audience.</li>
       <li><b>Shopping clicks</b> (our legitimate interest in understanding which suggestions are useful, and in earning commission): when you open a shopping link we record the retailer, the kind of link and the time for up to 400 days.</li>
       <li><b>Technical reports</b> (our legitimate interest in fixing faults): if the app hits an error in your browser it sends what failed, the page, the version and your browser type, linked to your account, and we delete it after 30 days. Our server logs record requests and your account identifier, not your address or the content of your closet.</li>
+      <li><b>Track Weight</b> (the calorie tracker at /trackweight): your diary (foods, workouts, weight and goals) is kept only on your own device, in your browser’s storage, and we never receive it; you can export or delete it on that page. When you search for a food or scan a barcode, the words or number are sent to us and passed on to the food databases below. When you ask for a calorie estimate from a photo, the photo is processed for that request only and not stored by us.</li>
       <li><b>Notifications</b>: if you turn them on we store the address your browser’s push service gives us for this device, and send reminders through that service.</li>
     </ul>
 
@@ -29,7 +30,8 @@ export function PrivacyView() {
     <ul>
       <li><b>Weather provider (Open-Meteo):</b> your coordinates, to fetch a forecast.</li>
       <li><b>Retailers:</b> when you follow a link, the retailer sees that you came from ModaWard. We never send them your closet or profile. Product pictures in the Shop come straight from retailers’ image servers, so those servers can see your IP address when a picture loads.</li>
-      <li><b>AI service (Anthropic):</b> if the AI stylist is on, the garments and preferences needed for that request go to Anthropic, which processes them in the United States. Photos you ask us to analyse are sent for that request only. Anthropic does not train its models on API inputs by default.</li>
+      <li><b>AI service (Anthropic):</b> if the AI stylist is on, the garments and preferences needed for that request go to Anthropic, which processes them in the United States. Photos you ask us to analyse, including meal photos in Track Weight, are sent for that request only. Anthropic does not train its models on API inputs by default.</li>
+      <li><b>Food databases (Open Food Facts, USDA FoodData Central):</b> the food words or barcode number you search for in Track Weight. They are public databases; nothing about you is sent with the request.</li>
       <li><b>Background removal (remove.bg), only if you use the high-accuracy option:</b> the photo you choose is sent to them to cut out the garment.</li>
       ${state.capabilities?.pricing === 'free' ? null : html`<li><b>Payments (Stripe):</b> Stripe handles card details; we never see or store them. Stripe keeps its own records of your payments.</li>`}
       <li><b>Email and notification services:</b> emails go through the operator’s mail provider. Push notifications travel through Google, Apple or Mozilla, depending on your browser, and contain the reminder text.</li>
@@ -48,7 +50,7 @@ export function PrivacyView() {
     <p>You can see and download your data (<b>Profile → Account &amp; plan → Download my data</b>), correct it in the app, and delete your account and everything linked to it in the same place. Depending on where you live you may also have the right to object to or restrict some uses, to have data moved to another service, to withdraw consent you gave, and to complain to your data-protection authority. Write to the contact above and we will answer within a month. If you live in California: we do not sell or share your personal information as those terms are defined.</p>
 
     <h2>Cookies and device storage</h2>
-    <p>We use one secure cookie to keep you signed in, and your browser’s storage for your language, theme and a few settings that make the app work. These are strictly necessary, so there is no cookie banner. We do not use advertising or tracking cookies.</p>
+    <p>We use one secure cookie to keep you signed in, and your browser’s storage for your language, theme and a few settings that make the app work (Track Weight also keeps your diary there). These are strictly necessary, so there is no cookie banner. We do not use advertising or tracking cookies.</p>
 
     <h2>The iOS and Android apps</h2>
     <p>The ModaWard apps show the same service as the website and use the same account and data; they do not collect anything extra. They ask your permission before using the camera (only to photograph a piece of clothing you choose to add) or your location (only to show the weather where you are). You can refuse either and still use the app, and you can change your choice in your phone’s settings.</p>

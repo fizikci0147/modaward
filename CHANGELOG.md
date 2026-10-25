@@ -6,6 +6,15 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+### Added
+- **Track Weight, a new page at `/trackweight`.** A calorie, macro, exercise and weight tracker in the ModaWard look, installable on its own (its own manifest and icon, offline once visited). Search a built-in library of about 150 everyday foods plus Open Food Facts and, with `USDA_API_KEY`, USDA FoodData Central; scan a barcode (camera where the browser supports it, or type the number); add your own foods; log exercise from 40 activities (calories from MET values and body weight) or by hand; follow weight and the last seven days against the goal. Targets come from the Mifflin–St Jeor equation for losing, keeping or gaining weight, never below 1,200 kcal (women) or 1,500 kcal (men). The diary stays on the person's device with JSON backup and restore; there is no account and nothing to delete on the server.
+- **Meal photos.** Photograph a meal and Claude lists each food with an estimated weight, calories and macros; the person checks and corrects every item (changing the grams rescales it) before it is saved, and each saved item is marked as an estimate. It uses the site's existing `ANTHROPIC_API_KEY`, needs a signed-in person, shares the daily allowance and the on/off rule of the other AI features (`FREE_AI`, or Pro on a paid site), and uses `AI_MEAL_MODEL` (default `claude-sonnet-5-5`, so the stylist's model setting is unchanged). Photos are resized in the browser and are not stored.
+- New endpoints under `/api/trackweight` (see docs/API.md), a `page()` helper in `src/http/assets.js` for versioned stand-alone pages, a browser test (`test/e2e/trackweight.mjs`, run by `npm run test:e2e`) and `test/trackweight.test.js`.
+
+### Changed
+- The privacy policy and `docs/PRIVACY-OPS.md` describe the new page. `AI_MEAL_MODEL` and `USDA_API_KEY` are documented in `.env.example`. The service worker precaches the tracker and opens it offline.
+- Track Weight is English only for now; the server's messages for it are translated into all seven languages.
+
 ### Added (not yet visible in the app)
 - **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next; no templates ship yet, so nothing changes for people using the app.
 

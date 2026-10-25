@@ -65,10 +65,10 @@ export function createAssets(config) {
     return res.sendFile(file);
   }
 
-  /** Every module reachable through static imports from main.js, as /js/... and /shared/... paths. */
-  function startupModules() {
+  /** Every module reachable through static imports from an entry module, as /js/... and /shared/... paths. */
+  function startupModules(entry = '/js/main.js') {
     const seen = new Set();
-    const queue = ['/js/main.js'];
+    const queue = [entry];
     const IMPORT = /(?:\bfrom\s*|\bimport\s*)(['"])(\/(?:js|shared|vendor)\/[^'"]+\.js)\1/g;
     while (queue.length) {
       const url = queue.shift();
@@ -116,6 +116,21 @@ export function createAssets(config) {
             .replace('src="/js/main.js"', `src="${prefix}/js/main.js"`);
         }
         return html;
+      };
+    })(),
+    /**
+     * A separate page of the site (such as /trackweight): its HTML from public/, with every script,
+     * stylesheet and vendor address pointing at this build and the modules it needs at start-up preloaded.
+     */
+    page: (() => {
+      const pages = new Map();
+      return (file, entry) => {
+        if (!pages.has(file)) {
+          const preload = startupModules(entry).map((u) => `<link rel="modulepreload" href="${prefix}${u}" />`).join('\n  ');
+          const html = fs.readFileSync(path.join(config.publicDir, file), 'utf8').replace(/\b(href|src)="\/(css|js|vendor)\//g, `$1="${prefix}/$2/`);
+          pages.set(file, html.replace('<link rel="stylesheet"', `${preload}\n  <link rel="stylesheet"`));
+        }
+        return pages.get(file);
       };
     })(),
     /** The service worker, with this build's cache name and versioned shell entries. */

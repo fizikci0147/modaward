@@ -1,0 +1,91 @@
+/* Track Weight (/trackweight): a small layer on top of the ModaWard design system in app.css.
+   Colours, type, buttons, cards, fields, chips and sheets all come from there. */
+
+/* The site's navigation switches to a side rail on wide screens; this page keeps its top bar and tab bar. */
+.tw .tabbar { grid-template-columns: repeat(4, 1fr); }
+.tw .main { padding-bottom: calc(var(--nav-h) + 56px + var(--sab)); }
+@media (min-width: 980px) {
+  .tw .topbar { display: flex; }
+  .tw .tabbar { display: grid; }
+  .tw .main { padding: 28px 18px calc(var(--nav-h) + 56px + var(--sab)); }
+}
+@media (min-width: 760px) {
+  .tw .tabbar { left: 50%; right: auto; width: 560px; transform: translateX(-50%); border: 1px solid var(--line); border-bottom: 0; border-radius: 22px 22px 0 0; }
+}
+.tw-top .brand { color: var(--ink); }
+.tw-center { min-height: 60dvh; display: grid; place-items: center; color: var(--ink-2); }
+
+/* ── layout bits ── */
+.tw-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tw-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.tw-two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tw-datebar { display: flex; align-items: center; justify-content: space-between; }
+.tw-meal-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.tw-macros-line { justify-content: center; flex-wrap: wrap; gap: 6px 18px; margin: 8px 0; font-size: 14px; }
+.tw-over { color: var(--danger); }
+
+/* ── macro colours ── */
+.tone-protein { background: var(--sky); }
+.tone-carbs { background: var(--warn); }
+.tone-fat { background: var(--clay); }
+.tone-protein-text { color: var(--sky); }
+.tone-carbs-text { color: var(--warn); }
+.tone-fat-text { color: var(--clay); }
+.tw-meter { height: 6px; margin: 5px 0 3px; }
+.tw-meter > i { transition: width 0.4s var(--ease); }
+
+/* ── today's summary ── */
+.tw-summary { display: flex; align-items: center; gap: 20px; }
+.tw-ring { position: relative; width: 132px; height: 132px; flex: none; }
+.tw-ring svg { width: 100%; height: 100%; }
+.tw-ring-bg { fill: none; stroke: var(--line-2); stroke-width: 12; }
+.tw-ring-fg { fill: none; stroke: var(--accent); stroke-width: 12; stroke-linecap: round; transition: stroke-dasharray 0.4s var(--ease); }
+.tw-ring-fg.over { stroke: var(--danger); }
+.tw-ring-label { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.tw-ring-label b { font-size: 2rem; font-weight: 400; }
+.tw-eq { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 16px; justify-content: space-between; }
+.tw-eq > div { display: grid; }
+.tw-eq b { font-size: 1.1rem; font-weight: 600; }
+
+/* ── diary rows ── */
+.tw-entry { display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 0; text-align: left; }
+.tw-entry + .tw-entry { border-top: 1px solid var(--line); }
+button.tw-entry:hover .tw-entry-name { text-decoration: underline; text-underline-offset: 3px; }
+.tw-entry .grow > span, .tw-food .grow > span { display: block; }
+.tw-entry-name { font-weight: 550; }
+.tw-food { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; padding: 11px 14px; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-m); transition: border-color 0.15s; }
+.tw-food:hover { border-color: var(--ink-3); }
+.tw-food[aria-pressed='true'] { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.tw-food-name { font-weight: 550; overflow-wrap: anywhere; }
+.tw-pick { display: grid; gap: 8px; max-height: 230px; overflow-y: auto; padding: 2px; }
+
+/* ── add button ── */
+.tw-fab { position: fixed; z-index: 40; right: max(18px, calc(50% - 440px)); bottom: calc(var(--nav-h) + var(--sab) + 18px); width: 58px; height: 58px; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: var(--bg); box-shadow: var(--shadow-l); transition: transform 0.18s var(--ease); }
+.tw-fab:active { transform: scale(0.93); }
+
+/* ── add-food tabs: four equal chips that fit a phone ── */
+.tw-tabs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: -8px; }
+.tw-tabs .chip { justify-content: center; padding: 0 6px; gap: 5px; font-size: 13px; }
+
+/* ── photo and scanner ── */
+.tw-drop { min-height: 190px; width: 100%; }
+.tw-photo { width: 100%; max-height: 280px; object-fit: cover; border-radius: var(--radius-m); background: var(--board); }
+.tw-photo-row.off { opacity: 0.5; }
+.tw-conf-low { color: var(--warn); }
+.tw-conf-medium { color: var(--ink-3); }
+.tw-conf-high { color: var(--ok); }
+.tw-scan { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius-m); background: #000; }
+
+/* ── charts ── */
+.tw-chart { width: 100%; height: auto; overflow: visible; }
+.tw-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.tw-dot { fill: var(--accent); }
+.tw-bar { fill: var(--accent); }
+.tw-bar.over { fill: var(--warn); }
+.tw-bar.empty { opacity: 0.15; }
+.tw-goal { stroke: var(--ink-3); stroke-width: 1; stroke-dasharray: 4 4; }
+
+@media (max-width: 380px) {
+  .tw-summary { flex-direction: column; align-items: stretch; }
+  .tw-ring { align-self: center; }
+}

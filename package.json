@@ -8,7 +8,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "test": "node scripts/test.mjs",
-    "test:e2e": "node test/e2e/run.mjs",
+    "test:e2e": "node test/e2e/run.mjs && node test/e2e/trackweight.mjs",
     "check": "node scripts/check.mjs",
     "vendor": "node scripts/vendor.mjs",
     "icons": "node scripts/icons.mjs",

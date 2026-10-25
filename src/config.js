@@ -105,9 +105,14 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
     ai: {
       apiKey: str(env.ANTHROPIC_API_KEY),
       model: str(env.AI_MODEL, 'claude-opus-5-5'),
+      // food photos on /trackweight: a cheaper model is plenty for naming a meal and judging portions
+      mealModel: str(env.AI_MEAL_MODEL, 'claude-sonnet-5-5'),
       dailyLimitPerUser: int(env.AI_DAILY_LIMIT, 12),
       dailyLimitGlobal: int(env.AI_GLOBAL_DAILY_LIMIT, 2000)
     },
+
+    // food databases behind /trackweight (Open Food Facts needs no key; a free USDA key adds generic foods)
+    foods: { usdaApiKey: str(env.USDA_API_KEY) },
 
     push: {
       enabled: bool(env.PUSH_ENABLED, true),

@@ -3,10 +3,11 @@
    - Never caches /api, /uploads or /go: personal data and redirects always come from the network.
    Bump VERSION when shipping changes to cached files. */
 const VERSION = 'mw-v5-18-1';
-const SHELL = ['/', '/offline.html', '/css/app.css', '/js/main.js', '/js/app.js', '/vendor/ui.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/favicon.svg', '/fonts/instrument-serif-400.woff2', '/fonts/geist-latin.woff2'];
+const SHELL = ['/', '/offline.html', '/css/trackweight.css', '/js/trackweight/main.js', '/trackweight.webmanifest', '/css/app.css', '/js/main.js', '/js/app.js', '/vendor/ui.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/favicon.svg', '/fonts/instrument-serif-400.woff2', '/fonts/geist-latin.woff2'];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // the calorie tracker page is a route, not a file, so it is cached by address (and never blocks the install)
+  event.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL).then(() => c.add('/trackweight').catch(() => {}))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -24,13 +25,14 @@ self.addEventListener('fetch', (event) => {
 
   // page navigations: network first, fall back to the cached shell, then the offline page
   if (req.mode === 'navigate') {
-    event.respondWith(fetch(req).catch(() => caches.match('/').then((r) => r || caches.match('/offline.html'))));
+    const home = /^\/trackweight\/?$/.test(url.pathname) ? '/trackweight' : '/';
+    event.respondWith(fetch(req).catch(() => caches.match(home).then((r) => r || caches.match('/offline.html'))));
     return;
   }
 
   // Application code must stay mutually consistent across deploys, so it is network-first
   // (the server answers conditional requests with a cheap 304) and falls back to the cache offline.
-  if (/^\/(js|css|shared|vendor)\//.test(url.pathname) || url.pathname === '/manifest.webmanifest') {
+  if (/^\/(js|css|shared|vendor)\//.test(url.pathname) || url.pathname === '/manifest.webmanifest' || url.pathname === '/trackweight.webmanifest') {
     event.respondWith(
       fetch(req)
         .then((res) => {

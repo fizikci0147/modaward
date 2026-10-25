@@ -19,6 +19,9 @@ import { customRetailer, CUSTOM_PREFIX } from './shop/retailers.js';
 import { createCatalog } from './shop/catalog.js';
 import { createAiClient } from './ai/client.js';
 import { createStylist } from './ai/stylist.js';
+import { createMealAnalyzer } from './ai/meals.js';
+import { createFoods } from './services/foods.js';
+import { trackweightRoutes } from './http/routes/trackweight.js';
 import { createPush } from './services/push.js';
 import { createReminders } from './services/reminders.js';
 import { reminderRoutes } from './http/routes/reminders.js';
@@ -58,6 +61,8 @@ export async function createDeps(config, overrides = {}) {
   // optional integrations: each is null when its key is absent, and the app degrades gracefully
   const ai = await createAiClient(config, usage, log, overrides.aiClient);
   const stylist = ai ? createStylist({ ai, db, log }) : null;
+  const meals = ai ? createMealAnalyzer({ ai, config }) : null;
+  const foods = createFoods({ config, log, fetch: overrides.fetch });
   const cutoutService = overrides.cutoutService === undefined ? createCutoutService(config, usage, log, overrides.fetch) : overrides.cutoutService;
   // nothing is sold in the free version, so there is no billing at all (even if Stripe keys are present)
   const billing = overrides.billing === undefined ? (config.plans.pricing === 'paid' ? createBilling(config, repos, log, overrides.fetch) : null) : overrides.billing;
@@ -80,13 +85,13 @@ export async function createDeps(config, overrides = {}) {
   trends.load();
 
   const codes = createCodes({ db, repos });
-  const deps = { config, db, repos, codes, trends, log, images, mailer, weather, linker, catalog, usage, stylist, cutoutService, billing, capabilities, extraApiRoutes: [] };
+  const deps = { config, db, repos, codes, trends, log, images, mailer, weather, linker, catalog, usage, stylist, meals, foods, cutoutService, billing, capabilities, extraApiRoutes: [] };
   deps.outfits = createOutfitService({ repos, weather, config, stylist });
   deps.shop = createShopService({ repos, weather, catalog, linker, config, stylist });
   deps.push = overrides.push === undefined ? await createPush(config, db, log, overrides.pushSender) : overrides.push;
   deps.reminders = createReminders({ db, repos, outfits: deps.outfits, push: deps.push, mailer, config, log, secret: persistentSecret(config.dataDir, 'reminders') });
   capabilities.push = Boolean(deps.push);
-  for (const routes of [shopRoutes, photoRoutes, billingRoutes, aiRoutes, insightsRoutes, adminRoutes, reminderRoutes, clientErrorRoutes]) deps.extraApiRoutes.push((api) => api.use(routes(deps)));
+  for (const routes of [shopRoutes, photoRoutes, billingRoutes, aiRoutes, trackweightRoutes, insightsRoutes, adminRoutes, reminderRoutes, clientErrorRoutes]) deps.extraApiRoutes.push((api) => api.use(routes(deps)));
   return deps;
 }
 
