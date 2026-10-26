@@ -42,8 +42,8 @@ export async function outfitPosterSvg({ items, weather, date, units, headline })
   const serif = `'Instrument Serif', 'Iowan Old Style', Georgia, 'Times New Roman', serif`;
   const sans = `Geist, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif`;
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
-    <rect width="${W}" height="${H}" fill="#f6f3ed"/>
-    <rect x="60" y="60" width="${W - 120}" height="900" rx="40" fill="#ece7dc"/>
+    <rect width="${W}" height="${H}" fill="#ffffff"/>
+    <rect x="60" y="60" width="${W - 120}" height="900" rx="40" fill="#f5f5f4"/>
     <svg x="150" y="100" width="780" height="820" viewBox="0 0 300 360" preserveAspectRatio="xMidYMid meet">${board}</svg>
     <text x="60" y="1060" font-family="${serif}" font-size="76" fill="#161511">${esc(headline)}</text>
     <text x="60" y="1118" font-family="${sans}" font-size="32" fill="#57534a">${esc(date ? longDate(date) : '')}${range ? ` · ${esc(range)}` : ''}</text>

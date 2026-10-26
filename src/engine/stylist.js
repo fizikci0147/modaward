@@ -31,11 +31,12 @@ export function occasionSpec(occasionId, prefs) {
  * layers over one another) reads as indecision.
  */
 const LAYER_PAIRS = {
-  tee: ['cardigan', 'hoodie'],
-  longsleeve: ['cardigan', 'hoodie'],
-  polo: ['sweater', 'cardigan'],
-  shirt: ['sweater', 'cardigan'],
-  blouse: ['cardigan', 'sweater'],
+  tee: ['cardigan', 'hoodie', 'vest'],
+  longsleeve: ['cardigan', 'hoodie', 'vest'],
+  polo: ['sweater', 'cardigan', 'vest'],
+  shirt: ['sweater', 'cardigan', 'vest', 'waistcoat'],
+  blouse: ['cardigan', 'sweater', 'vest', 'waistcoat'],
+  turtleneck: ['cardigan', 'vest'],
   sportstop: ['hoodie']
 };
 

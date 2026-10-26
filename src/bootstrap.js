@@ -47,7 +47,9 @@ export async function createDeps(config, overrides = {}) {
   const mailer = overrides.mailer ?? createMailer(config, log);
   const usage = createUsage(db);
 
-  const provider = overrides.weatherProvider ?? (config.weather.provider === 'mock' ? mockProvider() : openMeteoProvider({ apiKey: config.weather.apiKey }));
+  // what "today" is: the real time, or a fixed one in tests so dates the forecast hands out stay in range
+  const clock = overrides.clock ?? (() => new Date());
+  const provider = overrides.weatherProvider ?? (config.weather.provider === 'mock' ? mockProvider({ clock }) : openMeteoProvider({ apiKey: config.weather.apiKey }));
   const weather = createWeatherService({ provider, cacheMinutes: config.weather.cacheMinutes, log });
   // a store a person added is looked up by id when one of their links is followed (the link's signature, made by us, is what vouches for it)
   const resolveCustom = (id) => {
@@ -85,7 +87,7 @@ export async function createDeps(config, overrides = {}) {
   trends.load();
 
   const codes = createCodes({ db, repos });
-  const deps = { config, db, repos, codes, trends, log, images, mailer, weather, linker, catalog, usage, stylist, meals, foods, cutoutService, billing, capabilities, extraApiRoutes: [] };
+  const deps = { config, clock, db, repos, codes, trends, log, images, mailer, weather, linker, catalog, usage, stylist, meals, foods, cutoutService, billing, capabilities, extraApiRoutes: [] };
   deps.outfits = createOutfitService({ repos, weather, config, stylist });
   deps.shop = createShopService({ repos, weather, catalog, linker, config, stylist });
   deps.push = overrides.push === undefined ? await createPush(config, db, log, overrides.pushSender) : overrides.push;

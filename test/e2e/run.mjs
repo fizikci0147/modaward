@@ -26,9 +26,10 @@ async function run(label, contextOptions) {
   const problems = [];
   let expectRefusal = false; // set around a request the test knows the server will refuse
   page.on('console', (m) => {
-    // Chrome's "preloaded but not used within a few seconds" is a timing heuristic about when the page happened to reach the font, not a fault in the app
+    // Chrome's "preloaded but not used within a few seconds" is a timing heuristic about when the page happened to reach the font, not a fault in the app;
+    // so is its "cross-world service worker resource mismatch", which depends on whether the service worker took over before or after the preload
     if (expectRefusal && /status of 400/.test(m.text())) return;
-    if ((m.type() === 'error' || m.type() === 'warning') && !/preloaded using link preload but not used/.test(m.text())) problems.push(`console.${m.type()}: ${m.text()}`);
+    if ((m.type() === 'error' || m.type() === 'warning') && !/preloaded using link preload but not used|cross-world service worker resource mismatch/.test(m.text())) problems.push(`console.${m.type()}: ${m.text()}`);
   });
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   // a request the browser cancels because the test navigated away mid-load is not a failure

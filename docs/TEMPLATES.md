@@ -6,9 +6,12 @@ map of where the folds, seams and highlights are. The colour and the fabric (str
 laid over that map in the browser, so the cloth still looks like cloth. There is no AI, no cost per picture and no
 network call.
 
-The app ships **without** templates, because the pictures have to be real photographs that you have the right to use.
-Until a garment type has one, the *Catalogue look* option does not appear for it (nothing is faked). Every template you
-add makes the option appear for that type straight away.
+The pictures have to be real photographs that you have the right to use. The app ships with a first set made from
+freely licensed photographs on Wikimedia Commons: a crew-neck tee, a button-up shirt, a pleated day dress, straight
+chinos and trousers, a single-breasted blazer, a classic waistcoat, a
+V-neck sweater vest and a quilted puffer vest (see `public/templates/CREDITS.md` for each source, author and licence). Until a garment type has a
+template, the *Catalogue look* option does not appear for it (nothing is faked). Every template you add makes the option
+appear for that type straight away.
 
 ## What makes a good template photo
 
@@ -34,19 +37,30 @@ add makes the option appear for that type straight away.
 
 Do **not** use pictures lifted from shops or other apps.
 
+On Wikimedia Commons, museum collections photographed on a plain backdrop (the Met's CC0 images, DPLA partners) are a
+good source of public-domain garments. A garment on a dress form brings the form's neck or stand into the cut-out, and
+museum tags can hang below a hem; those have to be cleared from the template by hand. A photo on a backdrop of nearly
+the same colour (khaki on a white sheet) may need cutting out yourself first; pass the transparent PNG to the tool.
+
 ## Adding one
 
 ```bash
-npm run template:add -- ~/photos/white-shirt.jpg --type shirt --id classic-collar --label "Classic collar" --width 58
+npm run template:add -- ~/photos/white-shirt.jpg --type shirt --id classic-collar --label "Classic collar" --width 58 \
+  --source "own photo" --author "Your name" --license "All rights reserved"
 npm run template:check
+npm run template:preview -- /tmp/templates.png      # every template in a few colours and fabrics, to judge by eye
 ```
 
-* `--type` is one of the 54 garment types (below).
+* `--type` is one of the 59 garment types (below).
 * `--id` is a short lowercase name, unique within the type.
 * `--label` is what the person sees (it is not translated; keep it simple, or use a plain descriptive word).
 * `--width` is how wide the garment really is in centimetres (chest, or the widest point). It sets the size of
   patterns, so a stripe is the same size on a tee and on a coat. A rough guess is fine.
 * `--tags` is optional (`long-sleeve,button`).
+* `--source`, `--author`, `--license` (and `--license-url`) record where the photo came from: the web page of the
+  photo (or "own photo"), who made it and its licence. They are kept in `index.json` and `template:check` lists any
+  template without them. Add a line to `public/templates/CREDITS.md` too. A photo under CC BY-SA makes a template that
+  is shared under the same licence, with its credit.
 
 The tool cuts the garment out, straightens and crops it, takes the colour out, and writes
 `public/templates/<type>/<id>.png` plus the entry in `public/templates/index.json`. If it cannot find the garment on the
@@ -72,6 +86,9 @@ One template per type gets the option switched on. Variants are extra choices wo
 | blouse | 54 | classic blouse | wrap, bow neck, sleeveless |
 | sweater | 60 | crew neck | V-neck, turtleneck, chunky |
 | cardigan | 58 | button front | open front |
+| vest | 50 | sweater vest, V-neck | crew neck, cable knit |
+| waistcoat | 50 | single-breasted, front | double-breasted |
+| turtleneck | 54 | fine knit | chunky, mock neck |
 | hoodie | 62 | pullover | zip-up |
 | sportstop | 50 | short-sleeve | long-sleeve, sleeveless |
 | jeans | 40 | straight | skinny, wide-leg |
@@ -96,6 +113,8 @@ One template per type gets the option switched on. Variants are extra choices wo
 | wool-coat | 64 | single-breasted | double-breasted, long |
 | puffer | 64 | hip-length | long |
 | parka | 66 | hooded | |
+| overshirt | 60 | button front, chest pockets | |
+| gilet | 60 | puffer vest, zipped | fleece vest |
 | fleece | 60 | zip-up | |
 | sneakers | 30 | side view, low top | high top |
 | runners | 30 | side view | |

@@ -6,19 +6,21 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
-## [5.19.0] · 2026-10-25
+## [5.19.0] · 2026-10-18
 
 ### Added
-- **Track Weight, a new page at `/trackweight`.** A calorie, macro, exercise and weight tracker in the ModaWard look, installable on its own (its own manifest and icon, offline once visited). Search a built-in library of about 150 everyday foods plus Open Food Facts and, with `USDA_API_KEY`, USDA FoodData Central; scan a barcode (camera where the browser supports it, or type the number); add your own foods; log exercise from 40 activities (calories from MET values and body weight) or by hand; follow weight and the last seven days against the goal. Targets come from the Mifflin–St Jeor equation for losing, keeping or gaining weight, never below 1,200 kcal (women) or 1,500 kcal (men). The diary stays on the person's device with JSON backup and restore; there is no account and nothing to delete on the server.
-- **Meal photos.** Photograph a meal and Claude lists each food with an estimated weight, calories and macros; the person checks and corrects every item (changing the grams rescales it) before it is saved, and each saved item is marked as an estimate. It uses the site's existing `ANTHROPIC_API_KEY`, needs a signed-in person, shares the daily allowance and the on/off rule of the other AI features (`FREE_AI`, or Pro on a paid site), and uses `AI_MEAL_MODEL` (default `claude-sonnet-5-5`, so the stylist's model setting is unchanged). Photos are resized in the browser and are not stored.
-- New endpoints under `/api/trackweight` (see docs/API.md), a `page()` helper in `src/http/assets.js` for versioned stand-alone pages, a browser test (`test/e2e/trackweight.mjs`, run by `npm run test:e2e`) and `test/trackweight.test.js`.
+- **Five more kinds of clothing**: sweater vest, waistcoat, turtleneck, overshirt and puffer vest (gilet). Each has its own drawing, its translations in all seven languages, shop searches and product-feed matching. A sweater vest goes over a tee, polo, shirt, blouse or turtleneck and a waistcoat over a shirt or blouse, on days cool enough for a layer; the overshirt and puffer vest are light outer layers.
 
 ### Changed
-- The privacy policy and `docs/PRIVACY-OPS.md` describe the new page. `AI_MEAL_MODEL` and `USDA_API_KEY` are documented in `.env.example`. The service worker precaches the tracker and opens it offline.
-- Track Weight is English only for now; the server's messages for it are translated into all seven languages.
+- **A white background for the light theme.** Pages, cards, outfit boards and closet tiles are now white instead of cream, so clothes (especially beige, camel, khaki and grey pieces) stand out better. The browser bar colour, the installed-app colours, the shared outfit picture and the reminder email follow. Dark mode is unchanged.
+
+### Fixed
+- **The app starts on older browsers again.** Language detection used `Object.hasOwn`, which Safari before 15.4 (and Chrome before 93) does not have, so the app crashed at startup there with "Object.hasOwn is not a function". It now uses a check every browser supports; a test covers it.
+- **Weather rides out short Open-Meteo outages.** When the forecast service answered 503, the app retried twice within milliseconds, so a blip of a second or two still ended in "Weather is temporarily unavailable" (or an offline copy). Retries now wait half a second, then a second and a half. The admin System check's "Last weather error" now reads "Open-Meteo answered 503 (busy or down for maintenance) after 3 tries" instead of "Error: upstream 503".
 
 ### Added (not yet visible in the app)
-- **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next; no templates ship yet, so nothing changes for people using the app.
+- **Catalogue look, engine only.** A library of 56 fabrics and prints (`src/shared/fabrics.js`) and a recolouring renderer (`src/shared/catalogue.js`) that lays any colour and pattern over a garment template while keeping its folds and highlights. Tooling to add templates from photographs (`npm run template:add`), a coverage report (`npm run template:check`) and the shot list for all 54 garment types (`docs/TEMPLATES.md`). The screen that uses it comes next, so nothing changes for people using the app yet.
+- **The first real garment photos for the catalogue look**: a crew-neck tee, a button-up shirt, a pleated day dress, straight chinos and trousers, a single-breasted blazer, a classic waistcoat, a V-neck sweater vest and a quilted puffer vest, made from freely licensed Wikimedia Commons photographs (public domain, CC BY and CC BY-SA). Each template records its source, author and licence in `public/templates/index.json` and `public/templates/CREDITS.md`; `npm run template:add` takes `--source`, `--author` and `--license`, `template:check` lists any template without them, and `npm run template:preview` draws every template in several colours and fabrics to check them by eye.
 
 ## [5.18.1] · 2026-10-20
 

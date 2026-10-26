@@ -136,11 +136,11 @@ export function createReminders({ db, repos, outfits, push, mailer, config, log,
     return {
       subject: msg.title,
       text: `${msg.greeting},\n\n${msg.title}\n${msg.body}\n\n${msg.cta}: ${link}\n\n--\n${footer}\n${t('Turn off emails')}: ${unsub}\n`,
-      html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:28px 20px;color:#161511;background:#f6f3ed">
+      html: `<div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:520px;margin:0 auto;padding:28px 20px;color:#161511;background:#ffffff">
 <p style="margin:0 0 6px;color:#57534a">${esc(msg.greeting)}</p>
 <h1 style="font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:28px;line-height:1.2;margin:0 0 12px">${esc(msg.title)}</h1>
 <p style="font-size:16px;line-height:1.5;margin:0 0 22px">${esc(msg.body)}</p>
-<p style="margin:0 0 30px"><a href="${esc(link)}" style="background:#1f3d33;color:#f6f3ed;text-decoration:none;padding:13px 22px;border-radius:999px;display:inline-block;font-weight:600">${esc(msg.cta)}</a></p>
+<p style="margin:0 0 30px"><a href="${esc(link)}" style="background:#1f3d33;color:#ffffff;text-decoration:none;padding:13px 22px;border-radius:999px;display:inline-block;font-weight:600">${esc(msg.cta)}</a></p>
 <p style="font-size:12px;color:#8a8578;margin:0">${esc(footer)} <a href="${esc(unsub)}" style="color:#8a8578">${esc(t('Turn off emails'))}</a></p>
 </div>`,
       headers: { 'List-Unsubscribe': `<${unsub}>` }

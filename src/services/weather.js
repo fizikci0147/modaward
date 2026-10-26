@@ -106,17 +106,25 @@ export function normalizeOpenMeteo(raw, { name = '' } = {}) {
   };
 }
 
-/** Open-Meteo provider. @param {{fetch?:typeof fetch, apiKey?:string}} opts */
-export function openMeteoProvider({ fetch: doFetch = globalThis.fetch, apiKey = '' } = {}) {
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Open-Meteo provider. `retryDelays` is the pause before each retry: back-to-back retries land inside
+ * the same brief provider outage, so a short backoff is what actually rides one out.
+ * @param {{fetch?:typeof fetch, apiKey?:string, retryDelays?:number[], wait?:(ms:number)=>Promise<void>}} opts
+ */
+export function openMeteoProvider({ fetch: doFetch = globalThis.fetch, apiKey = '', retryDelays = [500, 1500], wait = sleep } = {}) {
   const forecastBase = apiKey ? 'https://customer-api.open-meteo.com/v1/forecast' : 'https://api.open-meteo.com/v1/forecast';
   const geoBase = apiKey ? 'https://customer-geocoding-api.open-meteo.com/v1/search' : 'https://geocoding-api.open-meteo.com/v1/search';
 
   async function getJson(url) {
     let lastError;
-    for (let attempt = 0; attempt < 3; attempt++) {
+    const tries = retryDelays.length + 1;
+    for (let attempt = 0; attempt < tries; attempt++) {
+      if (attempt) await wait(retryDelays[attempt - 1]);
       try {
         const res = await doFetch(url, { signal: AbortSignal.timeout(10_000), headers: { accept: 'application/json' } });
-        if (res.status >= 500) throw new Error(`upstream ${res.status}`);
+        if (res.status >= 500) throw new Error(`Open-Meteo answered ${res.status}${res.status === 503 ? ' (busy or down for maintenance)' : ''} after ${tries} tries`);
         if (!res.ok) {
           const body = await res.text().catch(() => '');
           // the provider's explanation is for the admin's system check only, never for the person's screen
