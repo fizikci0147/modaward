@@ -42,6 +42,7 @@ export function accountRoutes({ repos, images, billing, log, reminders }) {
       wearHistory: repos.wear.recent(id, 3650),
       savedLooks: repos.saved.list(id),
       addedStores: repos.customStores.list(id),
+      trackWeightMember: repos.trackweight.isMember(id),
       plannedDays: repos.plans.list(id, '0000-01-01', '9999-12-31'),
       reminders: reminders?.get(id) ?? null,
       // the rest of what is stored against the account, so the download is complete

@@ -58,6 +58,15 @@ export function Progress({ profile, saveProfile }) {
 
   return html`<div class="stack">
     <h1 class="display h-m">Progress</h1>
+    <section class="card card-pad tw-hero">
+      <div class="tw-hero-row">
+        <div><div class="tw-hero-title">Current weight</div><div class="tw-hero-big num">${latest?.kg ?? profile.weightKg}<span style=${{ fontSize: '1.2rem', fontFamily: 'var(--font-ui)' }}> kg</span></div></div>
+        <div class="small num" style=${{ textAlign: 'right' }}>
+          ${latest && first && weights.length > 1 ? html`<div><b>${(latest.kg - first.kg > 0 ? '+' : '') + (latest.kg - first.kg).toFixed(1)} kg</b> since ${first.date}</div>` : html`<div>Log your weight to see change</div>`}
+          <div>${avg ? `${avg} kcal a day this week` : 'No food logged this week'}</div>
+        </div>
+      </div>
+    </section>
     <section class="card card-pad stack">
       <h3 class="display h-s">Weight</h3>
       <div class="row">
@@ -65,11 +74,14 @@ export function Progress({ profile, saveProfile }) {
         <button class="btn btn-primary" disabled=${!valid} onClick=${logWeight}>Log</button>
       </div>
       <${WeightChart} points=${weights.slice(-60)} />
-      ${latest && first && weights.length > 1 ? html`<p class="small faint center">Change since ${first.date}: <b class="num">${(latest.kg - first.kg > 0 ? '+' : '') + (latest.kg - first.kg).toFixed(1)} kg</b></p>` : null}
     </section>
     <section class="card card-pad">
       <div class="tw-meal-head"><h3 class="display h-s">Calories, last 7 days</h3><span class="small faint num">${avg ? `average ${avg} kcal` : ''}</span></div>
       <svg class="tw-chart" viewBox="0 0 320 150" role="img" aria-label="Calories eaten each day for the last 7 days" style=${{ marginTop: '10px' }}>
+        <defs>
+          <linearGradient id="tw-bar-fill" x1="0" y1="0" x2="0" y2="1"><stop class="tw-stop-a" offset="0" /><stop class="tw-stop-b" offset="1" /></linearGradient>
+          <linearGradient id="tw-bar-over" x1="0" y1="0" x2="0" y2="1"><stop class="tw-stop-oa" offset="0" /><stop class="tw-stop-ob" offset="1" /></linearGradient>
+        </defs>
         ${days.map((d, i) => {
           const h = (week[i] / maxBar) * 110;
           const over = week[i] > goal * 1.05;

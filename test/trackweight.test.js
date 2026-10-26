@@ -167,10 +167,10 @@ describe('meal photo normalisation', () => {
   });
 });
 
-describe('/trackweight page', () => {
+describe('/trackweight page (access open)', () => {
   let t;
   before(async () => {
-    t = await startTestServer();
+    t = await startTestServer({ env: { TRACKWEIGHT_ACCESS: 'open', TRACKWEIGHT_ACCESS: 'open' } });
   });
   after(() => t.close());
 
@@ -235,23 +235,23 @@ describe('/trackweight page', () => {
   });
 });
 
-describe('/api/trackweight', () => {
+describe('/api/trackweight (access open)', () => {
   let t;
   let fake;
   let foods;
   before(async () => {
     fake = fakeAnthropic();
     foods = fakeFoodFetch();
-    t = await startTestServer({ env: { PRICING: 'free', FREE_AI: '1', USDA_API_KEY: 'test-usda-key', AI_DAILY_LIMIT: '4' }, overrides: { aiClient: fake, fetch: foods.fetch } });
+    t = await startTestServer({ env: { TRACKWEIGHT_ACCESS: 'open', PRICING: 'free', FREE_AI: '1', USDA_API_KEY: 'test-usda-key', AI_DAILY_LIMIT: '4' }, overrides: { aiClient: fake, fetch: foods.fetch } });
   });
   after(() => t.close());
 
   test('status tells the page whether photos can be used', async () => {
     const anon = t.client();
-    assert.deepEqual((await anon.get('/api/trackweight/status')).json, { signedIn: false, usda: true, photo: 'signin' });
+    assert.deepEqual((await anon.get('/api/trackweight/status')).json, { access: 'open', signedIn: false, usda: true, photo: 'signin' });
     const c = t.client();
     await registerUser(c);
-    assert.deepEqual((await c.get('/api/trackweight/status')).json, { signedIn: true, usda: true, photo: 'on' });
+    assert.deepEqual((await c.get('/api/trackweight/status')).json, { access: 'open', signedIn: true, usda: true, photo: 'on' });
   });
 
   test('searching foods merges USDA and Open Food Facts, drops incomplete products, and caches', async () => {
@@ -341,7 +341,7 @@ describe('/api/trackweight', () => {
   test('the meal model can be changed in configuration', async () => {
     const other = fakeAnthropic();
     other.reply = ok(MEAL);
-    const t2 = await startTestServer({ env: { PRICING: 'free', FREE_AI: '1', AI_MEAL_MODEL: 'claude-opus-5-5', AI_MODEL: 'claude-sonnet-5-5' }, overrides: { aiClient: other } });
+    const t2 = await startTestServer({ env: { TRACKWEIGHT_ACCESS: 'open', PRICING: 'free', FREE_AI: '1', AI_MEAL_MODEL: 'claude-opus-5-5', AI_MODEL: 'claude-sonnet-5-5' }, overrides: { aiClient: other } });
     try {
       const c = t2.client();
       await registerUser(c);
@@ -404,9 +404,194 @@ describe('/api/trackweight', () => {
   });
 });
 
+describe('membership: Track Weight is for approved members by default', () => {
+  let t;
+  let fake;
+  let foods;
+  const ADMIN = 'boss@example.com';
+  before(async () => {
+    fake = fakeAnthropic();
+    fake.reply = ok(MEAL);
+    foods = fakeFoodFetch();
+    t = await startTestServer({
+      env: { PRICING: 'free', FREE_AI: '1', USDA_API_KEY: 'k', ADMIN_EMAILS: ADMIN, OPERATOR_NAME: 'Test <i>Owner</i>', CONTACT_EMAIL: 'owner@example.com' },
+      overrides: { aiClient: fake, fetch: foods.fetch }
+    });
+  });
+  after(() => t.close());
+
+  const html = { accept: 'text/html' };
+  const page = async (c) => c.raw('GET', '/trackweight', undefined, html);
+  const admin = async () => {
+    const c = t.client();
+    await registerUser(c, { email: ADMIN });
+    return c;
+  };
+
+  test('the default is members-only', () => {
+    assert.equal(t.config.trackweight.access, 'members');
+    assert.equal(t.deps.trackweightAccess.mode, 'members');
+  });
+
+  test('a visitor who is not signed in gets a "members only" page with a way in, and nothing of the tracker', async () => {
+    const r = await page(t.client());
+    assert.equal(r.status, 401);
+    assert.match(r.headers.get('content-type'), /text\/html/);
+    assert.equal(r.headers.get('cache-control'), 'no-store');
+    assert.match(r.text, /<title>Members only · Track Weight/);
+    assert.match(r.text, /For members only/);
+    assert.match(r.text, /<a class="btn btn-primary btn-l" href="\/login">Sign in<\/a>/);
+    assert.doesNotMatch(r.text, /trackweight\/main\.js/);
+    assert.doesNotMatch(r.text, /\{\{/);
+    assert.match(r.text, /noindex/);
+    assert.match(r.text, /href="\/v\/[^/"]+\/css\/trackweight\.css"/);
+  });
+
+  test('a signed-in account that is not approved is told so, with who to ask (escaped)', async () => {
+    const c = t.client();
+    const { email } = await registerUser(c);
+    const r = await page(c);
+    assert.equal(r.status, 403);
+    assert.match(r.text, /Not on the member list yet/);
+    assert.ok(r.text.includes(email), 'shows which account is signed in');
+    assert.ok(r.text.includes('owner@example.com'));
+    assert.ok(r.text.includes('Test &lt;i&gt;Owner&lt;/i&gt;'), 'the operator name is HTML-escaped');
+    assert.doesNotMatch(r.text, /Test <i>Owner/);
+    assert.doesNotMatch(r.text, /trackweight\/main\.js/);
+  });
+
+  test('the API refuses everyone who is not a member, before any food database or model is touched', async () => {
+    foods.calls.length = 0;
+    fake.requests.length = 0;
+    const anon = t.client();
+    for (const [method, url, body] of [['GET', '/api/trackweight/status'], ['GET', '/api/trackweight/foods/search?q=apple'], ['GET', '/api/trackweight/foods/barcode/3017620422003'], ['POST', '/api/trackweight/analyze-meal', { image: PNG }]]) {
+      const r = await anon.raw(method, url, body);
+      assert.equal(r.status, 401, `${url} for a visitor`);
+    }
+    const c = t.client();
+    await registerUser(c);
+    for (const [method, url, body] of [['GET', '/api/trackweight/status'], ['GET', '/api/trackweight/foods/search?q=apple'], ['GET', '/api/trackweight/foods/barcode/3017620422003'], ['POST', '/api/trackweight/analyze-meal', { image: PNG }]]) {
+      const r = await c.raw(method, url, body);
+      assert.equal(r.status, 403, `${url} for an unapproved account`);
+      assert.equal(r.json.error.code, 'forbidden');
+      assert.equal(r.json.error.message, 'Track Weight is for approved members.');
+    }
+    assert.equal(foods.calls.length, 0);
+    assert.equal(fake.requests.length, 0);
+  });
+
+  test('refusal messages follow the person’s language', async () => {
+    const c = t.client();
+    await registerUser(c);
+    const r = await c.get('/api/trackweight/status', { 'x-locale': 'fr' });
+    assert.equal(r.status, 403);
+    assert.equal(r.json.error.message, 'Track Weight est réservé aux membres approuvés.');
+  });
+
+  test('an admin approves an account by email; they can use the page and the API at once, and removal takes it away at once', async () => {
+    const a = await admin();
+    const c = t.client();
+    const { email, user } = await registerUser(c);
+    assert.equal((await page(c)).status, 403);
+
+    const add = await a.post('/api/admin/trackweight/members', { email: email.toUpperCase(), note: 'Beta tester' });
+    assert.equal(add.status, 201);
+    assert.equal(add.json.member.id, user.id);
+
+    const ok1 = await page(c);
+    assert.equal(ok1.status, 200);
+    assert.match(ok1.text, /<script type="module" src="\/v\/[^/"]+\/js\/trackweight\/main\.js">/);
+    assert.equal(ok1.headers.get('cache-control'), 'no-cache');
+    const status = await c.get('/api/trackweight/status');
+    assert.deepEqual(status.json, { access: 'members', signedIn: true, usda: true, photo: 'on' });
+    assert.equal((await c.get('/api/trackweight/foods/search?q=apple')).status, 200);
+    assert.equal((await c.get('/api/trackweight/foods/barcode/3017620422003')).status, 200);
+    assert.equal((await c.post('/api/trackweight/analyze-meal', { image: PNG })).status, 200);
+
+    const list = await a.get('/api/admin/trackweight/members');
+    assert.equal(list.json.access, 'members');
+    assert.deepEqual(list.json.admins, [ADMIN]);
+    const row = list.json.members.find((m) => m.id === user.id);
+    assert.equal(row.email, email);
+    assert.equal(row.note, 'Beta tester');
+
+    // adding again is harmless and updates the note
+    assert.equal((await a.post('/api/admin/trackweight/members', { email, note: 'Updated' })).status, 201);
+    assert.equal((await a.get('/api/admin/trackweight/members')).json.members.filter((m) => m.id === user.id).length, 1);
+    assert.equal((await a.get('/api/admin/trackweight/members')).json.members.find((m) => m.id === user.id).note, 'Updated');
+
+    assert.equal((await a.del(`/api/admin/trackweight/members/${user.id}`)).status, 200);
+    assert.equal((await page(c)).status, 403);
+    assert.equal((await c.get('/api/trackweight/status')).status, 403);
+  });
+
+  test('admins can always use it, without being on the list', async () => {
+    const a = await admin().catch(async () => {
+      const c = t.client();
+      await c.post('/api/auth/login', { email: ADMIN, password: 'correct horse battery' });
+      return c;
+    });
+    assert.equal((await page(a)).status, 200);
+    assert.equal((await a.get('/api/trackweight/status')).status, 200);
+  });
+
+  test('only people with an account can be approved (a bare address could be claimed by whoever signs up first)', async () => {
+    const a = await admin().catch(async () => {
+      const c = t.client();
+      await c.post('/api/auth/login', { email: ADMIN, password: 'correct horse battery' });
+      return c;
+    });
+    const r = await a.post('/api/admin/trackweight/members', { email: 'nobody-yet@example.com' });
+    assert.equal(r.status, 404);
+    assert.match(r.json.error.message, /No account uses that email yet/);
+    assert.equal(t.deps.repos.trackweight.list().some((m) => m.email === 'nobody-yet@example.com'), false);
+    assert.equal((await a.post('/api/admin/trackweight/members', { email: 'not-an-email' })).status, 400);
+  });
+
+  test('the member list is for admins only', async () => {
+    const c = t.client();
+    await registerUser(c);
+    assert.equal((await c.get('/api/admin/trackweight/members')).status, 403);
+    assert.equal((await c.post('/api/admin/trackweight/members', { email: 'a@b.co' })).status, 403);
+    assert.equal((await t.client().get('/api/admin/trackweight/members')).status, 401);
+    assert.equal(t.deps.repos.trackweight.list().some((m) => m.email === 'a@b.co'), false);
+  });
+
+  test('membership belongs to the account: it is in their data download and goes when the account is deleted', async () => {
+    const a = await admin().catch(async () => {
+      const c = t.client();
+      await c.post('/api/auth/login', { email: ADMIN, password: 'correct horse battery' });
+      return c;
+    });
+    const c = t.client();
+    const { email, password, user } = await registerUser(c);
+    assert.equal((await c.get('/api/account/export')).json.trackWeightMember, false);
+    await a.post('/api/admin/trackweight/members', { email });
+    assert.equal((await c.get('/api/account/export')).json.trackWeightMember, true);
+    assert.equal(t.deps.repos.trackweight.isMember(user.id), true);
+    const del = await c.del('/api/account', { password });
+    assert.equal(del.status, 200);
+    assert.equal(t.deps.repos.trackweight.isMember(user.id), false);
+    assert.equal(t.deps.db.get('SELECT COUNT(*) AS n FROM trackweight_members WHERE user_id = ?', user.id).n, 0);
+  });
+
+  test('the service worker keeps only the real page for offline use, and drops it when access is refused', async () => {
+    const sw = await (await fetch(`${t.base}/sw.js`)).text();
+    assert.match(sw, /res\.status === 401 \|\| res\.status === 403/);
+    assert.match(sw, /c\.delete\('\/trackweight'\)/);
+    assert.match(sw, /const copy = res\.ok \? res\.clone\(\) : null;/);
+  });
+
+  test('the whole site works as before around it', async () => {
+    assert.equal((await fetch(`${t.base}/health`)).status, 200);
+    const home = await (await fetch(`${t.base}/`, { headers: html })).text();
+    assert.match(home, /src="\/v\/[^/"]+\/js\/main\.js"/);
+  });
+});
+
 describe('photo estimates follow the site’s plan rules', () => {
   test('off unless the operator pays for AI (the same rule as the stylist and photo tagging)', async () => {
-    const t = await startTestServer({ env: { PRICING: 'free' }, overrides: { aiClient: fakeAnthropic() } });
+    const t = await startTestServer({ env: { TRACKWEIGHT_ACCESS: 'open', PRICING: 'free' }, overrides: { aiClient: fakeAnthropic() } });
     try {
       const c = t.client();
       await registerUser(c);
@@ -421,7 +606,7 @@ describe('photo estimates follow the site’s plan rules', () => {
   test('on a paid site photos are a Pro feature', async () => {
     const fake = fakeAnthropic();
     fake.reply = ok(MEAL);
-    const t = await startTestServer({ env: { PRICING: 'paid' }, overrides: { aiClient: fake } });
+    const t = await startTestServer({ env: { TRACKWEIGHT_ACCESS: 'open', PRICING: 'paid' }, overrides: { aiClient: fake } });
     try {
       const c = t.client();
       const { user } = await registerUser(c);
@@ -438,7 +623,7 @@ describe('photo estimates follow the site’s plan rules', () => {
   });
 
   test('without an API key photos are simply off, and nothing else breaks', async () => {
-    const t = await startTestServer({ env: { PRICING: 'free', FREE_AI: '1' } });
+    const t = await startTestServer({ env: { TRACKWEIGHT_ACCESS: 'open', PRICING: 'free', FREE_AI: '1' } });
     try {
       assert.equal((await t.client().get('/api/trackweight/status')).json.photo, 'off');
       assert.equal(t.deps.meals, null);

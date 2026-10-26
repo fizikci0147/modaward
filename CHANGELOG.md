@@ -6,6 +6,16 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+## [5.21.0] · 2026-10-26
+
+### Added
+- **Track Weight is for approved members.** By default only accounts an admin has approved, and the admins themselves, can open `/trackweight` or use its food search, barcode lookup and meal photos. A visitor sees a "members only" page with a sign-in button, and a signed-in account that is not on the list is told so and who to ask. Admins add and remove members in *Business → Track Weight* by the email of an existing account (membership belongs to the account, not to an address, so nobody can claim an approved address by signing up first; it ends if the account is deleted). **Action needed after upgrading:** until you add people, only admins can use Track Weight; set `TRACKWEIGHT_ACCESS=open` to let everyone in as before.
+- Track Weight members appear in the person's data download.
+
+### Changed
+- **Track Weight is far more colourful.** Each tab has its own colours (green and teal for the Diary, orange and rose for Exercise, blue and violet for Progress, violet and pink for Profile) with gradient summary cards, a colour for every meal and macro, gradient buttons and a tab bar that lights up per tab. It follows light and dark mode.
+- The service worker keeps the real tracker page for offline use and discards it when access is refused.
+
 ## [5.20.0] · 2026-10-26
 
 ### Added

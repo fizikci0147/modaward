@@ -2,7 +2,7 @@
    - Precaches the app shell so it opens instantly and works offline-first for static files.
    - Never caches /api, /uploads or /go: personal data and redirects always come from the network.
    Bump VERSION when shipping changes to cached files. */
-const VERSION = 'mw-v5-20-0';
+const VERSION = 'mw-v5-21-0';
 const SHELL = ['/', '/offline.html', '/css/trackweight.css', '/js/trackweight/main.js', '/trackweight.webmanifest', '/css/app.css', '/js/main.js', '/js/app.js', '/vendor/ui.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/favicon.svg', '/fonts/instrument-serif-400.woff2', '/fonts/geist-latin.woff2'];
 
 self.addEventListener('install', (event) => {
@@ -25,8 +25,19 @@ self.addEventListener('fetch', (event) => {
 
   // page navigations: network first, fall back to the cached shell, then the offline page
   if (req.mode === 'navigate') {
-    const home = /^\/trackweight\/?$/.test(url.pathname) ? '/trackweight' : '/';
-    event.respondWith(fetch(req).catch(() => caches.match(home).then((r) => r || caches.match('/offline.html'))));
+    const tracker = /^\/trackweight\/?$/.test(url.pathname);
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (tracker) {
+            // keep the real page for offline use; a "members only" answer must never be kept, and removes an old copy
+            const copy = res.ok ? res.clone() : null;
+            caches.open(VERSION).then((c) => (copy ? c.put('/trackweight', copy) : res.status === 401 || res.status === 403 ? c.delete('/trackweight') : undefined));
+          }
+          return res;
+        })
+        .catch(() => caches.match(tracker ? '/trackweight' : '/').then((r) => r || caches.match('/offline.html')))
+    );
     return;
   }
 

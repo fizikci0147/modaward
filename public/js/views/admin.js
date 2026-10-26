@@ -402,12 +402,48 @@ function BrowserErrors() {
   </section>`;
 }
 
+/** Who may use Track Weight (/trackweight). Members are existing accounts; admins always have access. */
+function TrackWeightMembers() {
+  const [data, setData] = useState(null);
+  const [form, setForm] = useState({ email: '', note: '' });
+  const load = () => api.get('/admin/trackweight/members').then(setData).catch(fail);
+  useEffect(() => { load(); }, []);
+  const add = async (e) => {
+    e.preventDefault();
+    try {
+      const r = await api.post('/admin/trackweight/members', form);
+      toast(`${r.member.email} can now use Track Weight`);
+      setForm({ email: '', note: '' });
+      load();
+    } catch (err) { fail(err); }
+  };
+  const remove = async (m) => {
+    if (!confirm(`Remove ${m.email} from Track Weight?`)) return;
+    try { await api.del(`/admin/trackweight/members/${m.id}`); load(); } catch (err) { fail(err); }
+  };
+  if (!data) return html`<section class="card card-pad"><p class="muted">Loading…</p></section>`;
+  return html`<section class="card card-pad stack"><h2 class="display h-s">Track Weight members</h2>
+    ${data.access === 'open'
+      ? html`<div class="callout small">Access is <b>open to everyone</b> (TRACKWEIGHT_ACCESS=open), so the list below is not used. Remove that setting to make Track Weight members-only again.</div>`
+      : html`<p class="small muted">Only the people below, and the admins, can open <b>/trackweight</b>. Everyone else sees a “members only” page.</p>`}
+    <form class="row" style=${{ flexWrap: 'wrap', gap: '8px' }} onSubmit=${add}>
+      <input class="input grow" type="email" required aria-label="Email of an existing account" placeholder="Email of an existing account" value=${form.email} onInput=${(e) => setForm({ ...form, email: e.target.value })} />
+      <input class="input grow" aria-label="Note" placeholder="Note (optional)" maxlength="200" value=${form.note} onInput=${(e) => setForm({ ...form, note: e.target.value })} />
+      <button class="btn btn-primary">Add member</button>
+    </form>
+    ${data.members.length
+      ? html`<table class="table"><thead><tr><th>Member</th><th>Added</th><th>Note</th><th></th></tr></thead><tbody>${data.members.map((m) => html`<tr key=${m.id}><td><b>${m.email}</b>${m.name ? html`<div class="small faint">${m.name}</div>` : null}</td><td>${when(m.addedAt)}</td><td>${m.note || '–'}</td><td><button class="btn btn-ghost btn-s" onClick=${() => remove(m)}>Remove</button></td></tr>`)}</tbody></table>`
+      : html`<p class="small faint">No members yet. Add the email of someone who already has a ModaWard account.</p>`}
+    <p class="tiny faint">Admins (${data.admins.join(', ') || 'none set'}) always have access. A person must sign up for ModaWard first; membership belongs to the account, so it ends if the account is deleted.</p>
+  </section>`;
+}
+
 export function AdminView() {
   const [tab, setTab] = useState('overview');
   return html`<div class="stack-l">
     <header class="stack"><h1 class="display h-xl">Business</h1>
-      <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }} role="tablist">${[['overview', 'Overview'], ['users', 'Users'], ['access', 'Pro access'], ['products', 'Products'], ['system', 'System']].map(([id, label]) => html`<button key=${id} role="tab" class="chip" aria-selected=${tab === id} onClick=${() => setTab(id)}>${label}</button>`)}</div>
+      <div class="row" style=${{ gap: '8px', flexWrap: 'wrap' }} role="tablist">${[['overview', 'Overview'], ['users', 'Users'], ['access', 'Pro access'], ['trackweight', 'Track Weight'], ['products', 'Products'], ['system', 'System']].map(([id, label]) => html`<button key=${id} role="tab" class="chip" aria-selected=${tab === id} onClick=${() => setTab(id)}>${label}</button>`)}</div>
     </header>
-    ${tab === 'overview' ? html`<${Overview} />` : tab === 'users' ? html`<${Users} />` : tab === 'system' ? html`<div class="stack-l"><${System} /><${BrowserErrors} /></div>` : tab === 'products' ? html`<${Products} />` : html`<${Access} />`}
+    ${tab === 'overview' ? html`<${Overview} />` : tab === 'users' ? html`<${Users} />` : tab === 'system' ? html`<div class="stack-l"><${System} /><${BrowserErrors} /></div>` : tab === 'products' ? html`<${Products} />` : tab === 'trackweight' ? html`<${TrackWeightMembers} />` : html`<${Access} />`}
   </div>`;
 }

@@ -47,14 +47,22 @@ Common codes: `bad_request` 400, `unauthorized` 401, `upgrade_required` 402, `fo
 
 ## Track Weight (calorie tracker page)
 
-The diary itself is stored on the person's device; these are the only server calls. Searching needs no sign-in.
+The diary itself is stored on the person's device; these are the only server calls. They are for approved members (and admins) unless the site sets `TRACKWEIGHT_ACCESS=open`: 401 when nobody is signed in, 403 `forbidden` for an account that has not been approved. `GET /trackweight` (the page) answers the same way with a small HTML page.
 
 | | |
 |---|---|
-| `GET /api/trackweight/status` | `{ signedIn, usda, photo }`: `photo` is `on`, `signin`, `pro` or `off` (why meal photos can or cannot be used) |
+| `GET /api/trackweight/status` | `{ access: 'members'\|'open', signedIn, usda, photo }`: `photo` is `on`, `signin`, `pro` or `off` (why meal photos can or cannot be used) |
 | `GET /api/trackweight/foods/search?q=` | `{ foods: [{ id, name, brand?, barcode?, per100g: {kcal, protein, carbs, fat, fiber?}, servingGrams?, servingLabel?, source: 'off'\|'usda' }] }`; 503 if every database is unreachable |
 | `GET /api/trackweight/foods/barcode/:code` | `{ food }`; 404 if unknown or malformed, 503 if the database is unreachable |
 | `POST /api/trackweight/analyze-meal` `{image, hint?}` | signed in. `image` is a JPEG/PNG/WebP data URL, `hint` up to 300 characters. Returns `{ items: [{ name, grams, kcal, protein_g, carbs_g, fat_g, confidence }], notes }`. 402 `upgrade_required` (paid site, not Pro), 503 (not switched on), 429 (daily allowance), 422 `ai_unsure` (could not read it) |
+
+Admin only (the emails in `ADMIN_EMAILS`):
+
+| | |
+|---|---|
+| `GET /api/admin/trackweight/members` | `{ access, members: [{ id, email, name, addedAt, note }], admins }` |
+| `POST /api/admin/trackweight/members` `{email, note?}` | approve an existing account (404 if nobody has signed up with that email) |
+| `DELETE /api/admin/trackweight/members/:id` | remove a member; their access ends at once |
 
 ## Shop
 

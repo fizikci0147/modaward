@@ -14,6 +14,7 @@ For the person running the site. The public Privacy Policy (`public/js/views/leg
 | Shop link clicks | `click_events` | 400 days (the user link is cleared when an account is deleted) |
 | Browser error reports | `client_errors` | 30 days |
 | AI usage counters (including Track Weight meal photos, kind `meal_photo`) | `ai_usage` | 400 days |
+| Track Weight member list | `trackweight_members` (account id, date added, an optional note by the admin) | until removed or the account is deleted |
 | Track Weight diary (foods eaten, workouts, weight) | the person's own browser (IndexedDB); never sent to the server. Meal photos are sent to Anthropic for one request and not stored | until the person deletes it or clears site data |
 | Payment webhook ids | `stripe_events` | 90 days |
 | Password-reset tokens | `password_resets` | removed a day after use/expiry |

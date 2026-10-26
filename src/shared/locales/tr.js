@@ -1302,5 +1302,7 @@ export default {
   "That product is not in the food database yet. You can add it by hand.": "Bu ürün henüz yiyecek veri tabanında yok. Elle ekleyebilirsin.",
   "Photo estimates are not switched on for this site.": "Fotoğraftan tahmin bu sitede açık değil.",
   "Photo estimates are a Pro feature.": "Fotoğraftan tahmin bir Pro özelliği.",
-  "Too many searches. Please slow down.": "Çok fazla arama. Lütfen yavaşla."
+  "Too many searches. Please slow down.": "Çok fazla arama. Lütfen yavaşla.",
+  "Track Weight is for approved members.": "Track Weight yalnızca onaylı üyeler içindir.",
+  "No account uses that email yet. Ask them to sign up first, then add them here.": "Bu e-posta adresini kullanan bir hesap henüz yok. Önce kayıt olmasını iste, sonra buradan ekle."
 };

@@ -27,7 +27,7 @@ function AddWorkout({ date, weightKg, onClose }) {
         <div class="field"><label for="tw-wm">Duration (minutes)</label><input id="tw-wm" class="input" type="number" inputmode="numeric" min="0" value=${minutes} onInput=${(e) => setMinutes(e.target.value)} /></div>
         ${!act ? html`<div class="field"><label for="tw-wk">Calories burned</label><input id="tw-wk" class="input" type="number" inputmode="numeric" min="0" value=${customKcal} onInput=${(e) => setCustomKcal(e.target.value)} /></div>` : null}
       </div>
-      <div class="card card-pad center"><b class="display" style=${{ fontSize: '2rem' }}>${kcal}</b> kcal burned${act ? html`<div class="tiny faint">MET ${act.met} × ${weightKg} kg × ${num(minutes)} min</div>` : null}</div>
+      <div class="card card-pad center"><b class="display tw-bignum" style=${{ fontSize: '2.4rem' }}>${kcal}</b> kcal burned${act ? html`<div class="tiny faint">MET ${act.met} × ${weightKg} kg × ${num(minutes)} min</div>` : null}</div>
       <button class="btn btn-primary btn-block" disabled=${kcal <= 0 || num(minutes) <= 0 || !name} onClick=${async () => (await add('workouts', { date, name, minutes: num(minutes), kcal, createdAt: Date.now() }), onClose())}>Add workout</button>
     </div>
   </${Sheet}>`;
@@ -41,7 +41,7 @@ export function Exercise({ profile, date, setDate }) {
   const minutes = workouts.reduce((a, w) => a + w.minutes, 0);
   return html`<div class="stack">
     <${DateBar} date=${date} setDate=${setDate} />
-    <section class="card card-pad tw-two">
+    <section class="card card-pad tw-hero tw-two">
       <div class="center"><b class="display num" style=${{ fontSize: '2.4rem' }}>${kcalFmt(total)}</b><div class="small faint">kcal burned</div></div>
       <div class="center"><b class="display num" style=${{ fontSize: '2.4rem' }}>${minutes}</b><div class="small faint">minutes</div></div>
     </section>

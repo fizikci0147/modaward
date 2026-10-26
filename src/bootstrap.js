@@ -21,6 +21,7 @@ import { createAiClient } from './ai/client.js';
 import { createStylist } from './ai/stylist.js';
 import { createMealAnalyzer } from './ai/meals.js';
 import { createFoods } from './services/foods.js';
+import { createTrackweightAccess } from './services/trackweight-access.js';
 import { trackweightRoutes } from './http/routes/trackweight.js';
 import { createPush } from './services/push.js';
 import { createReminders } from './services/reminders.js';
@@ -65,6 +66,7 @@ export async function createDeps(config, overrides = {}) {
   const stylist = ai ? createStylist({ ai, db, log }) : null;
   const meals = ai ? createMealAnalyzer({ ai, config }) : null;
   const foods = createFoods({ config, log, fetch: overrides.fetch });
+  const trackweightAccess = createTrackweightAccess({ config, repos });
   const cutoutService = overrides.cutoutService === undefined ? createCutoutService(config, usage, log, overrides.fetch) : overrides.cutoutService;
   // nothing is sold in the free version, so there is no billing at all (even if Stripe keys are present)
   const billing = overrides.billing === undefined ? (config.plans.pricing === 'paid' ? createBilling(config, repos, log, overrides.fetch) : null) : overrides.billing;
@@ -87,7 +89,7 @@ export async function createDeps(config, overrides = {}) {
   trends.load();
 
   const codes = createCodes({ db, repos });
-  const deps = { config, clock, db, repos, codes, trends, log, images, mailer, weather, linker, catalog, usage, stylist, meals, foods, cutoutService, billing, capabilities, extraApiRoutes: [] };
+  const deps = { config, clock, db, repos, codes, trends, log, images, mailer, weather, linker, catalog, usage, stylist, meals, foods, trackweightAccess, cutoutService, billing, capabilities, extraApiRoutes: [] };
   deps.outfits = createOutfitService({ repos, weather, config, stylist });
   deps.shop = createShopService({ repos, weather, catalog, linker, config, stylist });
   deps.push = overrides.push === undefined ? await createPush(config, db, log, overrides.pushSender) : overrides.push;

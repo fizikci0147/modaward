@@ -48,9 +48,10 @@ const httpsOnly = (u) => {
   }
 };
 const grantSchema = object({ email: email(), days: integer({ min: 1, max: 3660 }) });
+const memberSchema = object({ email: email(), note: optional(string({ max: 200 }), '') });
 
 /** Operator dashboard data. Access is limited to the emails in ADMIN_EMAILS. */
-export function adminRoutes({ db, config, usage, catalog, codes, trends, weather, capabilities, mailer }) {
+export function adminRoutes({ db, repos, config, usage, catalog, codes, trends, weather, capabilities, mailer }) {
   const r = Router();
   r.use('/admin', requireUser, (req, _res, next) => (config.adminEmails.includes(req.user.email.toLowerCase()) ? next() : next(forbidden('Not found.'))));
 
@@ -253,6 +254,20 @@ export function adminRoutes({ db, config, usage, catalog, codes, trends, weather
   r.post('/admin/grants', (req, res) => {
     const { email: to, days } = grantSchema(req.body ?? {});
     res.json(codes.grant(to, days));
+  });
+
+  // ── who may use Track Weight (members-only by default) ──
+  r.get('/admin/trackweight/members', (_req, res) => res.json({ access: config.trackweight.access, members: repos.trackweight.list(), admins: config.adminEmails }));
+  r.post('/admin/trackweight/members', (req, res) => {
+    const { email: to, note } = memberSchema(req.body ?? {});
+    const user = repos.users.byEmail(to.trim().toLowerCase());
+    if (!user) throw notFound('No account uses that email yet. Ask them to sign up first, then add them here.');
+    repos.trackweight.add(user.id, note);
+    res.status(201).json({ member: { id: user.id, email: user.email, name: user.name } });
+  });
+  r.delete('/admin/trackweight/members/:id', (req, res) => {
+    repos.trackweight.remove(req.params.id);
+    res.json({ ok: true });
   });
 
   // ── product catalogue: hand-picked products and feed imports ──

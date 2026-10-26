@@ -44,7 +44,7 @@ function Row({ food, onPick }) {
       <span class="tw-food-name">${food.name}${food.custom ? html` <span class="badge badge-ok">mine</span>` : null}</span>
       <span class="tiny faint">${food.brand ? `${food.brand} · ` : ''}${food.servingLabel ?? '100 g'}</span>
     </span>
-    <span class="small num"><b>${portionKcal(food)}</b> <span class="faint">kcal</span></span>
+    <span class="tw-pill small num">${portionKcal(food)} kcal</span>
   </button>`;
 }
 
@@ -131,7 +131,7 @@ function Portion({ food, date, meal: initialMeal, onBack, onDone }) {
         </select></div>
     </div>
     <div class="card card-pad center">
-      <div class="display" style=${{ fontSize: '2.6rem', lineHeight: 1 }}>${m.kcal} <span class="muted" style=${{ fontSize: '1rem', fontFamily: 'var(--font-ui)' }}>kcal</span></div>
+      <div class="display" style=${{ fontSize: '2.8rem', lineHeight: 1 }}><span class="tw-bignum">${m.kcal}</span> <span class="muted" style=${{ fontSize: '1rem', fontFamily: 'var(--font-ui)' }}>kcal</span></div>
       <div class="row tw-macros-line"><span class="tone-protein-text">Protein ${m.protein} g</span><span class="tone-carbs-text">Carbs ${m.carbs} g</span><span class="tone-fat-text">Fat ${m.fat} g</span></div>
       <div class="tiny faint">${Math.round(grams)} g in total · ${food.per100g.kcal} kcal per 100 g</div>
     </div>

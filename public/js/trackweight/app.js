@@ -1,4 +1,4 @@
-import { html, useState } from '/js/ui.js';
+import { html, useState, useEffect } from '/js/ui.js';
 import { DEFAULT_PROFILE, today } from '/shared/nutrition.js';
 import { getSetting, setSetting, useQuery } from '/js/trackweight/db.js';
 import { Logo } from '/js/icons.js';
@@ -33,6 +33,10 @@ export function App() {
   const [date, setDate] = useState(today());
   // undefined while reading, null when this is the first visit
   const profile = useQuery(() => getSetting('profile', null), [], undefined);
+  // each tab has its own colours (css/trackweight.css reads this); the first-run questions use the Profile colours
+  useEffect(() => {
+    document.body.dataset.tab = profile === null ? 'profile' : tab;
+  }, [tab, profile === null]);
 
   if (profile === undefined) return html`<div class="tw-center"><${Spinner} /></div>`;
   if (profile === null) {
@@ -47,7 +51,7 @@ export function App() {
       ${tab === 'profile' ? html`<${ProfileView} initial=${profile} onSave=${saveProfile} />` : null}
     </main>
     <nav class="tabbar tw-tabbar" aria-label="Track Weight">
-      ${TABS.map(([id, label, icon]) => html`<button class="tab" key=${id} aria-current=${tab === id ? 'page' : undefined} onClick=${() => (setTab(id), scrollTo(0, 0))}><${Icon} name=${icon} />${label}</button>`)}
+      ${TABS.map(([id, label, icon]) => html`<button class="tab" key=${id} data-t=${id} aria-current=${tab === id ? 'page' : undefined} onClick=${() => (setTab(id), scrollTo(0, 0))}><${Icon} name=${icon} />${label}</button>`)}
     </nav>`;
 }
 

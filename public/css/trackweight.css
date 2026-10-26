@@ -25,12 +25,6 @@
 .tw-over { color: var(--danger); }
 
 /* ── macro colours ── */
-.tone-protein { background: var(--sky); }
-.tone-carbs { background: var(--warn); }
-.tone-fat { background: var(--clay); }
-.tone-protein-text { color: var(--sky); }
-.tone-carbs-text { color: var(--warn); }
-.tone-fat-text { color: var(--clay); }
 .tw-meter { height: 6px; margin: 5px 0 3px; }
 .tw-meter > i { transition: width 0.4s var(--ease); }
 
@@ -89,3 +83,150 @@ button.tw-entry:hover .tw-entry-name { text-decoration: underline; text-underlin
   .tw-summary { flex-direction: column; align-items: stretch; }
   .tw-ring { align-self: center; }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   Colour. Every tab has its own hue (--tw-a to --tw-a2) that drives its buttons, hero card, tab-bar
+   icon and highlights; meals and macros keep their own colours everywhere. Text on a light page
+   uses the darker "ink" of a hue so it stays readable; dark mode swaps in lighter inks.
+   ═══════════════════════════════════════════════════════════════════════ */
+.tw {
+  --c-emerald: #10b981; --c-cyan: #06b6d4; --c-orange: #f97316; --c-rose: #f43f5e; --c-blue: #3b82f6; --c-indigo: #6366f1;
+  --c-violet: #8b5cf6; --c-fuchsia: #d946ef; --c-amber: #f59e0b; --c-pink: #ec4899; --c-green: #22c55e; --c-teal: #14b8a6; --c-red: #ef4444;
+  --i-emerald: #047857; --i-orange: #c2410c; --i-blue: #1d4ed8; --i-violet: #6d28d9; --i-amber: #b45309; --i-pink: #be185d; --i-indigo: #4338ca; --i-teal: #0f766e; --i-green: #15803d;
+  /* the current tab's hue; Diary by default */
+  --tw-a: var(--c-emerald); --tw-a2: var(--c-cyan); --tw-ink: var(--i-emerald);
+  --tw-grad: linear-gradient(135deg, var(--tw-a), var(--tw-a2));
+  --tw-tint: color-mix(in srgb, var(--tw-a) 10%, var(--surface));
+}
+@media (prefers-color-scheme: dark) {
+  .tw { --i-emerald: #6ee7b7; --i-orange: #fdba74; --i-blue: #93c5fd; --i-violet: #c4b5fd; --i-amber: #fcd34d; --i-pink: #f9a8d4; --i-indigo: #a5b4fc; --i-teal: #5eead4; --i-green: #86efac; --tw-tint: color-mix(in srgb, var(--tw-a) 16%, var(--surface)); }
+}
+body.tw[data-tab='exercise'] { --tw-a: var(--c-orange); --tw-a2: var(--c-rose); --tw-ink: var(--i-orange); }
+body.tw[data-tab='progress'] { --tw-a: var(--c-blue); --tw-a2: var(--c-violet); --tw-ink: var(--i-blue); }
+body.tw[data-tab='profile'] { --tw-a: var(--c-violet); --tw-a2: var(--c-pink); --tw-ink: var(--i-violet); }
+body.tw-locked { --tw-a: var(--c-violet); --tw-a2: var(--c-pink); --tw-ink: var(--i-violet); }
+
+/* a soft wash of the tab's colours behind everything */
+body.tw {
+  background:
+    radial-gradient(900px 420px at 100% -8%, color-mix(in srgb, var(--tw-a) 20%, transparent), transparent 70%),
+    radial-gradient(760px 420px at -10% 4%, color-mix(in srgb, var(--tw-a2) 16%, transparent), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+}
+
+/* top bar: a stripe of the tab's colours along its lower edge */
+.tw-top { position: sticky; }
+.tw-top::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px; background: var(--tw-grad); }
+.tw-top .eyebrow { color: var(--tw-ink); font-weight: 700; }
+
+/* buttons, chips, the add button, the sheet's grab handle */
+.tw .btn-primary { background: var(--tw-grad); color: #fff; box-shadow: 0 8px 18px -8px color-mix(in srgb, var(--tw-a) 80%, transparent); }
+.tw .btn-primary:hover:not(:disabled) { background: var(--tw-grad); filter: brightness(1.06); color: #fff; }
+.tw .btn-outline { border-color: color-mix(in srgb, var(--tw-a) 55%, transparent); color: var(--tw-ink); }
+.tw .btn-outline:hover:not(:disabled) { border-color: var(--tw-a); background: var(--tw-tint); }
+.tw .btn-ghost { color: var(--tw-ink); }
+.tw .btn-ghost:hover:not(:disabled) { background: var(--tw-tint); color: var(--tw-ink); }
+.tw .btn-danger { color: var(--danger); }
+.tw .icon-btn:hover { background: var(--tw-tint); border-color: var(--tw-a); }
+.tw .chip[aria-selected='true'], .tw .chip[aria-pressed='true'] { background: var(--tw-grad); color: #fff; border-color: transparent; }
+.tw .chip:hover { border-color: var(--tw-a); color: var(--tw-ink); }
+.tw .chip[aria-selected='true']:hover, .tw .chip[aria-pressed='true']:hover { color: #fff; }
+.tw .segmented button[aria-pressed='true'] { background: var(--tw-grad); color: #fff; }
+.tw .input:focus, .tw .select:focus { border-color: var(--tw-a); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tw-a) 22%, transparent); }
+.tw .range, .tw input[type='checkbox'] { accent-color: var(--tw-a); }
+.tw .grab { background: var(--tw-grad); opacity: 0.7; }
+.tw .sheet-head { border-bottom-color: color-mix(in srgb, var(--tw-a) 30%, transparent); }
+.tw-fab { background: var(--tw-grad); color: #fff; box-shadow: 0 12px 26px -10px color-mix(in srgb, var(--tw-a) 90%, transparent); }
+
+/* tab bar: each tab lights up in its own colour */
+.tw .tab[data-t='diary'] { --c: var(--i-emerald); --cb: var(--c-emerald); }
+.tw .tab[data-t='exercise'] { --c: var(--i-orange); --cb: var(--c-orange); }
+.tw .tab[data-t='progress'] { --c: var(--i-blue); --cb: var(--c-blue); }
+.tw .tab[data-t='profile'] { --c: var(--i-violet); --cb: var(--c-violet); }
+.tw .tab[aria-current='page'] { color: var(--c); font-weight: 650; }
+.tw .tab[aria-current='page']::before { background: var(--cb); width: 30px; height: 3px; }
+.tw .tab[aria-current='page'] svg { filter: drop-shadow(0 4px 6px color-mix(in srgb, var(--cb) 45%, transparent)); }
+
+/* hero cards: a block of the tab's gradient with white text */
+.tw-hero { position: relative; overflow: hidden; background: var(--tw-grad); color: #fff; border: 0; box-shadow: 0 22px 40px -24px color-mix(in srgb, var(--tw-a) 90%, transparent); }
+.tw-hero::before, .tw-hero::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.14); pointer-events: none; }
+.tw-hero::before { width: 220px; height: 220px; right: -70px; top: -90px; }
+.tw-hero::after { width: 150px; height: 150px; left: -50px; bottom: -80px; background: rgba(255, 255, 255, 0.09); }
+.tw-hero > * { position: relative; z-index: 1; }
+.tw-hero .faint, .tw-hero .muted, .tw-hero .small { color: rgba(255, 255, 255, 0.85); }
+.tw-hero .tw-ring-bg { stroke: rgba(255, 255, 255, 0.3); }
+.tw-hero .tw-ring-fg, .tw-hero .tw-ring-fg.over { stroke: #fff; }
+.tw-hero .tw-over { color: #fff; }
+.tw-hero.over { background: linear-gradient(135deg, var(--c-orange), var(--c-red)); }
+.tw-hero .tw-eq b { font-size: 1.25rem; }
+.tw-hero-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.9; }
+.tw-hero-big { font-family: var(--font-display); font-size: 3.4rem; line-height: 1; letter-spacing: -0.02em; }
+.tw-hero-row { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+/* meals: a colour each, in the icon, the edge and the Add button */
+.tw-meal { --m: var(--c-amber); --m2: var(--c-orange); --mi: var(--i-amber); border-left: 5px solid var(--m); }
+.tw-meal-lunch { --m: var(--c-green); --m2: var(--c-teal); --mi: var(--i-green); }
+.tw-meal-dinner { --m: var(--c-indigo); --m2: var(--c-violet); --mi: var(--i-indigo); }
+.tw-meal-snack { --m: var(--c-pink); --m2: var(--c-rose); --mi: var(--i-pink); }
+.tw-meal-title { display: flex; align-items: center; gap: 10px; }
+.tw-meal-ico { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: linear-gradient(135deg, var(--m), var(--m2)); color: #fff; flex: none; box-shadow: 0 6px 12px -6px var(--m); }
+.tw-meal-ico svg { width: 20px; height: 20px; }
+.tw-meal .btn-outline { border-color: color-mix(in srgb, var(--m) 60%, transparent); color: var(--mi); }
+.tw-meal .btn-outline:hover:not(:disabled) { border-color: var(--m); background: color-mix(in srgb, var(--m) 12%, var(--surface)); }
+.tw-meal-kcal { font-weight: 650; color: var(--mi); }
+
+/* macros */
+/* (.meter > i in app.css is more specific than a bare class, so these name the bar too) */
+.tw-meter > i.tone-protein { background: linear-gradient(90deg, #60a5fa, var(--c-indigo)); }
+.tw-meter > i.tone-carbs { background: linear-gradient(90deg, #fbbf24, var(--c-orange)); }
+.tw-meter > i.tone-fat { background: linear-gradient(90deg, #f472b6, var(--c-rose)); }
+.tone-protein-text, .m-protein .small { color: var(--i-blue); }
+.tone-carbs-text, .m-carbs .small { color: var(--i-amber); }
+.tone-fat-text, .m-fat .small { color: var(--i-pink); }
+.tw-meter { background: color-mix(in srgb, var(--ink) 9%, transparent); height: 8px; }
+
+/* pills and numbers */
+.tw-pill { display: inline-block; padding: 2px 10px; border-radius: 999px; background: var(--tw-tint); color: var(--tw-ink); font-weight: 650; }
+.tw-entry b.num { color: var(--tw-ink); }
+.tw-food:hover { border-color: var(--tw-a); }
+.tw-food[aria-pressed='true'] { border-color: var(--tw-a); box-shadow: 0 0 0 1px var(--tw-a); background: var(--tw-tint); }
+@supports (background-clip: text) or (-webkit-background-clip: text) {
+  .tw-bignum { background: var(--tw-grad); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent; }
+}
+.tw-drop { background: var(--tw-tint); border-color: color-mix(in srgb, var(--tw-a) 55%, transparent); color: var(--tw-ink); }
+.tw-drop:hover { border-color: var(--tw-a); background: var(--tw-tint); }
+.tw-drop svg { width: 38px; height: 38px; }
+.tw .callout { background: color-mix(in srgb, var(--c-amber) 16%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c-amber) 45%, transparent); color: var(--ink); }
+
+/* charts */
+.tw-line { stroke: var(--tw-a); stroke-width: 3; }
+.tw-dot { fill: var(--surface); stroke: var(--tw-a); stroke-width: 2.5; }
+.tw-bar { fill: url(#tw-bar-fill); }
+.tw-bar.over { fill: url(#tw-bar-over); }
+.tw-stop-a { stop-color: var(--c-blue); }
+.tw-stop-b { stop-color: var(--c-violet); }
+.tw-stop-oa { stop-color: var(--c-amber); }
+.tw-stop-ob { stop-color: var(--c-red); }
+.tw-goal { stroke: var(--tw-ink); }
+
+/* the "members only" page */
+.tw-locked .tw-main { display: grid; align-items: center; min-height: 100dvh; }
+.tw-lock { position: relative; overflow: hidden; text-align: center; display: grid; justify-items: center; gap: 14px; padding: 44px 24px 40px; border-radius: var(--radius); background: var(--tw-grad); color: #fff; box-shadow: 0 30px 60px -30px color-mix(in srgb, var(--tw-a) 90%, transparent); }
+.tw-lock::before, .tw-lock::after { content: ''; position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.14); pointer-events: none; }
+.tw-lock::before { width: 260px; height: 260px; right: -90px; top: -110px; }
+.tw-lock::after { width: 180px; height: 180px; left: -70px; bottom: -90px; background: rgba(255, 255, 255, 0.09); }
+.tw-lock > * { position: relative; z-index: 1; }
+.tw-lock img { background: #fff; border-radius: 14px; padding: 6px; }
+.tw-lock .eyebrow { color: rgba(255, 255, 255, 0.9); }
+.tw-lock-text { max-width: 36ch; color: rgba(255, 255, 255, 0.92); font-size: 16px; }
+.tw-lock-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-top: 8px; }
+.tw-lock .btn-primary { background: #fff; color: var(--tw-ink); box-shadow: none; filter: none; }
+.tw-lock .btn-primary:hover { background: #fff; color: var(--tw-ink); filter: brightness(0.96); }
+.tw-lock .btn-outline { border-color: rgba(255, 255, 255, 0.75); color: #fff; }
+.tw-lock .btn-outline:hover { background: rgba(255, 255, 255, 0.16); border-color: #fff; }
+.tw-hero .eyebrow { color: rgba(255, 255, 255, 0.92); }
+.tw-hero .callout { color: var(--ink); }
+.tw-hero .btn-danger { color: #fff; }
+.tw-hero label { color: #fff; }
+.tw-hero .input { color: var(--ink); }

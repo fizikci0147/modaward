@@ -46,7 +46,10 @@ async function run(label, contextOptions) {
   const offline = { on: false, failed: [] };
   page.on('console', (m) => {
     if (offline.on && /ERR_INTERNET_DISCONNECTED/.test(m.text())) return; // checked below: only the online search may fail
-    if ((m.type() === 'error' || m.type() === 'warning') && !/preloaded using link preload but not used/.test(m.text())) problems.push(`console.${m.type()}: ${m.text()}`);
+    if (/status of (401|403)/.test(m.text()) && /\/trackweight/.test(m.location().url)) return; // the members-only page itself
+    // ModaWard's own offline page asks for /css/app.css by its plain address, which the service worker only keeps under the versioned one (true of the original too)
+    if (offline.on && /ERR_FAILED/.test(m.text()) && /\/css\/app\.css$/.test(m.location().url)) return;
+    if ((m.type() === 'error' || m.type() === 'warning') && !/preloaded using link preload but not used/.test(m.text())) problems.push(`console.${m.type()}: ${m.text()} @ ${m.location().url}`);
   });
   page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`));
   page.on('requestfailed', (r) => {
@@ -54,7 +57,7 @@ async function run(label, contextOptions) {
     if (offline.on) offline.failed.push(new URL(r.url()).pathname);
     else problems.push(`requestfailed: ${r.url()} ${r.failure()?.errorText}`);
   });
-  page.on('response', (r) => r.status() >= 400 && !/favicon/.test(r.url()) && problems.push(`HTTP ${r.status()} ${r.url()}`));
+  page.on('response', (r) => r.status() >= 400 && !/favicon/.test(r.url()) && !(/\/trackweight$/.test(r.url()) && [401, 403].includes(r.status())) && problems.push(`HTTP ${r.status()} ${r.url()}`));
   const shot = async (name) => shots && (await page.waitForTimeout(300), await page.screenshot({ path: path.join(shots, `tw-${label}-${name}.png`), fullPage: name.startsWith('full-') }));
   const noSideScroll = async (where) => {
     const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
@@ -67,6 +70,26 @@ async function run(label, contextOptions) {
   };
 
   try {
+    // ── members only: a visitor, then an account nobody approved, then an approved member ──
+    const gate1 = await page.goto('/trackweight');
+    assert.equal(gate1.status(), 401);
+    await page.getByRole('heading', { name: 'For members only' }).waitFor();
+    await page.getByRole('link', { name: 'Sign in' }).waitFor();
+    assert.equal(await page.locator('#root').count(), 0, 'a visitor gets none of the tracker');
+    await shot('00-members-only');
+    await noSideScroll('the members-only page');
+    const reg = await ctx.request.post('/api/auth/register', { headers: { 'x-requested-with': 'modaward' }, data: { email: `tw-${Date.now()}@example.com`, password: 'correct horse battery', name: 'Tracker', acceptTerms: true } });
+    assert.equal(reg.status(), 201);
+    const member = (await reg.json()).user;
+    const gate2 = await page.goto('/trackweight');
+    assert.equal(gate2.status(), 403);
+    await page.getByRole('heading', { name: 'Not on the member list yet' }).waitFor();
+    await page.getByText(member.email).waitFor();
+    await shot('00-not-approved');
+    assert.equal((await ctx.request.get('/api/trackweight/status')).status(), 403);
+    ok(`${label}: a visitor and an unapproved account are kept out, page and API`);
+    t.deps.repos.trackweight.add(member.id, 'end-to-end test');
+
     // ── first visit: a short profile ──
     await page.goto('/trackweight');
     await page.getByRole('heading', { name: 'Welcome to Track Weight' }).waitFor();
@@ -132,15 +155,7 @@ async function run(label, contextOptions) {
     await page.getByRole('dialog').waitFor({ state: 'detached' });
     ok(`${label}: a custom food is added and remembered under "my foods"; Escape closes the sheet`);
 
-    // ── photo: signed out, then signed in ──
-    await page.getByRole('button', { name: 'Add food' }).click();
-    await page.getByRole('tab', { name: 'Photo' }).click();
-    await page.getByText(/you need to be signed in/).waitFor();
-    await page.getByRole('link', { name: 'Open ModaWard to sign in' }).waitFor();
-    await shot('05-photo-signin');
-    await page.keyboard.press('Escape');
-    const reg = await ctx.request.post('/api/auth/register', { headers: { 'x-requested-with': 'modaward' }, data: { email: `tw-${Date.now()}@example.com`, password: 'correct horse battery', name: 'Tracker', acceptTerms: true } });
-    assert.equal(reg.status(), 201);
+    // ── photo ──
     const jpeg = await page.evaluate(() => {
       const c = document.createElement('canvas');
       c.width = 1800; c.height = 1200;
@@ -256,6 +271,21 @@ async function run(label, contextOptions) {
     await ctx.setOffline(false);
     offline.on = false;
     ok(`${label}: offline, the page and the diary still open, and food search says it is offline`);
+
+    // ── access can be taken away: the page is refused at once and the offline copy goes with it ──
+    t.deps.repos.trackweight.remove(member.id);
+    const revoked = await page.goto('/trackweight');
+    assert.equal(revoked.status(), 403);
+    await page.getByRole('heading', { name: 'Not on the member list yet' }).waitFor();
+    await page.waitForTimeout(400); // let the service worker drop its copy
+    offline.on = true;
+    await ctx.setOffline(true);
+    await page.goto('/trackweight').catch(() => {});
+    await page.getByRole('heading', { name: /You’re offline/ }).waitFor({ timeout: 10_000 });
+    assert.equal(await page.locator('.tw-eq').count(), 0, 'a revoked member gets no offline copy of the tracker');
+    await ctx.setOffline(false);
+    offline.on = false;
+    ok(`${label}: removing a member locks the page at once and clears their offline copy`);
 
     // ── the main app is untouched ──
     await ctx.clearCookies(); // the photo step signed this browser in; look at the front page as a visitor

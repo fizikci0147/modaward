@@ -1,4 +1,4 @@
-import { html, useEffect, useRef } from '/js/ui.js';
+import { html, useLayoutEffect, useRef } from '/js/ui.js';
 
 const PATHS = {
   diary: '<path d="M6 4h11a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 17 21H6V4Z"/><path d="M6 4a1.5 1.5 0 0 0-1.5 1.5V19A2 2 0 0 0 6 21M9.5 8.5h6M9.5 12h6"/>',
@@ -15,7 +15,11 @@ const PATHS = {
   edit: '<path d="M4 20h4L19.5 8.5a2.1 2.1 0 0 0-3-3L5 17v3Z"/><path d="m14.5 7.5 3 3"/>',
   trash: '<path d="M4.5 7h15M9.5 7V4.8c0-.4.3-.8.8-.8h3.4c.5 0 .8.4.8.8V7M6.5 7l.8 12.2c0 .5.4.8.9.8h7.6c.5 0 .9-.3.9-.8L17.5 7"/>',
   check: '<path d="m5 12.5 4.5 4.5L19 7.5"/>',
-  sparkle: '<path d="M12 3.5 13.8 10 20.5 12l-6.7 2L12 20.5 10.2 14 3.5 12l6.7-2L12 3.5Z"/>'
+  sparkle: '<path d="M12 3.5 13.8 10 20.5 12l-6.7 2L12 20.5 10.2 14 3.5 12l6.7-2L12 3.5Z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>',
+  bowl: '<path d="M3.5 11h17a8.5 8.5 0 0 1-17 0Z"/><path d="M8 7.5c0-1.2 1-1.5 1-2.7M12 7.5c0-1.2 1-1.5 1-2.7M16 7.5c0-1.2 1-1.5 1-2.7"/>',
+  moon: '<path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z"/>',
+  apple: '<path d="M12 7.5c-2-2-6-1.5-6 3.2 0 4.2 2.8 8.3 6 8.3s6-4.1 6-8.3c0-4.7-4-5.2-6-3.2Z"/><path d="M12 7.5c0-1.7.8-3 2.5-3.5"/>'
 };
 
 export function Icon({ name, size, class: cls = '' }) {
@@ -27,7 +31,8 @@ export function Sheet({ title, onClose, children, footer }) {
   const ref = useRef(null);
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
-  useEffect(() => {
+  // a layout effect: the key handler and the focus are in place before the first paint, so Escape works at once
+  useLayoutEffect(() => {
     const prev = document.activeElement;
     const onKey = (e) => {
       if (e.key === 'Escape') closeRef.current();
@@ -80,8 +85,8 @@ export function Ring({ value, max, children }) {
 
 export function MacroBar({ label, value, target, tone }) {
   const pct = target > 0 ? Math.min(100, (value / target) * 100) : 0;
-  return html`<div>
-    <div class="small" style=${{ fontWeight: 550 }}>${label}</div>
+  return html`<div class=${`tw-macro m-${tone}`}>
+    <div class="small" style=${{ fontWeight: 650 }}>${label}</div>
     <div class="meter tw-meter"><i class=${`tone-${tone}`} style=${{ width: `${pct}%` }}></i></div>
     <div class="tiny faint num">${Math.round(value)} / ${target} g</div>
   </div>`;

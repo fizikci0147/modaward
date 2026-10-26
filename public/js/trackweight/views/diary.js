@@ -2,6 +2,8 @@ import { html, useState } from '/js/ui.js';
 import { sumMacros, targets, addDays, today } from '/shared/nutrition.js';
 import { MEALS, entriesFor, workoutsFor, put, remove, useQuery } from '/js/trackweight/db.js';
 import { Icon, MacroBar, Ring, Sheet, kcalFmt, num } from '/js/trackweight/ui.js';
+
+const MEAL_ICON = { breakfast: 'sun', lunch: 'bowl', dinner: 'moon', snack: 'apple' };
 import { AddFood } from '/js/trackweight/views/add-food.js';
 
 export function dayLabel(iso) {
@@ -32,7 +34,7 @@ function EditEntry({ entry, onClose }) {
       ${hasGrams
         ? html`<div class="field"><label for="tw-eg">Amount (g)</label><input id="tw-eg" class="input" type="number" inputmode="decimal" value=${grams} onInput=${(e) => setGrams(e.target.value)} data-autofocus /></div>`
         : html`<div class="field"><label for="tw-ek">Calories (kcal)</label><input id="tw-ek" class="input" type="number" inputmode="decimal" value=${kcal} onInput=${(e) => setKcal(e.target.value)} data-autofocus /></div>`}
-      <div class="card card-pad center"><b class="display" style=${{ fontSize: '2rem' }}>${preview.kcal}</b> kcal<div class="tiny faint num">P ${preview.protein} g · C ${preview.carbs} g · F ${preview.fat} g</div></div>
+      <div class="card card-pad center"><b class="display tw-bignum" style=${{ fontSize: '2.4rem' }}>${preview.kcal}</b> kcal<div class="tiny faint num">P ${preview.protein} g · C ${preview.carbs} g · F ${preview.fat} g</div></div>
       <button class="btn btn-primary btn-block" disabled=${hasGrams && num(grams) <= 0} onClick=${async () => (await put('entries', { ...entry, ...preview, ...(hasGrams ? { grams: num(grams) } : {}) }), onClose())}>Save</button>
       <button class="btn btn-danger btn-block" onClick=${async () => (await remove('entries', entry.id), onClose())}>Delete entry</button>
     </div>
@@ -55,7 +57,7 @@ export function Diary({ profile, date, setDate }) {
 
   return html`<div class="stack">
     <${DateBar} date=${date} setDate=${setDate} />
-    <section class="card card-pad">
+    <section class=${`card card-pad tw-hero ${remaining < 0 ? 'over' : ''}`}>
       <div class="tw-summary">
         <${Ring} value=${eaten.kcal} max=${t.kcal + burned}>
           <b class=${`display num ${remaining < 0 ? 'tw-over' : ''}`}>${kcalFmt(Math.abs(remaining))}</b>
@@ -67,7 +69,10 @@ export function Diary({ profile, date, setDate }) {
           <div><b class="num">${kcalFmt(burned)}</b><span class="tiny faint">Exercise</span></div>
         </div>
       </div>
-      <div class="tw-grid3" style=${{ marginTop: '18px' }}>
+    </section>
+    <section class="card card-pad stack" style=${{ gap: '12px' }}>
+      <div class="eyebrow">Macros</div>
+      <div class="tw-grid3">
         <${MacroBar} label="Protein" value=${eaten.protein} target=${t.protein} tone="protein" />
         <${MacroBar} label="Carbs" value=${eaten.carbs} target=${t.carbs} tone="carbs" />
         <${MacroBar} label="Fat" value=${eaten.fat} target=${t.fat} tone="fat" />
@@ -76,10 +81,10 @@ export function Diary({ profile, date, setDate }) {
 
     ${MEALS.map((m) => {
       const list = entries.filter((e) => e.meal === m.id);
-      return html`<section class="card card-pad" key=${m.id}>
+      return html`<section class=${`card card-pad tw-meal tw-meal-${m.id}`} key=${m.id}>
         <div class="tw-meal-head">
-          <h3 class="display h-s">${m.label}</h3>
-          <div class="row"><span class="small faint num">${kcalFmt(list.reduce((a, e) => a + e.kcal, 0))} kcal</span>
+          <h3 class="display h-s tw-meal-title"><span class="tw-meal-ico"><${Icon} name=${MEAL_ICON[m.id]} /></span>${m.label}</h3>
+          <div class="row"><span class="small num tw-meal-kcal">${kcalFmt(list.reduce((a, e) => a + e.kcal, 0))} kcal</span>
             <button class="btn btn-outline btn-s" onClick=${() => setAdding({ meal: m.id })}><${Icon} name="plus" /> Add</button></div>
         </div>
         ${list.map(

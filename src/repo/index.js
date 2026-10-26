@@ -369,5 +369,13 @@ export function createRepos(db) {
     count: (userId) => db.get('SELECT COUNT(*) AS n FROM saved_looks WHERE user_id = ?', userId).n
   };
 
-  return { users, sessions, resets, profiles, garments, wear, plans, feedback, pairs, customStores, looks, saved, db };
+  /** The approved members of Track Weight (see src/services/trackweight-access.js). */
+  const trackweight = {
+    isMember: (userId) => Boolean(db.get('SELECT 1 AS x FROM trackweight_members WHERE user_id = ?', userId)),
+    add: (userId, note = '') => db.run('INSERT INTO trackweight_members (user_id, added_at, note) VALUES (?,?,?) ON CONFLICT(user_id) DO UPDATE SET note = excluded.note', userId, now(), note),
+    remove: (userId) => db.run('DELETE FROM trackweight_members WHERE user_id = ?', userId).changes,
+    list: () => db.all('SELECT m.user_id AS id, u.email, u.name, m.added_at AS addedAt, m.note FROM trackweight_members m JOIN users u ON u.id = m.user_id ORDER BY m.added_at DESC, u.email')
+  };
+
+  return { users, sessions, resets, profiles, garments, wear, plans, feedback, pairs, customStores, looks, saved, trackweight, db };
 }

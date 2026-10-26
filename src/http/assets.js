@@ -126,9 +126,9 @@ export function createAssets(config) {
       const pages = new Map();
       return (file, entry) => {
         if (!pages.has(file)) {
-          const preload = startupModules(entry).map((u) => `<link rel="modulepreload" href="${prefix}${u}" />`).join('\n  ');
+          const preload = entry ? startupModules(entry).map((u) => `<link rel="modulepreload" href="${prefix}${u}" />`).join('\n  ') + '\n  ' : '';
           const html = fs.readFileSync(path.join(config.publicDir, file), 'utf8').replace(/\b(href|src)="\/(css|js|vendor)\//g, `$1="${prefix}/$2/`);
-          pages.set(file, html.replace('<link rel="stylesheet"', `${preload}\n  <link rel="stylesheet"`));
+          pages.set(file, html.replace('<link rel="stylesheet"', `${preload}<link rel="stylesheet"`));
         }
         return pages.get(file);
       };

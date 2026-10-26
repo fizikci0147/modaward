@@ -62,7 +62,7 @@ export function ProfileView({ initial, onSave, firstRun }) {
         <select id="tw-goal" class="select" value=${p.goal} onChange=${(e) => set('goal', e.target.value)}><option value="lose">Lose weight</option><option value="maintain">Maintain weight</option><option value="gain">Gain weight</option></select></div>
       ${p.goal !== 'maintain' ? html`<div class="field"><label for="tw-rate">Pace: ${p.weeklyKg} kg per week</label><input id="tw-rate" class="range" type="range" min="0.25" max="1" step="0.25" value=${p.weeklyKg} onInput=${(e) => set('weeklyKg', Number(e.target.value))} /></div>` : null}
     </section>
-    <section class="card card-pad stack" style=${{ gap: '8px' }}>
+    <section class="card card-pad tw-hero stack" style=${{ gap: '8px' }}>
       <div class="eyebrow">Your daily target</div>
       <div class="display num" style=${{ fontSize: '2.8rem', lineHeight: 1 }}>${t.kcal} <span class="muted" style=${{ fontSize: '1rem', fontFamily: 'var(--font-ui)' }}>kcal</span></div>
       <div class="small muted num">Protein ${t.protein} g · Carbs ${t.carbs} g · Fat ${t.fat} g</div>

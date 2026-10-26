@@ -112,6 +112,9 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
       dailyLimitGlobal: int(env.AI_GLOBAL_DAILY_LIMIT, 2000)
     },
 
+    // Track Weight (/trackweight): 'members' = only approved accounts (and admins) may use it; 'open' = everyone
+    trackweight: { access: str(env.TRACKWEIGHT_ACCESS, 'members').toLowerCase() === 'open' ? 'open' : 'members' },
+
     // food databases behind /trackweight (Open Food Facts needs no key; a free USDA key adds generic foods)
     foods: { usdaApiKey: str(env.USDA_API_KEY) },
 

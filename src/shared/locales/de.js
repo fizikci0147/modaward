@@ -1302,5 +1302,7 @@ export default {
   "That product is not in the food database yet. You can add it by hand.": "Dieses Produkt ist noch nicht in der Lebensmitteldatenbank. Du kannst es von Hand hinzufügen.",
   "Photo estimates are not switched on for this site.": "Schätzungen per Foto sind auf dieser Seite nicht aktiviert.",
   "Photo estimates are a Pro feature.": "Schätzungen per Foto sind eine Pro-Funktion.",
-  "Too many searches. Please slow down.": "Zu viele Suchanfragen. Bitte langsamer."
+  "Too many searches. Please slow down.": "Zu viele Suchanfragen. Bitte langsamer.",
+  "Track Weight is for approved members.": "Track Weight ist nur für freigeschaltete Mitglieder.",
+  "No account uses that email yet. Ask them to sign up first, then add them here.": "Noch kein Konto nutzt diese E-Mail-Adresse. Bitte die Person, sich zuerst zu registrieren, und füge sie dann hier hinzu."
 };

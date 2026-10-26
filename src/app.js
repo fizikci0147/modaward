@@ -143,9 +143,25 @@ export function createApp(deps) {
   app.use('/api', api);
 
   // ── the calorie tracker is its own page, not a screen of the app (so it never reaches the fallback below) ──
-  app.get('/trackweight', (_req, res) => {
-    res.setHeader('Cache-Control', 'no-cache');
-    res.type('html').send(assets.page('trackweight.html', '/js/trackweight/main.js'));
+  // Members only by default (see services/trackweight-access.js): everyone else is told so, with the right next step.
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  app.get('/trackweight', sessionAuth(repos), (req, res) => {
+    const state = deps.trackweightAccess.state(req.user);
+    if (state === 'open' || state === 'member') {
+      res.setHeader('Cache-Control', 'no-cache');
+      return res.type('html').send(assets.page('trackweight.html', '/js/trackweight/main.js'));
+    }
+    const who = config.operator.email ? `${config.operator.name || 'the owner of this site'} (${config.operator.email})` : config.operator.name || 'the owner of this site';
+    const copy =
+      state === 'signin'
+        ? { heading: 'For members only', text: 'Track Weight is open to approved ModaWard members. Sign in to see whether your account has access.', primaryHref: '/login', primaryLabel: 'Sign in' }
+        : { heading: 'Not on the member list yet', text: `You are signed in as ${req.user.email}, but this account has not been approved for Track Weight. Ask ${who} to add you.`, primaryHref: '/', primaryLabel: 'Open ModaWard' };
+    // never cached: the answer changes the moment someone signs in or is approved
+    res.setHeader('Cache-Control', 'no-store');
+    res
+      .status(state === 'signin' ? 401 : 403)
+      .type('html')
+      .send(assets.page('trackweight-locked.html').replace(/\{\{(heading|text|primaryHref|primaryLabel)\}\}/g, (_m, k) => escapeHtml(copy[k])));
   });
 
   // ── single-page app fallback ──
