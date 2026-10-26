@@ -88,6 +88,7 @@ export function loadConfig(env = process.env, { dotenv = env === process.env } =
     dataDir: resolveDataDir(str(env.DATA_DIR) || null),
     publicDir: path.join(ROOT, 'public'),
     sharedDir: path.join(ROOT, 'src', 'shared'),
+    sitesDir: path.join(ROOT, 'sites'),
 
     limits: { auth: int(env.AUTH_RATE_MAX, 20), api: int(env.API_RATE_MAX, 400) },
     operator: { name: str(env.OPERATOR_NAME), email: str(env.CONTACT_EMAIL) },
