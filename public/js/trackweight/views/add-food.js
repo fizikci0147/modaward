@@ -1,5 +1,6 @@
 import { html, useState, useEffect, useMemo } from '/js/ui.js';
-import { SEED_FOODS } from '/shared/foods-seed.js';
+import { SEED_FOODS, CATEGORY_ORDER, POPULAR } from '/shared/foods-seed.js';
+import { rankFoods } from '/shared/food-search.js';
 import { scale } from '/shared/nutrition.js';
 import { MEALS, add, savedFoods, rememberFood, useQuery } from '/js/trackweight/db.js';
 import { searchFoods } from '/js/trackweight/api.js';
@@ -15,9 +16,10 @@ const TABS = [
   ['manual', 'Manual', 'edit']
 ];
 
-const seedChoice = (f) => ({ name: f.name, per100g: f.per100g, servingLabel: f.servingLabel, servingGrams: f.servingGrams, source: 'library' });
+const seedChoice = (f) => ({ name: f.name, per100g: f.per100g, servingLabel: f.servingLabel, servingGrams: f.servingGrams, source: 'library', approx: f.approx });
+const BY_NAME = new Map(SEED_FOODS.map((f) => [f.name, f]));
+const SHOW_FIRST = 60; // rows shown per category before "Show all"
 const remoteChoice = (f) => ({ name: f.name, brand: f.brand, barcode: f.barcode, per100g: f.per100g, servingLabel: f.servingLabel, servingGrams: f.servingGrams, source: f.barcode ? 'barcode' : 'search' });
-const matches = (hay, q) => q.toLowerCase().split(/\s+/).filter(Boolean).every((tok) => hay.toLowerCase().includes(tok));
 const portionKcal = (f) => Math.round(f.per100g.kcal * ((f.servingGrams ?? 100) / 100));
 
 export function AddFood({ date, meal, initialTab = 'search', onClose }) {
@@ -50,12 +52,14 @@ function Row({ food, onPick }) {
 
 function Search({ onPick }) {
   const [q, setQ] = useState('');
-  const [category, setCategory] = useState('All');
+  const [category, setCategory] = useState('Popular');
+  const [showAll, setShowAll] = useState(false);
   const [remote, setRemote] = useState([]);
   const [loading, setLoading] = useState(false);
   const [remoteError, setRemoteError] = useState('');
   const saved = useQuery(savedFoods, [], []);
-  const categories = useMemo(() => ['All', ...new Set(SEED_FOODS.map((f) => f.category))], []);
+  const categories = useMemo(() => ['Popular', ...CATEGORY_ORDER.filter((c) => SEED_FOODS.some((f) => f.category === c))], []);
+  const browse = useMemo(() => (category === 'Popular' ? POPULAR.map((n) => BY_NAME.get(n)).filter(Boolean) : SEED_FOODS.filter((f) => f.category === category)), [category]);
 
   // online databases (Open Food Facts, USDA) after a short pause in typing
   useEffect(() => {
@@ -77,7 +81,8 @@ function Search({ onPick }) {
   const mine = saved.map((f) => ({ ...f, source: f.custom ? 'custom' : 'library' }));
   const seen = new Set();
   const dedupe = (list) => list.filter((f) => ((k) => (seen.has(k) ? false : (seen.add(k), true)))(`${f.name}|${f.brand ?? ''}`.toLowerCase()));
-  const local = query ? dedupe([...mine.filter((f) => matches(`${f.name} ${f.brand ?? ''}`, query)), ...SEED_FOODS.filter((f) => matches(f.name, query)).map(seedChoice)]) : [];
+  // forgiving: typos ("buritos"), plurals, accents and UK/US words all find the food; the person's own foods come first
+  const local = query ? dedupe([...rankFoods(mine, query, (f) => `${f.name} ${f.brand ?? ''}`), ...rankFoods(SEED_FOODS, query, (f) => `${f.name} ${f.category}`).map(seedChoice)]) : [];
   const online = dedupe(remote);
 
   return html`<div class="stack">
@@ -86,15 +91,16 @@ function Search({ onPick }) {
       ? html`
           ${saved.length ? html`<div class="stack" style=${{ gap: '8px' }}><div class="eyebrow">Recent and my foods</div>${dedupe(mine.slice(0, 12)).map((f, i) => html`<${Row} key=${i} food=${f} onPick=${onPick} />`)}</div>` : null}
           <div class="eyebrow">Food library</div>
-          <div class="chips-scroll">${categories.map((c) => html`<button class="chip chip-s" key=${c} aria-pressed=${c === category} onClick=${() => setCategory(c)}>${c}</button>`)}</div>
-          <div class="stack" style=${{ gap: '8px' }}>${SEED_FOODS.filter((f) => category === 'All' || f.category === category).map((f) => html`<${Row} key=${f.id} food=${seedChoice(f)} onPick=${onPick} />`)}</div>
+          <div class="chips-scroll">${categories.map((c) => html`<button class="chip chip-s" key=${c} aria-pressed=${c === category} onClick=${() => (setCategory(c), setShowAll(false))}>${c}</button>`)}</div>
+          <div class="stack" style=${{ gap: '8px' }}>${(showAll ? browse : browse.slice(0, SHOW_FIRST)).map((f) => html`<${Row} key=${f.id} food=${seedChoice(f)} onPick=${onPick} />`)}</div>
+          ${!showAll && browse.length > SHOW_FIRST ? html`<button class="btn btn-outline btn-block" onClick=${() => setShowAll(true)}>Show all ${browse.length}</button>` : null}
         `
       : html`
           <div class="stack" style=${{ gap: '8px' }}>${local.map((f, i) => html`<${Row} key=${`l${i}`} food=${f} onPick=${onPick} />`)}</div>
           ${online.length ? html`<div class="eyebrow">Online databases</div><div class="stack" style=${{ gap: '8px' }}>${online.map((f, i) => html`<${Row} key=${`r${i}`} food=${f} onPick=${onPick} />`)}</div>` : null}
           ${loading ? html`<div class="row faint small" style=${{ justifyContent: 'center' }}><${Spinner} /> Searching online databases…</div>` : null}
           ${remoteError ? html`<p class="small faint center">${remoteError}</p>` : null}
-          ${!loading && !local.length && !online.length && !remoteError && query.length >= 3 ? html`<p class="muted center">No matches. Try another word, or add it by hand on the Manual tab.</p>` : null}
+          ${!loading && !local.length && !online.length && !remoteError && query.length >= 3 ? html`<p class="muted center">No matches. Try another word, or add it by hand on the Manual tab: copy the numbers from a menu, a label or a recipe card.</p>` : null}
         `}
   </div>`;
 }
@@ -135,6 +141,7 @@ function Portion({ food, date, meal: initialMeal, onBack, onDone }) {
       <div class="row tw-macros-line"><span class="tone-protein-text">Protein ${m.protein} g</span><span class="tone-carbs-text">Carbs ${m.carbs} g</span><span class="tone-fat-text">Fat ${m.fat} g</span></div>
       <div class="tiny faint">${Math.round(grams)} g in total · ${food.per100g.kcal} kcal per 100 g</div>
     </div>
+    ${food.approx ? html`<p class="small faint">Typical values for this kind of dish. A particular restaurant, brand or recipe will differ, so change the amount to suit, or enter the exact numbers from the menu, label or recipe card on the Manual tab.</p>` : null}
     <div class="field"><label for="tw-meal">Meal</label>
       <select id="tw-meal" class="select" value=${meal} onChange=${(e) => setMeal(e.target.value)}>${MEALS.map((x) => html`<option value=${x.id}>${x.label}</option>`)}</select></div>
     <button class="btn btn-primary btn-block" disabled=${grams <= 0} onClick=${save}>Add to diary</button>

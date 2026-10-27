@@ -1,8 +1,11 @@
 /**
- * The built-in food library for /trackweight: about 150 everyday foods, so the app is useful with no
- * connection at all. Values are typical averages per 100 g (USDA-style); the "Meals & takeaway"
- * group is approximate by nature. Online databases cover everything else.
+ * The built-in food library for /trackweight, so the app is useful with no connection at all: about 150
+ * basic foods (values per 100 g, USDA-style averages) plus several hundred typical dishes from many
+ * cuisines (foods-dishes.js, written per serving). Dishes and the "Meals & takeaway" group are marked
+ * `approx`: typical values, not any restaurant's or brand's. Online databases cover everything else.
  */
+import { DISHES } from './foods-dishes.js';
+
 /** [name, kcal, protein, carbs, fat per 100 g, serving label, serving grams] */
 const CATEGORIES = {
   Fruit: [
@@ -173,13 +176,52 @@ const CATEGORIES = {
   ],
 };
 
-export const SEED_FOODS = Object.entries(CATEGORIES).flatMap(([category, rows]) =>
+const slug = (name) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+const BASICS = Object.entries(CATEGORIES).flatMap(([category, rows]) =>
   rows.map(([name, kcal, protein, carbs, fat, servingLabel, servingGrams]) => ({
-    id: `seed:${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`,
+    id: `seed:${slug(name)}`,
     name,
     category,
+    // the takeaway group is approximate by nature, like the dishes below
+    ...(category.includes('approx') ? { approx: true } : {}),
     per100g: { kcal, protein, carbs, fat },
     servingLabel,
     servingGrams,
   })),
 );
+
+const round1 = (n) => Math.round(n * 10) / 10;
+
+/** Dishes are written per serving (see foods-dishes.js); the library stores everything per 100 g. */
+const DISH_FOODS = Object.entries(DISHES).flatMap(([category, rows]) =>
+  rows.map(([name, servingLabel, servingGrams, kcal, protein, carbs, fat]) => ({
+    id: `seed:${slug(name)}`,
+    name,
+    category,
+    approx: true,
+    per100g: { kcal: round1((kcal * 100) / servingGrams), protein: round1((protein * 100) / servingGrams), carbs: round1((carbs * 100) / servingGrams), fat: round1((fat * 100) / servingGrams) },
+    servingLabel,
+    servingGrams,
+  })),
+);
+
+export const SEED_FOODS = [...BASICS, ...DISH_FOODS];
+
+/** The order of the category chips: the food people look for most comes first. */
+export const CATEGORY_ORDER = [
+  'Mexican', 'American and fast food', 'Pizza and Italian', 'Asian', 'Indian', 'Mediterranean and Middle Eastern', 'European and British',
+  'Latin American and Caribbean', 'Breakfast', 'Salads and bowls', 'Soups', 'Meal-kit style dinners', 'Desserts', 'Drinks', 'Snacks and sauces',
+  'Plant-based', 'Fruit', 'Vegetables', 'Grains & bread', 'Meat, fish & eggs', 'Plant protein', 'Dairy', 'Nuts, oils & spreads',
+  'Meals & takeaway (approx.)', 'Snacks & sweets',
+];
+
+/** Shown first, before anyone has searched: a short list of what most people log. */
+export const POPULAR = [
+  'Banana', 'Apple', 'Egg (whole)', 'Oatmeal (cooked)', 'Greek yogurt, nonfat', 'Avocado toast', 'Bagel with cream cheese', 'Pancakes (3, with syrup and butter)',
+  'Chicken breast (cooked)', 'White rice (cooked)', 'Salmon (cooked)', 'Chicken burrito', 'Bean and cheese burrito', 'Chicken burrito bowl (rice, beans, salsa)',
+  'Soft taco, chicken', 'Cheese quesadilla', 'Hamburger (single patty, bun)', 'Double cheeseburger', 'Pepperoni pizza', 'Margherita pizza',
+  'Spaghetti with meat sauce', 'Caesar salad with chicken', 'Chicken teriyaki with rice', 'Pad thai with chicken', 'Chicken tikka masala',
+  'Chicken shawarma wrap', 'Turkey sandwich (deli)', 'Latte (whole milk)', 'Cappuccino (12 oz, whole milk)', 'Chocolate chip cookie, bakery size',
+  'Almonds', 'Peanut butter', 'Protein bar',
+];

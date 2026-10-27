@@ -118,6 +118,30 @@ async function run(label, contextOptions) {
     assert.equal((await diaryNumbers()).food, 105);
     ok(`${label}: a built-in food is added with its serving (banana = 105 kcal)`);
 
+    // ── the big library: popular start list, forgiving search, browse by group, typical-values note ──
+    await page.getByRole('button', { name: 'Add food' }).click();
+    await page.getByRole('button', { name: /^Chicken burrito/ }).first().waitFor(); // on the "Popular" list before anything is typed
+    await page.getByLabel('Search foods').fill('buritos'); // a typo and a plural
+    await page.getByRole('button', { name: /^Chicken burrito/ }).first().waitFor();
+    await page.getByRole('button', { name: /^Steak burrito/ }).first().waitFor();
+    assert.equal(await page.getByText('No matches').count(), 0);
+    await shot('03b-search-buritos');
+    await page.getByLabel('Search foods').fill('');
+    await page.getByRole('button', { name: 'Meal-kit style dinners', exact: true }).click();
+    await page.getByRole('button', { name: /^Teriyaki salmon with rice and broccoli/ }).waitFor();
+    await page.getByRole('button', { name: 'Asian', exact: true }).click();
+    assert.equal(await page.getByRole('button', { name: /^Peanut sauce/ }).count(), 0, 'long groups show their first 60 foods');
+    await page.getByRole('button', { name: 'Show all' }).click();
+    await page.getByRole('button', { name: /^Peanut sauce/ }).waitFor();
+    await page.getByRole('button', { name: 'Meal-kit style dinners', exact: true }).click();
+    await shot('03c-meal-kit-group');
+    await page.getByRole('button', { name: /^Teriyaki salmon with rice and broccoli/ }).click();
+    await page.getByText(/Typical values for this kind of dish/).waitFor();
+    await page.getByRole('button', { name: 'Back' }).click();
+    await page.keyboard.press('Escape');
+    await page.getByRole('dialog').waitFor({ state: 'detached' });
+    ok(`${label}: the library has burritos (even as "buritos"), meal-kit style dinners and a "typical values" note`);
+
     // ── online database ──
     await page.getByRole('button', { name: 'Add food' }).click();
     await page.getByLabel('Search foods').fill('nutella');

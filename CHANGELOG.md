@@ -6,6 +6,16 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+## [5.22.0] · 2026-10-27
+
+### Added
+- **A much bigger food library in Track Weight: 654 foods, up from 146.** About 500 typical dishes from many kinds of kitchen: eight burritos, three burrito bowls, tacos, quesadillas and nachos; burgers, sandwiches, wings and BBQ; pizza and pasta; sushi, ramen, pho, pad thai, curries and stir-fries; Indian, Mediterranean, Turkish, European, British and Latin American plates; breakfasts, salads and bowls, soups, desserts, coffee-shop and bar drinks, snacks and sauces, plant-based; and **39 "meal-kit style dinners"** (teriyaki salmon with rice, sheet-pan chicken, turkey meatballs with spaghetti, chicken fajitas and more). These are typical values for the kind of dish, not any restaurant's or meal-kit service's own numbers (those are only published on their own pages), and the portion screen says so; exact figures from a menu, a label or a recipe card go in on the Manual tab.
+- **Search that forgives.** "buritos", "burrito" and "chiken" all find what you meant; accents, plurals and regional words work too (börek, crepe, crisps, aubergine, prawns, mince). A group name such as "mexican" lists its dishes. Browse by group, starting with a short Popular list; long groups show their first 60 with a Show all button.
+- With a `USDA_API_KEY`, the online search now also includes the USDA survey of mixed dishes (burritos, curries, sandwiches).
+
+### Changed
+- Searching the built-in library no longer needs every typed word to appear exactly; see above.
+
 ## [5.21.0] · 2026-10-26
 
 ### Added

@@ -2,7 +2,8 @@ import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { startTestServer, registerUser } from './helpers.js';
 import { ACTIVITY_LEVELS, DEFAULT_PROFILE, addDays, bmr, exerciseKcal, scale, sumMacros, targets, tdee } from '../src/shared/nutrition.js';
-import { SEED_FOODS } from '../src/shared/foods-seed.js';
+import { SEED_FOODS, CATEGORY_ORDER, POPULAR } from '../src/shared/foods-seed.js';
+import { rankFoods, stem, distance, normalise } from '../src/shared/food-search.js';
 import { ACTIVITIES } from '../src/shared/activities.js';
 import { normaliseMeal } from '../src/ai/meals.js';
 import { fromOpenFoodFacts, fromUsda } from '../src/services/foods.js';
@@ -110,7 +111,7 @@ describe('nutrition maths', () => {
 
 describe('built-in libraries', () => {
   test('foods have unique ids, sane servings, and energy that matches their macros', () => {
-    assert.ok(SEED_FOODS.length >= 140);
+    assert.ok(SEED_FOODS.length >= 600, `only ${SEED_FOODS.length} foods`);
     assert.equal(new Set(SEED_FOODS.map((f) => f.id)).size, SEED_FOODS.length);
     for (const f of SEED_FOODS) {
       const { kcal, protein, carbs, fat } = f.per100g;
@@ -118,14 +119,102 @@ describe('built-in libraries', () => {
       assert.ok(kcal >= 0 && kcal <= 900 && protein >= 0 && carbs >= 0 && fat >= 0 && protein + carbs + fat <= 101, `${f.name}: values`);
       const atwater = 4 * protein + 4 * carbs + 9 * fat;
       // alcohol has 7 kcal/g and no macros, so drinks may carry more energy than their macros explain
-      if (/beer|wine|spirits/i.test(f.name)) assert.ok(kcal >= atwater, `${f.name}: alcohol adds energy`);
+      if (/beer|wine|spirits|margarita|mojito|gin and tonic|cider/i.test(f.name)) assert.ok(kcal >= atwater, `${f.name}: alcohol adds energy`);
       else assert.ok(Math.abs(kcal - atwater) <= Math.max(25, 0.25 * kcal), `${f.name}: ${kcal} kcal vs ${Math.round(atwater)} from macros`);
     }
+  });
+
+  test('dishes are marked as typical, have believable servings, and every category is listed and used', () => {
+    const dishes = SEED_FOODS.filter((f) => f.approx);
+    assert.ok(dishes.length >= 480, `only ${dishes.length} dishes`);
+    for (const f of dishes) {
+      const kcal = Math.round((f.per100g.kcal * f.servingGrams) / 100);
+      assert.ok(f.servingGrams >= 5 && f.servingGrams <= 700, `${f.name}: ${f.servingGrams} g`);
+      assert.ok(kcal <= 1100, `${f.name}: ${kcal} kcal in one serving`);
+    }
+    const used = new Set(SEED_FOODS.map((f) => f.category));
+    assert.deepEqual([...used].filter((c) => !CATEGORY_ORDER.includes(c)), [], 'a category missing from CATEGORY_ORDER would never show');
+    assert.deepEqual(CATEGORY_ORDER.filter((c) => !used.has(c)), [], 'a listed category with no foods');
+    const names = new Set(SEED_FOODS.map((f) => f.name));
+    assert.deepEqual(POPULAR.filter((n) => !names.has(n)), [], 'every popular food exists');
+  });
+
+  test('the cuisines and services people ask for are covered', () => {
+    const count = (cat) => SEED_FOODS.filter((f) => f.category === cat).length;
+    assert.ok(count('Mexican') >= 40, 'Mexican');
+    assert.ok(count('Meal-kit style dinners') >= 35, 'meal-kit style dinners');
+    for (const cat of ['Asian', 'Indian', 'Mediterranean and Middle Eastern', 'Pizza and Italian', 'American and fast food', 'Breakfast', 'Salads and bowls', 'Soups', 'Desserts']) assert.ok(count(cat) >= 12, cat);
+    const burritos = SEED_FOODS.filter((f) => /burrito/i.test(f.name));
+    assert.ok(burritos.length >= 8, `${burritos.length} burritos`);
+    // a serving's calories add up from the per-100 g figures the page stores
+    const bean = SEED_FOODS.find((f) => f.name === 'Bean and cheese burrito');
+    assert.equal(Math.round((bean.per100g.kcal * bean.servingGrams) / 100), 380);
   });
 
   test('activities have unique ids and believable MET values', () => {
     assert.equal(new Set(ACTIVITIES.map((a) => a.id)).size, ACTIVITIES.length);
     for (const a of ACTIVITIES) assert.ok(a.met >= 1.5 && a.met <= 16, a.name);
+  });
+});
+
+describe('forgiving food search', () => {
+  const find = (q, n = 8) => rankFoods(SEED_FOODS, q, (f) => `${f.name} ${f.category}`).slice(0, n).map((f) => f.name);
+
+  test('burritos are found, plurals and typos included', () => {
+    for (const q of ['burrito', 'burritos', 'buritos', 'burito', 'BURRITO', 'burrtio']) {
+      const top = find(q);
+      assert.ok(top.length >= 5, q);
+      assert.ok(top.slice(0, 5).every((n) => /burrito/i.test(n)), `${q}: ${top.slice(0, 5)}`);
+    }
+  });
+
+  test('every typed word must match, and the best match comes first', () => {
+    assert.equal(find('chicken burrito')[0], 'Chicken burrito');
+    assert.equal(find('banana')[0], 'Banana');
+    assert.equal(find('bean and cheese burrito')[0], 'Bean and cheese burrito');
+    assert.ok(find('chiken').some((n) => /chicken/i.test(n)), 'a typo still finds chicken');
+    assert.deepEqual(find('zzzzzz'), []);
+    assert.deepEqual(find('   '), []);
+    assert.deepEqual(find('chicken zzzzzz'), []);
+  });
+
+  test('accents, other spellings and regional words', () => {
+    assert.ok(find('borek').includes('Börek (cheese)'));
+    assert.ok(find('kofte').some((n) => /Köfte/.test(n)));
+    assert.ok(find('crepe').some((n) => /Crêpe/.test(n)));
+    assert.ok(find('aubergine').includes('Eggplant'));
+    assert.ok(find('courgette').includes('Zucchini'));
+    assert.ok(find('crisps').includes('Potato chips'));
+    assert.ok(find('prawn').some((n) => /shrimp/i.test(n)));
+    assert.ok(find('mince').some((n) => /ground beef/i.test(n)));
+    assert.ok(find('doner').some((n) => /Doner kebab/.test(n)));
+  });
+
+  test('a cuisine or group name finds its dishes, and words are not matched by accident', () => {
+    assert.ok(find('mexican', 20).every((n) => SEED_FOODS.find((f) => f.name === n)?.category === 'Mexican' || /mexican/i.test(n)));
+    assert.ok(find('meal kit', 12).every((n) => SEED_FOODS.find((f) => f.name === n)?.category === 'Meal-kit style dinners' || /meal|kit/i.test(n)));
+    assert.ok(!find('rice').includes('Pizza'), 'unrelated foods stay out');
+    assert.ok(find('ram', 20).every((n) => /ram/i.test(n) || SEED_FOODS.find((f) => f.name === n).category.toLowerCase().includes('ram')), 'a short word only matches by prefix');
+  });
+
+  test('the person’s own foods come ahead of the built-in ones on a tie', () => {
+    const mine = [{ name: 'Burrito from Mum' }];
+    const ranked = rankFoods([...mine, ...SEED_FOODS], 'burrito');
+    assert.equal(ranked[0].name, 'Burrito from Mum');
+  });
+
+  test('helpers: stemming, accents and edit distance', () => {
+    assert.deepEqual(['burritos', 'sandwiches', 'berries', 'glass', 'cactus', 'tomatoes', 'fries'].map(stem), ['burrito', 'sandwich', 'berry', 'glass', 'cactus', 'tomato', 'fry']);
+    assert.equal(normalise('Crème Brûlée & Börek!'), 'creme brulee and borek');
+    assert.equal(distance('burito', 'burrito'), 1);
+    assert.equal(distance('burrtio', 'burrito'), 1, 'a swapped pair of letters counts once');
+    assert.equal(distance('abc', 'xyzxyz', 2), 3);
+  });
+
+  test('searching the whole library is quick enough to run on every keystroke', () => {
+    const t0 = performance.now();
+    for (const q of ['burr', 'chick', 'pizza', 'pad thai', 'xyzxyz', 'chiken sandwhich']) find(q);
+    assert.ok(performance.now() - t0 < 400, `took ${Math.round(performance.now() - t0)} ms for six searches`);
   });
 });
 
@@ -265,6 +354,7 @@ describe('/api/trackweight (access open)', () => {
     const usdaCall = foods.calls.find((u) => u.includes('api.nal.usda.gov'));
     assert.match(usdaCall, /api_key=test-usda-key/);
     assert.match(usdaCall, /query=apple/);
+    assert.equal(new URL(usdaCall).searchParams.get('dataType'), 'Foundation,SR Legacy,Survey (FNDDS),Branded', 'mixed dishes (burritos, curries) come from the USDA survey data');
     const before = foods.calls.length;
     await c.get('/api/trackweight/foods/search?q=apple');
     assert.equal(foods.calls.length, before, 'the second search is answered from memory');

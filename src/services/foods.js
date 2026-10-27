@@ -2,7 +2,7 @@
  * Food databases behind the calorie tracker at /trackweight.
  *
  * Open Food Facts (packaged foods and barcodes, no key needed) and, when USDA_API_KEY is set,
- * USDA FoodData Central (generic and branded foods). Results are normalised to values per 100 g
+ * USDA FoodData Central (generic foods, the mixed-dish survey data behind burritos and curries, and branded foods). Results are normalised to values per 100 g
  * and cached in memory for ten minutes, so repeated searches never hit the providers twice. These
  * are public databases; the person's own food log never leaves their device.
  */
@@ -92,7 +92,7 @@ export function createFoods({ config, log, fetch: fetchImpl = globalThis.fetch, 
   async function searchUsda(q) {
     const key = config.foods.usdaApiKey;
     if (!key) return [];
-    const params = new URLSearchParams({ query: q, pageSize: '20', dataType: 'Foundation,SR Legacy,Branded', api_key: key });
+    const params = new URLSearchParams({ query: q, pageSize: '20', dataType: 'Foundation,SR Legacy,Survey (FNDDS),Branded', api_key: key });
     const data = await getJson(`https://api.nal.usda.gov/fdc/v1/foods/search?${params}`);
     return (data.foods ?? []).map(fromUsda).filter(Boolean);
   }
