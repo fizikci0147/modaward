@@ -6,6 +6,11 @@ Versions follow [semver](https://semver.org): **major** = a change that needs ac
 
 ## [Unreleased]
 
+## [5.23.0] · 2026-10-27
+
+### Removed
+- **The `/cities` city maps are taken out for now** (Philadelphia and New York, with their building photos, and the old `/phillyproject` address that led to them). Those addresses now show the ordinary app, like any other unknown page. The looser security policy and the `sites/` folder those maps needed are gone too, so every page of the site has the same strict policy again, and the deployable zip drops from about 147 MB to about 1 MB. Nothing was lost: the work stays on the `cities-5.19` branch (and pull request 2) and in the history of 5.20.0 to 5.22.0, and can be brought back. The Week temperature graph, which arrived in the same merge, stays.
+
 ## [5.22.0] · 2026-10-27
 
 ### Added

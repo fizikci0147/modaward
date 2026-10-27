@@ -13,19 +13,6 @@ import { notFound } from './util/errors.js';
 import { createAssets } from './http/assets.js';
 
 const LONG_CACHE = 'public, max-age=86400';
-const SITE_CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-  // street photos: Mapillary's API, which serves its images from Facebook's CDN
-  "img-src 'self' data: blob: https://*.fbcdn.net https://*.mapillary.com",
-  "font-src 'self' https://fonts.gstatic.com",
-  "connect-src 'self' https://graph.mapillary.com",
-  "worker-src 'self' blob:",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "frame-ancestors 'none'"
-].join('; ');
 
 /**
  * Build the Express app from explicit dependencies (no globals), so tests can run the whole
@@ -91,20 +78,6 @@ export function createApp(deps) {
       }
     })
   );
-
-  // ── side projects: static sites under their own address, not linked from the app ──
-  // They ship their own inline scripts and styles, so they get their own, looser CSP.
-  app.use(
-    '/cities',
-    (_req, res, next) => {
-      res.setHeader('Content-Security-Policy', SITE_CSP);
-      res.setHeader('X-Robots-Tag', 'noindex');
-      next();
-    },
-    express.static(path.join(config.sitesDir, 'cities'), { ...staticOpts, index: 'index.html' })
-  );
-  // the Philadelphia map's first address, kept working for links already shared
-  app.use('/phillyproject', (req, res) => res.redirect(301, '/cities/philadelphia' + req.url));
 
   // ── authenticated files and redirects ──
   app.get('/uploads/:name', sessionAuth(repos), uploadsRoute(deps));
